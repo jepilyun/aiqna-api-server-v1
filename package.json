@@ -1,0 +1,72 @@
+{
+  "name": "aiqna-api-server-v1",
+  "version": "0.1.0",
+  "description": "AI QNA api server",
+  "keywords": [
+    "aiqna",
+    "AI",
+    "qna"
+  ],
+  "homepage": "https://github.com/jepilyun/aiqna-api-server-v1#readme",
+  "bugs": {
+    "url": "https://github.com/jepilyun/aiqna-api-server-v1/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jepilyun/aiqna-api-server-v1.git"
+  },
+  "license": "ISC",
+  "author": "jepilyun",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint --fix '**/**/*.ts'",
+    "prettier": "prettier --write --config ./.prettierrc.json '**/*.ts'",
+    "build": "tsc",
+    "start": "tsc && export RUN='SERVICE' && TZ=Etc/Universal && node ./dist/server.js",
+    "dev": "tsc && export RUN='DEV' && TZ=Etc/Universal && node ./dist/server.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
+    "@types/formidable": "^3.4.5",
+    "@types/mime-types": "^3.0.1",
+    "bcrypt": "^6.0.0",
+    "cookie": "^1.0.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "formidable": "^3.5.4",
+    "google_place_api_module_v1": "^0.1.8",
+    "groq-sdk": "^0.32.0",
+    "jsonwebtoken": "^9.0.2",
+    "mime-types": "^3.0.1",
+    "puppeteer": "^24.22.0",
+    "trand_common_v1": "^0.2.56",
+    "tripadvisor_api_module_v1": "^0.1.9",
+    "uuid": "^13.0.0",
+    "youtube_api_module_v1": "^0.1.20"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.36.0",
+    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
+    "@types/bcrypt": "^6.0.0",
+    "@types/cookie": "^1.0.0",
+    "@types/cookie-parser": "^1.4.9",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.2",
+    "@types/node": "^24.5.2",
+    "@types/uuid": "^11.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.44.0",
+    "@typescript-eslint/parser": "^8.44.0",
+    "eslint": "^9.36.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "globals": "^16.4.0",
+    "npm": "^11.6.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.44.0"
+  }
+}
