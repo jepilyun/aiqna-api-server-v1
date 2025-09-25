@@ -27,9 +27,11 @@
     "dev": "tsc && export RUN='DEV' && TZ=Etc/Universal && node ./dist/server.js"
   },
   "dependencies": {
+    "@pinecone-database/pinecone": "^6.1.2",
     "@supabase/supabase-js": "^2.57.4",
     "@types/formidable": "^3.4.5",
     "@types/mime-types": "^3.0.1",
+    "aiqna_common_v1": "0.1.2",
     "bcrypt": "^6.0.0",
     "cookie": "^1.0.2",
     "cookie-parser": "^1.4.7",
@@ -38,16 +40,16 @@
     "express": "^5.1.0",
     "formidable": "^3.5.4",
     "google_place_api_module_v1": "^0.1.8",
+    "googleapis": "^160.0.0",
     "groq-sdk": "^0.32.0",
     "html-entities": "^2.6.0",
     "jsonwebtoken": "^9.0.2",
     "mime-types": "^3.0.1",
     "puppeteer": "^24.22.0",
-    "trand_common_v1": "^0.2.56",
     "tripadvisor_api_module_v1": "^0.1.9",
     "uuid": "^13.0.0",
     "youtube_api_module_v1": "^0.1.20",
-    "youtubei.js": "^15.1.1"
+    "youtubei.js": "^9.3.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
