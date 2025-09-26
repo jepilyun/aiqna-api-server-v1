@@ -2,9 +2,9 @@ import {
   F_YOUTUBE_VIDEO_PROCESSING_LOG,
   ResponseDBSelect,
   SQL_DB_TABLE,
-  TYoutubeVideoProcessingLog,
-  TYoutubeVideoProcessingLogInsert,
-  TYoutubeVideoProcessingLogUpdate,
+  TSqlYoutubeVideoProcessingLog,
+  TSqlYoutubeVideoProcessingLogInsert,
+  TSqlYoutubeVideoProcessingLogUpdate,
 } from "aiqna_common_v1";
 import supabase from "../../config/supabase.js";
 import { ErrorYoutubeVideoProcessingLogDuplicate } from "../../errors/error-youtube-video-processing-log.js";
@@ -24,7 +24,7 @@ export default class DBSbYoutubeVideoProcessingLog {
   static async selectList(
     start: number,
     limit: number = 36,
-  ): Promise<ResponseDBSelect<TYoutubeVideoProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
     try {
       const query = supabase
         .from(SQL_DB_TABLE.youtube_video_processing_logs)
@@ -34,7 +34,7 @@ export default class DBSbYoutubeVideoProcessingLog {
 
       const { data, error, count } = await query
         .order(F_YOUTUBE_VIDEO_PROCESSING_LOG.created_at.id, { ascending: true })
-        .overrideTypes<TYoutubeVideoProcessingLog[]>();
+        .overrideTypes<TSqlYoutubeVideoProcessingLog[]>();
 
       if (error) {
         throw new Error(
@@ -62,14 +62,14 @@ export default class DBSbYoutubeVideoProcessingLog {
    * @returns 카테고리 정보
    */
   static async insert(
-    log: TYoutubeVideoProcessingLogInsert,
-  ): Promise<ResponseDBSelect<TYoutubeVideoProcessingLog[]>> {
+    log: TSqlYoutubeVideoProcessingLogInsert,
+  ): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
     try {
       const { data, error } = await supabase
         .from(SQL_DB_TABLE.youtube_video_processing_logs)
         .insert(log)
         .select()
-        .overrideTypes<TYoutubeVideoProcessingLog[]>();
+        .overrideTypes<TSqlYoutubeVideoProcessingLog[]>();
 
       if (error) {
         if (error.code === "23505") {
@@ -103,14 +103,14 @@ export default class DBSbYoutubeVideoProcessingLog {
    */
   static async selectByVideoId(
     videoId: string,
-  ): Promise<ResponseDBSelect<TYoutubeVideoProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
     try {
       const { data, error, count } = await supabase
         .from(SQL_DB_TABLE.youtube_video_processing_logs)
         .select("*", { count: "exact" })
         .order(F_YOUTUBE_VIDEO_PROCESSING_LOG.created_at.id, { ascending: true })
         .eq(F_YOUTUBE_VIDEO_PROCESSING_LOG.video_id.id, videoId)
-        .overrideTypes<TYoutubeVideoProcessingLog[]>();
+        .overrideTypes<TSqlYoutubeVideoProcessingLog[]>();
 
       if (error) {
         throw new Error(
@@ -140,15 +140,15 @@ export default class DBSbYoutubeVideoProcessingLog {
    */
   static async updateDetailByVideoId(
     videoId: string,
-    logUpdate: TYoutubeVideoProcessingLogUpdate,
-  ): Promise<ResponseDBSelect<TYoutubeVideoProcessingLog[]>> {
+    logUpdate: TSqlYoutubeVideoProcessingLogUpdate,
+  ): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
     try {
       const { data, error } = await supabase
         .from(SQL_DB_TABLE.youtube_video_processing_logs)
         .update(logUpdate)
         .eq(F_YOUTUBE_VIDEO_PROCESSING_LOG.video_id.id, videoId)
         .select() // 영향 받은 row 확인을 위해 select 필요
-        .overrideTypes<TYoutubeVideoProcessingLog[]>();
+        .overrideTypes<TSqlYoutubeVideoProcessingLog[]>();
 
       if (error) {
         throw new Error(
@@ -177,14 +177,14 @@ export default class DBSbYoutubeVideoProcessingLog {
    */
   static async deleteDetailByVideoId(
     videoId: string,
-  ): Promise<ResponseDBSelect<TYoutubeVideoProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
     try {
       const { data, error } = await supabase
         .from(SQL_DB_TABLE.youtube_video_processing_logs)
         .delete()
         .eq(F_YOUTUBE_VIDEO_PROCESSING_LOG.video_id.id, videoId)
         .select() // 삭제된 행 유무 확인용
-        .overrideTypes<TYoutubeVideoProcessingLog[]>();
+        .overrideTypes<TSqlYoutubeVideoProcessingLog[]>();
 
       if (error) {
         throw new Error(

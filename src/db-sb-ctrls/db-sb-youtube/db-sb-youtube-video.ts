@@ -1,15 +1,16 @@
 import {
-  DB_COLUMNS_YOUTUBE_VIDEO_LIST,
+  SQL_DB_COLUMNS_YOUTUBE_VIDEO_LIST,
   F_YOUTUBE_VIDEO,
   ResponseDBSelect,
   SQL_DB_TABLE,
-  TYoutubeVideoDetail,
-  TYoutubeVideoDetailInsert,
-  TYoutubeVideoDetailUpdate,
-  TYoutubeVideoList,
+  TSqlYoutubeVideoDetail,
+  TSqlYoutubeVideoDetailInsert,
+  TSqlYoutubeVideoDetailUpdate,
+  TSqlYoutubeVideoList,
 } from "aiqna_common_v1";
 import supabase from "../../config/supabase.js";
 import { ErrorYoutubeVideoDuplicate } from "../../errors/error-youtube-video.js";
+import { youtube_v3 } from "googleapis";
 
 /**
  * DBSbYoutubeVideo
@@ -26,17 +27,17 @@ export default class DBSbYoutubeVideo {
   static async selectList(
     start: number,
     limit: number = 36,
-  ): Promise<ResponseDBSelect<TYoutubeVideoList[]>> {
+  ): Promise<ResponseDBSelect<TSqlYoutubeVideoList[]>> {
     try {
       const query = supabase
         .from(SQL_DB_TABLE.youtube_videos)
-        .select(DB_COLUMNS_YOUTUBE_VIDEO_LIST.join(","), { count: "exact" })
+        .select(SQL_DB_COLUMNS_YOUTUBE_VIDEO_LIST.join(","), { count: "exact" })
         .order(F_YOUTUBE_VIDEO.created_at.id, { ascending: false })
         .range(start, start + limit - 1);
 
       const { data, error, count } = await query
         .order(F_YOUTUBE_VIDEO.created_at.id, { ascending: true })
-        .overrideTypes<TYoutubeVideoList[]>();
+        .overrideTypes<TSqlYoutubeVideoList[]>();
 
       if (error) {
         throw new Error(
@@ -64,14 +65,14 @@ export default class DBSbYoutubeVideo {
    * @returns 
    */
   static async insert(
-    log: TYoutubeVideoDetailInsert,
-  ): Promise<ResponseDBSelect<TYoutubeVideoDetail[]>> {
+    log: TSqlYoutubeVideoDetailInsert,
+  ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
     try {
       const { data, error } = await supabase
         .from(SQL_DB_TABLE.youtube_videos)
         .insert(log)
         .select()
-        .overrideTypes<TYoutubeVideoDetail[]>();
+        .overrideTypes<TSqlYoutubeVideoDetail[]>();
 
       if (error) {
         if (error.code === "23505") {
@@ -97,6 +98,41 @@ export default class DBSbYoutubeVideo {
       );
     }
   }
+  // (alias) fetchYoutubeVideoApiData(videoId: string): Promise<youtube_v3.Schema$Video>
+
+  /**
+   * Youtube 비디오 등록 기능
+   * @param json Youtube 비디오 정보
+   * @returns 
+   */
+  static async upsert(
+    json: youtube_v3.Schema$Video,
+  ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
+    try {
+      const { data, error } = await supabase
+        .rpc("upsert_youtube_video_api_data", { p_video_data: json })
+        .select()
+        .overrideTypes<TSqlYoutubeVideoDetail[]>();
+
+      if (error) {
+        throw new Error(
+          `#1 Youtube 비디오 등록(UPSERT) 중 오류 발생 >>> ${error.message}`,
+        );
+      }
+
+      return { data: data || [] };
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        throw new Error(
+          error.message ||
+            "#2 Youtube 비디오 등록(UPSERT) 중 알 수 없는 오류가 발생했습니다.",
+        );
+      }
+      throw new Error(
+        "#3 Youtube 비디오 등록(UPSERT) 중 알 수 없는 오류가 발생했습니다.",
+      );
+    }
+  }
 
   /**
    * Youtube 비디오 목록 검색 (name, name_ko)
@@ -105,14 +141,14 @@ export default class DBSbYoutubeVideo {
    */
   static async selectByVideoId(
     videoId: string,
-  ): Promise<ResponseDBSelect<TYoutubeVideoDetail[]>> {
+  ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
     try {
       const { data, error, count } = await supabase
         .from(SQL_DB_TABLE.youtube_videos)
         .select("*", { count: "exact" })
         .order(F_YOUTUBE_VIDEO.created_at.id, { ascending: true })
         .eq(F_YOUTUBE_VIDEO.video_id.id, videoId)
-        .overrideTypes<TYoutubeVideoDetail[]>();
+        .overrideTypes<TSqlYoutubeVideoDetail[]>();
 
       if (error) {
         throw new Error(
@@ -142,15 +178,15 @@ export default class DBSbYoutubeVideo {
    */
   static async updateDetailByVideoId(
     videoId: string,
-    logUpdate: TYoutubeVideoDetailUpdate,
-  ): Promise<ResponseDBSelect<TYoutubeVideoDetail[]>> {
+    logUpdate: TSqlYoutubeVideoDetailUpdate,
+  ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
     try {
       const { data, error } = await supabase
         .from(SQL_DB_TABLE.youtube_videos)
         .update(logUpdate)
         .eq(F_YOUTUBE_VIDEO.video_id.id, videoId)
         .select() // 영향 받은 row 확인을 위해 select 필요
-        .overrideTypes<TYoutubeVideoDetail[]>();
+        .overrideTypes<TSqlYoutubeVideoDetail[]>();
 
       if (error) {
         throw new Error(
@@ -179,14 +215,14 @@ export default class DBSbYoutubeVideo {
    */
   static async deleteDetailByVideoId(
     videoId: string,
-  ): Promise<ResponseDBSelect<TYoutubeVideoDetail[]>> {
+  ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
     try {
       const { data, error } = await supabase
         .from(SQL_DB_TABLE.youtube_videos)
         .delete()
         .eq(F_YOUTUBE_VIDEO.video_id.id, videoId)
         .select() // 삭제된 행 유무 확인용
-        .overrideTypes<TYoutubeVideoDetail[]>();
+        .overrideTypes<TSqlYoutubeVideoDetail[]>();
 
       if (error) {
         throw new Error(

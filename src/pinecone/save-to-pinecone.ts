@@ -1,6 +1,6 @@
-import { pinecone } from "../config/pinecone.js";
-import { generateEmbeddings } from "../embedding/generate-embeddings.js";
-import { TTranscriptSegment } from "../types/youtube.js";
+// import { pinecone } from "../config/pinecone.js";
+// import { generateEmbeddings } from "../embedding/generate-embeddings.js";
+// import { TTranscriptSegment } from "../types/youtube.js";
 
 // Pinecone에 벡터 저장
 // export async function saveToPinecone(

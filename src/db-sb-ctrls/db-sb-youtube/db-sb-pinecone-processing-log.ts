@@ -2,9 +2,9 @@ import {
   F_PINECONE_PROCESSING_LOG,
   ResponseDBSelect,
   SQL_DB_TABLE,
-  TPineconeProcessingLog,
-  TPineconeProcessingLogInsert,
-  TPineconeProcessingLogUpdate,
+  TSqlPineconeProcessingLog,
+  TSqlPineconeProcessingLogInsert,
+  TSqlPineconeProcessingLogUpdate,
 } from "aiqna_common_v1";
 import supabase from "../../config/supabase.js";
 import {
@@ -27,7 +27,7 @@ export default class DBSbPineconeProcessingLog {
   static async selectList(
     start: number,
     limit: number = 36,
-  ): Promise<ResponseDBSelect<TPineconeProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlPineconeProcessingLog[]>> {
     try {
       const query = supabase
         .from(SQL_DB_TABLE.pinecone_processing_logs)
@@ -37,7 +37,7 @@ export default class DBSbPineconeProcessingLog {
 
       const { data, error, count } = await query
         .order(F_PINECONE_PROCESSING_LOG.created_at.id, { ascending: true })
-        .overrideTypes<TPineconeProcessingLog[]>();
+        .overrideTypes<TSqlPineconeProcessingLog[]>();
 
       if (error) {
         throw new Error(
@@ -65,14 +65,14 @@ export default class DBSbPineconeProcessingLog {
    * @returns 카테고리 정보
    */
   static async insert(
-    log: TPineconeProcessingLogInsert,
-  ): Promise<ResponseDBSelect<TPineconeProcessingLog[]>> {
+    log: TSqlPineconeProcessingLogInsert,
+  ): Promise<ResponseDBSelect<TSqlPineconeProcessingLog[]>> {
     try {
       const { data, error } = await supabase
         .from(SQL_DB_TABLE.pinecone_processing_logs)
         .insert(log)
         .select()
-        .overrideTypes<TPineconeProcessingLog[]>();
+        .overrideTypes<TSqlPineconeProcessingLog[]>();
 
       if (error) {
         if (error.code === "23505") {
@@ -109,14 +109,14 @@ export default class DBSbPineconeProcessingLog {
    */
   static async selectByVideoId(
     videoId: string,
-  ): Promise<ResponseDBSelect<TPineconeProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlPineconeProcessingLog[]>> {
     try {
       const { data, error, count } = await supabase
         .from(SQL_DB_TABLE.pinecone_processing_logs)
         .select("*", { count: "exact" })
         .order(F_PINECONE_PROCESSING_LOG.created_at.id, { ascending: true })
         .eq(F_PINECONE_PROCESSING_LOG.video_id.id, videoId)
-        .overrideTypes<TPineconeProcessingLog[]>();
+        .overrideTypes<TSqlPineconeProcessingLog[]>();
 
       if (error) {
         throw new Error(
@@ -146,15 +146,15 @@ export default class DBSbPineconeProcessingLog {
    */
   static async updateDetailByVideoId(
     videoId: string,
-    logUpdate: TPineconeProcessingLogUpdate,
-  ): Promise<ResponseDBSelect<TPineconeProcessingLog[]>> {
+    logUpdate: TSqlPineconeProcessingLogUpdate,
+  ): Promise<ResponseDBSelect<TSqlPineconeProcessingLog[]>> {
     try {
       const { data, error } = await supabase
         .from(SQL_DB_TABLE.pinecone_processing_logs)
         .update(logUpdate)
         .eq(F_PINECONE_PROCESSING_LOG.video_id.id, videoId)
         .select() // 영향 받은 row 확인을 위해 select 필요
-        .overrideTypes<TPineconeProcessingLog[]>();
+        .overrideTypes<TSqlPineconeProcessingLog[]>();
 
       if (error) {
         throw new Error(
@@ -183,14 +183,14 @@ export default class DBSbPineconeProcessingLog {
    */
   static async deleteDetailByVideoId(
     videoId: string,
-  ): Promise<ResponseDBSelect<TPineconeProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlPineconeProcessingLog[]>> {
     try {
       const { data, error } = await supabase
         .from(SQL_DB_TABLE.pinecone_processing_logs)
         .delete()
         .eq(F_PINECONE_PROCESSING_LOG.video_id.id, videoId)
         .select() // 삭제된 행 유무 확인용
-        .overrideTypes<TPineconeProcessingLog[]>();
+        .overrideTypes<TSqlPineconeProcessingLog[]>();
 
       if (error) {
         if (error.code === "23503") {
