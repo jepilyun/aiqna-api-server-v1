@@ -1,61 +1,8 @@
-import { EMBEDDING_MODEL, PINECONE_INDEX_NAME, TPineconeChunkMetadata, TPineconeTranscriptData, TPineconeTranscriptVector, TPineconeVideoMetadata } from "aiqna_common_v1";
+import { EMBEDDING_MODEL, PINECONE_INDEX_NAME, TPineconeTranscriptData, TPineconeVideoMetadata } from "aiqna_common_v1";
 import { chunkTranscript } from "../../utils/chunk-transcript.js";
 import { pcdb } from "../../config/pinecone.js";
 import { IEmbeddingProvider } from "../../types/shared.js";
-import { EmbeddingProviderFactory } from "../../utils/embedding/embedding-provider-factory.js";
-
-/**
- * Pinecone에 벡터 저장
- */
-export async function saveToPineconeOpenAIEmbedding(
-  transcripts: TPineconeTranscriptData[],
-  videoMetadata: TPineconeVideoMetadata,
-  indexName: string = PINECONE_INDEX_NAME.YOUTUBE_TRANSCRIPT_TRAVEL_SEOUL.OPENAI_SMALL,
-  embeddingModel: string = EMBEDDING_MODEL.OPENAI.SMALL
-): Promise<void> {
-  const index = pcdb.index(indexName);
-  
-  // 모든 언어별 처리
-  for (const transcript of transcripts) {
-    const chunks = chunkTranscript(transcript.segments);
-    
-    const vectors: TPineconeTranscriptVector[] = chunks.map((chunk, idx) => {
-      const chunkId = `${videoMetadata.video_id}_${transcript.language}_${idx}`;
-      
-      const metadata: TPineconeChunkMetadata = {
-        video_id: videoMetadata.video_id,
-        title: videoMetadata.title,
-        channel_title: videoMetadata.channel_title,
-        channel_id: videoMetadata.channel_id,
-        published_at: videoMetadata.published_at,
-        thumbnail_url: videoMetadata.thumbnail_url,
-        duration: videoMetadata.duration,
-        view_count: videoMetadata.view_count,
-        like_count: videoMetadata.like_count,
-        language: transcript.language,
-        chunk_index: idx,
-        chunk_id: chunkId,
-        start_time: chunk.startTime,
-        end_time: chunk.endTime,
-        text: chunk.text,
-        text_length: chunk.text.length,
-        embedding_model: embeddingModel,
-        created_at: new Date().toISOString()
-      };
-      
-      return {
-        id: chunkId,
-        values: [], // 실제로는 embedding API로 생성된 벡터 필요
-        metadata
-      };
-    });
-    
-    // Pinecone에 upsert
-    await index.upsert(vectors);
-    console.log(`✓ ${transcript.language}: ${vectors.length}개 chunk를 Pinecone에 저장 완료`);
-  }
-}
-
+import { EmbeddingProviderFactory } from "../../embedding/embedding-provider-factory.js";
 
 
 /**
@@ -68,39 +15,24 @@ export async function saveToPineconeWithProvider(
   modelName?: string,
   indexName: string = PINECONE_INDEX_NAME.YOUTUBE_TRANSCRIPT_TRAVEL_SEOUL.OPENAI_SMALL
 ): Promise<void> {
-  // 1. 함수 시작 로그
-  console.log(`\n[saveToPineconeWithProvider] Starting for ${provider.constructor.name}`);
-  console.log(`Index: ${indexName}`);
-  console.log(`Transcripts: ${transcripts.length}`);
-  
   const index = pcdb.index(indexName);
   const embeddingModel = modelName || provider.getDefaultModel();
   
   for (const transcript of transcripts) {
-    // 2. 각 언어 처리 시작
-    console.log(`\n[${transcript.language}] Processing transcript...`);
-    console.log(`Segments count: ${transcript.segments?.length || 0}`);
-    
     const chunks = chunkTranscript(transcript.segments);
-    
-    // 3. chunk 생성 결과 확인
-    console.log(`[${transcript.language}] Generated ${chunks.length} chunks`);
-    
+
     if (chunks.length === 0) {
       console.warn(`⚠️  No chunks generated for ${transcript.language}, skipping...`);
       continue;
     }
-    
-    // 4. 임베딩 생성 전
-    console.log(`[${transcript.language}] Generating embeddings for ${chunks.length} chunks...`);
-    
+
     const vectors = await Promise.all(
       chunks.map(async (chunk, idx) => {
         // 5. 첫 5개만 상세 로그
         if (idx < 5) {
           console.log(`  Chunk ${idx}: ${chunk.text.substring(0, 50)}... (${chunk.text.length} chars)`);
         }
-        console.log('embeddingModel =====>', embeddingModel);
+
         const embedding = await provider.generateEmbedding(chunk.text, embeddingModel);
         const chunkId = `${videoMetadata.video_id}_${transcript.language}_${idx}`;
         
@@ -148,16 +80,11 @@ export async function saveToPineconeWithProvider(
         };
       })
     );
-    
-    // 6. 임베딩 생성 완료
-    console.log(`[${transcript.language}] ✓ Embeddings generated: ${vectors.length} vectors`);
-    console.log(`[${transcript.language}] First vector dims: ${vectors[0]?.values?.length || 0}`);
-    
+
     // 7. Pinecone 업로드 시작
     const batchSize = 100;
     const totalBatches = Math.ceil(vectors.length / batchSize);
-    console.log(`[${transcript.language}] Uploading to Pinecone in ${totalBatches} batches...`);
-    
+
     for (let i = 0; i < vectors.length; i += batchSize) {
       const batch = vectors.slice(i, i + batchSize);
       const batchNum = Math.floor(i / batchSize) + 1;
@@ -165,13 +92,7 @@ export async function saveToPineconeWithProvider(
       console.log(`  Batch ${batchNum}/${totalBatches}: uploading ${batch.length} vectors...`);
       await index.upsert(batch);
     }
-    
-    // 8. 완료 로그 (기존)
-    console.log(`✓ ${transcript.language}: ${vectors.length}개 chunk 저장 완료 (${embeddingModel})`);
   }
-  
-  // 9. 함수 종료 로그
-  console.log(`[saveToPineconeWithProvider] Completed for ${provider.constructor.name}\n`);
 }
 
 
@@ -206,14 +127,6 @@ export async function processWithDifferentProviders(
   transcripts: TPineconeTranscriptData[],
   videoMetadata: TPineconeVideoMetadata
 ) {
-  // 1. 입력 데이터 검증 로그 (맨 앞)
-  console.log('=== Input Validation ===');
-  console.log('Transcripts count:', transcripts.length);
-  console.log('Video metadata:', {
-    video_id: videoMetadata.video_id,
-    title: videoMetadata.title
-  });
-  
   transcripts.forEach((t, idx) => {
     console.log(`Transcript ${idx + 1}:`, {
       language: t.language,
@@ -226,7 +139,6 @@ export async function processWithDifferentProviders(
     });
   });
   console.log('========================\n');
-
   console.log(`Starting parallel processing for ${PROVIDER_CONFIGS.length} providers...`);
   
   const startTime = Date.now();

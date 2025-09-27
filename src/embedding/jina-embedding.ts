@@ -1,28 +1,27 @@
-import { IEmbeddingProvider } from "../../types/shared.js";
+import { IEmbeddingProvider } from "../types/shared.js";
 
 /**
- * Cohere Embedding Provider
+ * Jina AI Embedding Provider
  */
-export class CohereEmbeddingProvider implements IEmbeddingProvider {
+export class JinaEmbeddingProvider implements IEmbeddingProvider {
   private apiKey: string;
   
   constructor(apiKey?: string) {
-    this.apiKey = apiKey || process.env.COHERE_API_KEY || '';
+    this.apiKey = apiKey || process.env.JINA_API_KEY || '';
   }
   
   getDefaultModel(): string {
-    return 'embed-multilingual-v3.0';
+    return 'jina-embeddings-v2-base-en';
   }
   
   getDimensions(model?: string): number {
-    console.log("model =====>", model);
-    return 1024; // Cohere v3 models are 1024 dimensions
+    return 768;
   }
   
   async generateEmbedding(text: string, model?: string): Promise<number[]> {
     const modelName = model || this.getDefaultModel();
     
-    const response = await fetch('https://api.cohere.ai/v1/embed', {
+    const response = await fetch('https://api.jina.ai/v1/embeddings', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -30,18 +29,16 @@ export class CohereEmbeddingProvider implements IEmbeddingProvider {
       },
       body: JSON.stringify({
         model: modelName,
-        texts: [text],
-        input_type: 'search_document',
-        embedding_types: ['float']
+        input: [text]
       })
     });
     
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(`Cohere API Error: ${error.message || 'Unknown error'}`);
+      throw new Error(`Jina API Error: ${error.detail || 'Unknown error'}`);
     }
     
     const data = await response.json();
-    return data.embeddings.float[0];
+    return data.data[0].embedding;
   }
 }

@@ -1,4 +1,4 @@
-import { IEmbeddingProvider } from "../../types/shared.js";
+import { IEmbeddingProvider } from "../types/shared.js";
 
 /**
  * OpenAI Embedding Provider

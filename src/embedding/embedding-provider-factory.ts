@@ -1,4 +1,4 @@
-import { IEmbeddingProvider } from "../../types/shared.js";
+import { IEmbeddingProvider } from "../types/shared.js";
 import { CohereEmbeddingProvider } from "./cohere-embedding.js";
 import { HuggingFaceEmbeddingProvider } from "./huggingface-embedding.js";
 import { JinaEmbeddingProvider } from "./jina-embedding.js";
