@@ -8,7 +8,7 @@ import {
   TSqlYoutubeVideoDetailUpdate,
   TSqlYoutubeVideoList,
 } from "aiqna_common_v1";
-import supabase from "../../config/supabase.js";
+import sbdb from "../../config/supabase.js";
 import { ErrorYoutubeVideoDuplicate } from "../../errors/error-youtube-video.js";
 import { youtube_v3 } from "googleapis";
 
@@ -29,7 +29,7 @@ export default class DBSbYoutubeVideo {
     limit: number = 36,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoList[]>> {
     try {
-      const query = supabase
+      const query = sbdb
         .from(SQL_DB_TABLE.youtube_videos)
         .select(SQL_DB_COLUMNS_YOUTUBE_VIDEO_LIST.join(","), { count: "exact" })
         .order(F_YOUTUBE_VIDEO.created_at.id, { ascending: false })
@@ -68,7 +68,7 @@ export default class DBSbYoutubeVideo {
     log: TSqlYoutubeVideoDetailInsert,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await sbdb
         .from(SQL_DB_TABLE.youtube_videos)
         .insert(log)
         .select()
@@ -109,7 +109,7 @@ export default class DBSbYoutubeVideo {
     json: youtube_v3.Schema$Video,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await sbdb
         .rpc("upsert_youtube_video_api_data", { p_video_data: json })
         .select()
         .overrideTypes<TSqlYoutubeVideoDetail[]>();
@@ -143,7 +143,7 @@ export default class DBSbYoutubeVideo {
     videoId: string,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
     try {
-      const { data, error, count } = await supabase
+      const { data, error, count } = await sbdb
         .from(SQL_DB_TABLE.youtube_videos)
         .select("*", { count: "exact" })
         .order(F_YOUTUBE_VIDEO.created_at.id, { ascending: true })
@@ -181,7 +181,7 @@ export default class DBSbYoutubeVideo {
     logUpdate: TSqlYoutubeVideoDetailUpdate,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await sbdb
         .from(SQL_DB_TABLE.youtube_videos)
         .update(logUpdate)
         .eq(F_YOUTUBE_VIDEO.video_id.id, videoId)
@@ -217,7 +217,7 @@ export default class DBSbYoutubeVideo {
     videoId: string,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await sbdb
         .from(SQL_DB_TABLE.youtube_videos)
         .delete()
         .eq(F_YOUTUBE_VIDEO.video_id.id, videoId)

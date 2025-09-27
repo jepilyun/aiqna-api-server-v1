@@ -6,7 +6,7 @@ import {
   TSqlYoutubeVideoProcessingLogInsert,
   TSqlYoutubeVideoProcessingLogUpdate,
 } from "aiqna_common_v1";
-import supabase from "../../config/supabase.js";
+import sbdb from "../../config/supabase.js";
 import { ErrorYoutubeVideoProcessingLogDuplicate } from "../../errors/error-youtube-video-processing-log.js";
 
 /**
@@ -26,7 +26,7 @@ export default class DBSbYoutubeVideoProcessingLog {
     limit: number = 36,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
     try {
-      const query = supabase
+      const query = sbdb
         .from(SQL_DB_TABLE.youtube_video_processing_logs)
         .select("*", { count: "exact" })
         .order(F_YOUTUBE_VIDEO_PROCESSING_LOG.created_at.id, { ascending: false })
@@ -65,7 +65,7 @@ export default class DBSbYoutubeVideoProcessingLog {
     log: TSqlYoutubeVideoProcessingLogInsert,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await sbdb
         .from(SQL_DB_TABLE.youtube_video_processing_logs)
         .insert(log)
         .select()
@@ -105,7 +105,7 @@ export default class DBSbYoutubeVideoProcessingLog {
     videoId: string,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
     try {
-      const { data, error, count } = await supabase
+      const { data, error, count } = await sbdb
         .from(SQL_DB_TABLE.youtube_video_processing_logs)
         .select("*", { count: "exact" })
         .order(F_YOUTUBE_VIDEO_PROCESSING_LOG.created_at.id, { ascending: true })
@@ -143,7 +143,7 @@ export default class DBSbYoutubeVideoProcessingLog {
     logUpdate: TSqlYoutubeVideoProcessingLogUpdate,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await sbdb
         .from(SQL_DB_TABLE.youtube_video_processing_logs)
         .update(logUpdate)
         .eq(F_YOUTUBE_VIDEO_PROCESSING_LOG.video_id.id, videoId)
@@ -179,7 +179,7 @@ export default class DBSbYoutubeVideoProcessingLog {
     videoId: string,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await sbdb
         .from(SQL_DB_TABLE.youtube_video_processing_logs)
         .delete()
         .eq(F_YOUTUBE_VIDEO_PROCESSING_LOG.video_id.id, videoId)

@@ -19,6 +19,6 @@ if (!supabaseUrl || !supabaseAPIKeyServiceRole) {
   }
 }
 
-const supabase = createClient(supabaseUrl, supabaseAPIKeyServiceRole);
+const sbdb = createClient(supabaseUrl, supabaseAPIKeyServiceRole);
 
-export default supabase;
+export default sbdb;

@@ -7,7 +7,7 @@ import {
   TSqlYoutubeVideoTranscriptUpdate,
   TYouTubeTranscriptSegment,
 } from "aiqna_common_v1";
-import supabase from "../../config/supabase.js";
+import sbdb from "../../config/supabase.js";
 import { ErrorYoutubeVideoTranscriptDuplicate } from "../../errors/error-youtube-video-transcript.js";
 import { extractTextFromYouTubeTranscriptSegment } from "../../youtube/extract-transcript-segment.js";
 
@@ -28,7 +28,7 @@ export default class DBSbYoutubeVideoTranscript {
     limit: number = 36,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoTranscript[]>> {
     try {
-      const query = supabase
+      const query = sbdb
         .from(SQL_DB_TABLE.youtube_video_transcripts)
         .select("*", { count: "exact" })
         .order(F_YOUTUBE_VIDEO_TRANSCRIPT.created_at.id, { ascending: false })
@@ -67,7 +67,7 @@ export default class DBSbYoutubeVideoTranscript {
     log: TSqlYoutubeVideoTranscriptInsert,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoTranscript[]>> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await sbdb
         .from(SQL_DB_TABLE.youtube_video_transcripts)
         .insert(log)
         .select()
@@ -107,7 +107,7 @@ export default class DBSbYoutubeVideoTranscript {
     videoId: string,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoTranscript[]>> {
     try {
-      const { data, error, count } = await supabase
+      const { data, error, count } = await sbdb
         .from(SQL_DB_TABLE.youtube_video_transcripts)
         .select("*", { count: "exact" })
         .order(F_YOUTUBE_VIDEO_TRANSCRIPT.created_at.id, { ascending: true })
@@ -145,7 +145,7 @@ export default class DBSbYoutubeVideoTranscript {
     logUpdate: TSqlYoutubeVideoTranscriptUpdate,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoTranscript[]>> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await sbdb
         .from(SQL_DB_TABLE.youtube_video_transcripts)
         .update(logUpdate)
         .eq(F_YOUTUBE_VIDEO_TRANSCRIPT.video_id.id, videoId)
@@ -181,7 +181,7 @@ export default class DBSbYoutubeVideoTranscript {
     videoId: string,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoTranscript[]>> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await sbdb
         .from(SQL_DB_TABLE.youtube_video_transcripts)
         .delete()
         .eq(F_YOUTUBE_VIDEO_TRANSCRIPT.video_id.id, videoId)

@@ -1,13 +1,15 @@
 import { Request, Response } from "express";
-// import supabase from "../config/supabase.js";
 import { fetchYoutubeVideoTranscriptByLanguage } from "../youtube/fetch-youtube-video-transcript.js";
-// import { saveToPinecone } from "../pinecone/save-to-pinecone";
 import { getClientIp } from "../utils/get-client-ip.js";
 import { extractVideoId } from "../youtube/extract-video-id.js";
 import DBSbYoutubeVideoProcessingLog from "../db-sb-ctrls/db-sb-youtube/db-sb-youtube-video-processing-log.js";
 import { fetchYoutubeVideoApiData } from "../youtube/fetch-youtube-video-api-data.js";
 import DBSbYoutubeVideo from "../db-sb-ctrls/db-sb-youtube/db-sb-youtube-video.js";
 import DBSbYoutubeVideoTranscript, { transformTranscriptForDB } from "../db-sb-ctrls/db-sb-youtube/db-sb-youtube-video-transcript.js";
+import { TPineconeTranscriptData } from "aiqna_common_v1";
+import { convertSegmentsToPineconeFormat } from "../utils/convert-segment-pincone.js";
+import { EmbeddingProviderFactory } from "../utils/embedding/embedding-provider-factory.js";
+import { processWithDifferentProviders } from "../db-pinecone-ctrls/db-pc-save.js";
 
 /**
  * processYoutubeVideoData
@@ -21,93 +23,118 @@ export async function processYoutubeVideoData(videoId: string) {
     console.log("youtubeVideoProcessingLog =====>", youtubeVideoProcessingLog);
 
     if (youtubeVideoProcessingLog.data && youtubeVideoProcessingLog.data.length > 0) {
-      if (!youtubeVideoProcessingLog.data[0].is_api_data_fetched) {
-        // fetch YouTube API data
-        const youtubeVideoApiData = await fetchYoutubeVideoApiData(videoId);
+      const log = youtubeVideoProcessingLog.data[0];
+      
+      // 1. API 데이터 가져오기
+      let youtubeVideoApiData;
+      if (!log.is_api_data_fetched) {
+        youtubeVideoApiData = await fetchYoutubeVideoApiData(videoId);
         console.log("youtubeVideoApiData =====>", youtubeVideoApiData);
         await DBSbYoutubeVideo.upsert(youtubeVideoApiData);
+        
+        // 상태 업데이트
+        await DBSbYoutubeVideoProcessingLog.updateDetailByVideoId(videoId, {
+          video_id: videoId,
+          is_api_data_fetched: true
+        });
+      } else {
+        // 이미 저장된 데이터 가져오기
+        const existingVideo = await DBSbYoutubeVideo.selectByVideoId(videoId);
+        youtubeVideoApiData = existingVideo.data?.[0];
       }
 
-      if (!youtubeVideoProcessingLog.data[0].is_transcript_fetched) {
-        // 여러 언어 시도 (에러 핸들링 포함)
-        await saveMultipleLanguageTranscripts(videoId, ['en', 'ko']);
+      // 2. 트랜스크립트 가져오기
+      let transcripts: TPineconeTranscriptData[] = [];
+      if (!log.is_transcript_fetched) {
+        transcripts = await saveMultipleLanguageTranscripts(videoId, ['en', 'ko']);
+        
+        // 상태 업데이트
+        await DBSbYoutubeVideoProcessingLog.updateDetailByVideoId(videoId, {
+          video_id: videoId,
+          is_transcript_fetched: true
+        });
+      } else {
+        // 이미 저장된 트랜스크립트 가져오기
+        const existingTranscripts = await DBSbYoutubeVideoTranscript.selectByVideoId(videoId);
+        transcripts = existingTranscripts.data?.map(t => ({
+          videoId,
+          language: t.language,
+          segments: convertSegmentsToPineconeFormat(t.segments_json)
+        })) || [];
       }
 
-      if (!youtubeVideoProcessingLog.data[0].is_pinecone_processed) {
-        // save to Pinecone
+      // 3. Pinecone 저장
+      if (!log.is_pinecone_processed && youtubeVideoApiData && transcripts.length > 0) {
+        const provider = EmbeddingProviderFactory.createProvider('openai');
+        await processWithDifferentProviders(videoId, transcripts, youtubeVideoApiData);
+        
+        // 상태 업데이트
+        await DBSbYoutubeVideoProcessingLog.updateDetailByVideoId(videoId, {
+          video_id: videoId,
+          is_pinecone_processed: true
+        });
       }
+      
     } else {
       // 새로 생성
       const youtubeVideoApiData = await fetchYoutubeVideoApiData(videoId);
       console.log("youtubeVideoApiData =====>", youtubeVideoApiData);
       await DBSbYoutubeVideo.upsert(youtubeVideoApiData);
+      
+      // 처리 로그 생성
+      await DBSbYoutubeVideoProcessingLog.insert({
+        video_id: videoId,
+        processing_status: 'processing',
+        is_api_data_fetched: true,
+        is_transcript_fetched: false,
+        is_pinecone_processed: false
+      });
   
       // 트랜스크립트 가져오기
-      // 여러 언어 시도 (에러 핸들링 포함)
-      await saveMultipleLanguageTranscripts(videoId, ['en', 'ko']);
+      const transcripts = await saveMultipleLanguageTranscripts(videoId, ['en', 'ko']);
       
-      // save to Pinecone
+      // 상태 업데이트
+      await DBSbYoutubeVideoProcessingLog.updateDetailByVideoId(videoId, {
+        video_id: videoId,
+        processing_status: 'processing',
+        is_transcript_fetched: true
+      });
+      
+      // Pinecone 저장
+      const provider = EmbeddingProviderFactory.createProvider('openai');
+      await saveToPineconeWithProvider(
+        transcripts,
+        youtubeVideoApiData,
+        provider,
+        'text-embedding-3-small',
+        'youtube-transcripts'
+      );
+      
+      // 상태 업데이트
+      await DBSbYoutubeVideoProcessingLog.updateDetailByVideoId(videoId, {
+        video_id: videoId,
+        processing_status: 'processing',
+        is_pinecone_processed: true
+      });
     }
+    
+    return { success: true, videoId };
+    
   } catch (error: unknown) {
     const err = error as Error;
     throw new Error(`Database query error: ${err.message}`);
   }
-
-  // let transcriptData: {
-  //   videoTitle: string;
-  //   transcript: TranscriptSegment[];
-  // } | null = null;
-  // let videoMetadata: TYouTubeVideoMetadata | null = null;
-
-  // 5. is_pinecone_saved_index_01이 false이면 Pinecone에 저장
-  // if (!videoRecord.is_pinecone_saved_index_01 && transcriptData) {
-  //   console.log(`Saving to Pinecone for video ${videoId}...`);
-  //   await saveToPinecone(
-  //     videoId,
-  //     transcriptData.transcript,
-  //     transcriptData.videoTitle,
-  //   );
-
-  //   // Pinecone 저장 완료 표시
-  //   const { error: updateError } = await supabase
-  //     .from("videos")
-  //     .update({
-  //       is_pinecone_saved_index_01: true,
-  //       updated_at: new Date().toISOString(),
-  //     })
-  //     .eq("video_id", videoId);
-
-  //   if (updateError) {
-  //     throw new Error(
-  //       `Failed to update Pinecone status: ${updateError.message}`,
-  //     );
-  //   }
-
-  //   console.log(`Pinecone processing completed for video ${videoId}`);
-  // }
-
-  // return {
-  //   videoTitle:
-  //     transcriptData?.videoTitle || videoRecord.video_title || "Unknown Title",
-  //   transcript: transcriptData?.transcript || [],
-  //   metadata: videoMetadata || videoRecord.video_metadata || {},
-  //   processingStatus: {
-  //     transcriptSaved: true,
-  //     metadataFetched: true,
-  //     pineconeProcessed: true,
-  //   },
-  // };
 }
 
 
 /**
- * 여러 언어의 트랜스크립트를 저장 (에러 핸들링 포함)
+ * 여러 언어의 트랜스크립트를 저장하고 결과 반환
  */
-async function saveMultipleLanguageTranscripts(
+export async function saveMultipleLanguageTranscripts(
   videoId: string,
   languages: string[] = ['ko', 'en']
-): Promise<void> {
-  const savedLanguages: string[] = [];
+): Promise<TPineconeTranscriptData[]> {
+  const savedTranscripts: TPineconeTranscriptData[] = [];
   
   for (const lang of languages) {
     try {
@@ -116,29 +143,41 @@ async function saveMultipleLanguageTranscripts(
       const transcriptData = transformTranscriptForDB(
         videoId, 
         transcriptResult,
-        transcriptResult.language // 실제 반환된 언어 사용
+        transcriptResult.language
       );
       
       await DBSbYoutubeVideoTranscript.insert(transcriptData);
-      savedLanguages.push(transcriptResult.language);
+      
+      // segments_json을 Pinecone 형식으로 변환
+      const pineconeSegments = convertSegmentsToPineconeFormat(transcriptData.segments_json);
+      
+      // 저장된 트랜스크립트 데이터 반환용으로 추가
+      savedTranscripts.push({
+        videoId,
+        language: transcriptData.language || transcriptResult.language,
+        segments: pineconeSegments
+      });
       
       console.log(`✓ ${transcriptResult.language} 트랜스크립트 저장 완료`);
       
     } catch (error) {
       const err = error as Error;
       console.log(`✗ ${lang} 트랜스크립트 없음: ${err.message}`);
-      // 에러를 throw하지 않고 계속 진행
       continue;
     }
   }
   
-  // 하나도 저장 못했으면 에러
-  if (savedLanguages.length === 0) {
+  if (savedTranscripts.length === 0) {
     throw new Error('No transcripts available for any language');
   }
   
-  console.log(`총 ${savedLanguages.length}개 언어 저장 완료: ${savedLanguages.join(', ')}`);
+  console.log(`총 ${savedTranscripts.length}개 언어 저장 완료`);
+  return savedTranscripts;
 }
+
+
+
+
 
 /**
  * YouTube Video Process Controller
