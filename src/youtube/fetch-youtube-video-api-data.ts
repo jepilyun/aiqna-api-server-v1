@@ -42,7 +42,6 @@ export async function fetchYoutubeVideoApiData(videoId: string) {
 
     // PostgreSQL 함수가 기대하는 형식 그대로 반환
     return response.data.items[0];
-    
   } catch (error) {
     console.error("Error fetching video metadata:", error);
     throw error;
