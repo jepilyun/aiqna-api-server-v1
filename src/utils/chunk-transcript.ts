@@ -11,34 +11,61 @@ export function chunkTranscript(
   maxChunkSize: number = 1000,
   overlapSize: number = 200
 ): Array<{ text: string; startTime: number; endTime: number }> {
+  // 1. 입력 검증 로그 (맨 앞)
+  console.log('\n=== chunkTranscript Debug ===');
+  console.log('Input segments count:', segments?.length || 0);
+  
+  if (!segments || segments.length === 0) {
+    console.warn('⚠️  Empty or undefined segments array');
+    console.log('============================\n');
+    return [];
+  }
+  
+  console.log('First segment sample:', {
+    text: segments[0]?.text?.substring(0, 50) + '...',
+    start: segments[0]?.start,
+    duration: segments[0]?.duration,
+    hasText: !!segments[0]?.text,
+    hasStart: segments[0]?.start !== undefined,
+    hasDuration: segments[0]?.duration !== undefined
+  });
+  
   const chunks: Array<{ text: string; startTime: number; endTime: number }> = [];
   
   let currentChunk = '';
-  // let currentStartTime = 0;
   let currentEndTime = 0;
   let chunkStartTime = segments[0]?.start || 0;
   
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i];
+    
+    // 2. 세그먼트 데이터 검증 (첫 5개만)
+    if (i < 5) {
+      console.log(`Segment ${i}:`, {
+        text: segment.text ? `${segment.text.substring(0, 30)}...` : 'NO TEXT',
+        start: segment.start,
+        duration: segment.duration
+      });
+    }
+    
     const segmentText = segment.text + ' ';
     
-    // 첫 세그먼트이거나 chunk가 비어있으면 시작 시간 설정
     if (currentChunk.length === 0) {
       chunkStartTime = segment.start;
     }
     
     currentEndTime = segment.start + segment.duration;
     
-    // chunk 크기 체크
     if (currentChunk.length + segmentText.length > maxChunkSize && currentChunk.length > 0) {
-      // 현재 chunk 저장
+      // 3. chunk 생성 로그
+      console.log(`Creating chunk: ${currentChunk.length} chars, time ${chunkStartTime}-${currentEndTime}`);
+      
       chunks.push({
         text: currentChunk.trim(),
         startTime: chunkStartTime,
         endTime: currentEndTime
       });
       
-      // overlap을 위해 마지막 부분 일부를 다음 chunk로 이월
       const overlapText = currentChunk.slice(-overlapSize);
       currentChunk = overlapText + segmentText;
       chunkStartTime = segment.start;
@@ -47,14 +74,19 @@ export function chunkTranscript(
     }
   }
   
-  // 마지막 chunk 추가
+  // 4. 마지막 chunk
   if (currentChunk.trim().length > 0) {
+    console.log(`Creating final chunk: ${currentChunk.length} chars`);
     chunks.push({
       text: currentChunk.trim(),
       startTime: chunkStartTime,
       endTime: currentEndTime
     });
   }
+  
+  // 5. 결과 요약 (맨 끝)
+  console.log(`\n✅ Generated ${chunks.length} chunks from ${segments.length} segments`);
+  console.log('============================\n');
   
   return chunks;
 }

@@ -96,6 +96,19 @@ export default class DBSbYoutubeVideoProcessingLog {
     }
   }
 
+  // ✅ Upsert 메서드 추가
+  static async upsert(videoId: string, data: TSqlYoutubeVideoProcessingLogInsert) {
+    const { data: existing } = await DBSbYoutubeVideoProcessingLog.selectByVideoId(data.video_id);
+    
+    if (existing && existing.length > 0) {
+      // 이미 존재하면 업데이트
+      return DBSbYoutubeVideoProcessingLog.updateDetailByVideoId(videoId, data);
+    } else {
+      // 없으면 삽입
+      return DBSbYoutubeVideoProcessingLog.insert(data);
+    }
+  }
+
   /**
    * Youtube 비디오 처리 로그 목록 검색 (name, name_ko)
    * @param videoId 검색 키워드

@@ -1,5 +1,6 @@
 import express from "express";
-import { ctrlProcessYoutubeVideo } from "../ctrls/ctrl-process-youtube-video.js";
+import { ctrlProcessYoutubeVideo } from "../route-ctrls/ctrl-process-youtube-video.js";
+import { ctrlVideoStatus } from "../route-ctrls/ctrl-video-status.js";
 
 /*
  * Main Content Routes
@@ -11,6 +12,13 @@ const router = express.Router();
  * MAP CATEGORY CONTENT LIST BY CONTENT CODE
  * POST /api/main/process-youtube-video
  */
-router.get("/process-youtube-video", ctrlProcessYoutubeVideo);
+router.post('/main/process-video', ctrlProcessYoutubeVideo);
+
+/**
+ * YouTube Video Status
+ * GET /api/main/video-status/:videoId
+ */
+router.get('/main/video-status/:videoId', ctrlVideoStatus);
+
 
 export default router;

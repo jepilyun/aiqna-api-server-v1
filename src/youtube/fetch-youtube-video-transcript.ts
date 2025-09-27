@@ -1,5 +1,6 @@
 import { TYouTubeTranscriptSegment } from 'aiqna_common_v1';
 import Innertube from 'youtubei.js';
+import { sleep } from '../utils/sleep.js';
 
 /**
  * 자막 트랙 타입 정의
@@ -16,6 +17,69 @@ interface CaptionTrack {
 
 interface CaptionsData {
   caption_tracks?: CaptionTrack[];
+}
+
+/**
+ * 재시도 가능한 fetch 함수
+ */
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit = {},
+  maxRetries: number = 3,
+  retryDelay: number = 1000
+): Promise<Response> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: AbortSignal.timeout(10000) // 10초 타임아웃
+      });
+
+      // Rate Limit 체크
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('Retry-After');
+        const waitTime = retryAfter 
+          ? parseInt(retryAfter) * 1000 
+          : retryDelay * Math.pow(2, attempt); // 지수 백오프
+        
+        if (attempt < maxRetries) {
+          console.log(`Rate limited. Retrying after ${waitTime}ms...`);
+          await sleep(waitTime);
+          continue;
+        }
+        throw new Error('Rate limit exceeded after max retries');
+      }
+
+      // 서버 에러 재시도
+      if (response.status >= 500 && attempt < maxRetries) {
+        console.log(`Server error ${response.status}. Retry ${attempt + 1}/${maxRetries}...`);
+        await sleep(retryDelay * Math.pow(2, attempt));
+        continue;
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return response;
+
+    } catch (error) {
+      const isLastAttempt = attempt === maxRetries;
+      const isRetryable = 
+        error instanceof TypeError || // 네트워크 오류
+        (error as Error).message.includes('timeout') ||
+        (error as Error).message.includes('ECONNRESET');
+
+      if (!isRetryable || isLastAttempt) {
+        throw error;
+      }
+
+      console.log(`Network error. Retry ${attempt + 1}/${maxRetries}...`);
+      await sleep(retryDelay * Math.pow(2, attempt));
+    }
+  }
+
+  throw new Error('Max retries exceeded');
 }
 
 /**
@@ -61,26 +125,31 @@ export async function fetchYoutubeVideoTranscriptByLanguage(
     let transcriptData;
     let actualLanguage = targetLanguage;
     
-    // ✅ 여기에 추가
     if (targetLanguage && captions?.caption_tracks) {
       const targetTrack = captions.caption_tracks.find(
         (track: CaptionTrack) => track.language_code === targetLanguage
       );
       
       if (targetTrack && targetTrack.base_url) {
-        // base_url에서 직접 자막 데이터 가져오기
-        const response = await fetch(targetTrack.base_url);
-        const transcriptText = await response.text();
-        
-        // XML 파싱
-        const segments = parseTranscriptFromUrl(transcriptText);
-        
-        return {
-          videoTitle,
-          language: targetLanguage,
-          transcript: segments,
-          availableLanguages
-        };
+        try {
+          // 재시도 로직 적용
+          const response = await fetchWithRetry(targetTrack.base_url, {}, 3, 1000);
+          const transcriptText = await response.text();
+          
+          const segments = parseTranscriptFromUrl(transcriptText);
+          
+          return {
+            videoTitle,
+            language: targetLanguage,
+            transcript: segments,
+            availableLanguages
+          };
+        } catch (fetchError) {
+          console.error(`Failed to fetch transcript URL after retries:`, fetchError);
+          throw new Error(
+            `Transcript fetch failed for ${targetLanguage}: ${(fetchError as Error).message}`
+          );
+        }
       } else {
         throw new Error(`Transcript not available in language: ${targetLanguage}`);
       }
@@ -96,7 +165,7 @@ export async function fetchYoutubeVideoTranscriptByLanguage(
         'en';
     }
     
-    // 기존 파싱 로직 (기본 트랜스크립트용)
+    // 기존 파싱 로직...
     const transcriptObj = transcriptData as unknown as {
       transcript?: { content?: { body?: { initial_segments?: unknown[] } } };
       content?: { body?: { initial_segments?: unknown[] } };

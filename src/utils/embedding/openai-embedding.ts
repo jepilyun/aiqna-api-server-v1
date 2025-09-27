@@ -17,7 +17,7 @@ export class OpenAIEmbeddingProvider implements IEmbeddingProvider {
   getDimensions(model?: string): number {
     const modelName = model || this.getDefaultModel();
     const dimensionMap: Record<string, number> = {
-      'text-embedding-3-small': 1536,
+      'text-embedding-3-small': 512,
       'text-embedding-3-large': 3072,
       'text-embedding-ada-002': 1536
     };
@@ -26,6 +26,7 @@ export class OpenAIEmbeddingProvider implements IEmbeddingProvider {
   
   async generateEmbedding(text: string, model?: string): Promise<number[]> {
     const modelName = model || this.getDefaultModel();
+    const dimensions = this.getDimensions(modelName);  // ✅ 차원 가져오기
     
     const response = await fetch('https://api.openai.com/v1/embeddings', {
       method: 'POST',
@@ -35,7 +36,8 @@ export class OpenAIEmbeddingProvider implements IEmbeddingProvider {
       },
       body: JSON.stringify({
         model: modelName,
-        input: text
+        input: text,
+        dimensions: dimensions
       })
     });
     
