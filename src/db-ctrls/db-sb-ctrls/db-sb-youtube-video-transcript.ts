@@ -1,15 +1,14 @@
 import {
   F_YOUTUBE_VIDEO_TRANSCRIPT,
+  LIST_LIMIT,
   ResponseDBSelect,
   SQL_DB_TABLE,
   TSqlYoutubeVideoTranscript,
   TSqlYoutubeVideoTranscriptInsert,
   TSqlYoutubeVideoTranscriptUpdate,
-  TYouTubeTranscriptSegment,
 } from "aiqna_common_v1";
-import sbdb from "../../config/supabase.js";
+import supabaseClient from "../../config/supabase-client.js";
 import { ErrorYoutubeVideoTranscriptDuplicate } from "../../errors/error-youtube-video-transcript.js";
-import { extractTextFromYouTubeTranscriptSegment } from "../../youtube/extract-transcript-segment.js";
 
 /**
  * DBSbYoutubeVideoTranscript
@@ -24,11 +23,11 @@ export default class DBSbYoutubeVideoTranscript {
    * @returns Youtube 비디오 트랜스크립트
    */
   static async selectList(
-    start: number,
-    limit: number = 36,
+    start: number = LIST_LIMIT.start,
+    limit: number = LIST_LIMIT.default,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoTranscript[]>> {
     try {
-      const query = sbdb
+      const query = supabaseClient
         .from(SQL_DB_TABLE.youtube_video_transcripts)
         .select("*", { count: "exact" })
         .order(F_YOUTUBE_VIDEO_TRANSCRIPT.created_at.id, { ascending: false })
@@ -61,13 +60,13 @@ export default class DBSbYoutubeVideoTranscript {
   /**
    * Youtube 비디오 트랜스크립트 등록 기능
    * @param log Youtube 비디오 트랜스크립트 정보
-   * @returns 
+   * @returns
    */
   static async insert(
     log: TSqlYoutubeVideoTranscriptInsert,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoTranscript[]>> {
     try {
-      const { data, error } = await sbdb
+      const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.youtube_video_transcripts)
         .insert(log)
         .select()
@@ -107,7 +106,7 @@ export default class DBSbYoutubeVideoTranscript {
     videoId: string,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoTranscript[]>> {
     try {
-      const { data, error, count } = await sbdb
+      const { data, error, count } = await supabaseClient
         .from(SQL_DB_TABLE.youtube_video_transcripts)
         .select("*", { count: "exact" })
         .order(F_YOUTUBE_VIDEO_TRANSCRIPT.created_at.id, { ascending: true })
@@ -145,7 +144,7 @@ export default class DBSbYoutubeVideoTranscript {
     logUpdate: TSqlYoutubeVideoTranscriptUpdate,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoTranscript[]>> {
     try {
-      const { data, error } = await sbdb
+      const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.youtube_video_transcripts)
         .update(logUpdate)
         .eq(F_YOUTUBE_VIDEO_TRANSCRIPT.video_id.id, videoId)
@@ -181,7 +180,7 @@ export default class DBSbYoutubeVideoTranscript {
     videoId: string,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoTranscript[]>> {
     try {
-      const { data, error } = await sbdb
+      const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.youtube_video_transcripts)
         .delete()
         .eq(F_YOUTUBE_VIDEO_TRANSCRIPT.video_id.id, videoId)
@@ -207,46 +206,4 @@ export default class DBSbYoutubeVideoTranscript {
       );
     }
   }
-}
-
-
-
-/**
- * fetchYoutubeVideoTranscript 결과를 DB insert 형식으로 변환
- * 
- * @param videoId - YouTube 비디오 ID
- * @param transcriptResult - fetchYoutubeVideoTranscript 반환값
- * @param language - 트랜스크립트 언어 (기본값: 'ko')
- * @returns DB insert용 데이터
- */
-export function transformTranscriptForDB(
-  videoId: string,
-  transcriptResult: { videoTitle: string; transcript: TYouTubeTranscriptSegment[] },
-  language: string = 'ko'
-): TSqlYoutubeVideoTranscriptInsert {
-  const { transcript } = transcriptResult;
-  
-  // 전체 텍스트 추출 (검색용)
-  const fullText = transcript
-    .map(seg => extractTextFromYouTubeTranscriptSegment(seg))
-    .filter(text => text.trim())
-    .join(' ');
-  
-  // 총 길이 계산 (마지막 세그먼트의 end_ms)
-  const totalDuration = transcript.length > 0
-    ? Math.max(
-        ...transcript.map(seg => 
-          parseFloat(seg.transcript_segment_renderer.end_ms || '0') / 1000
-        )
-      )
-    : 0;
-  
-  return {
-    video_id: videoId,
-    language,
-    total_duration: totalDuration,
-    segment_count: transcript.length,
-    segments_json: transcript, // JSONB 컬럼에 그대로 저장
-    full_text: fullText
-  };
 }

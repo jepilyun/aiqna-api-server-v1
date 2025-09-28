@@ -1,4 +1,4 @@
-import { google } from 'googleapis';
+import { google, youtube_v3 } from 'googleapis';
 
 
 /**
@@ -18,7 +18,7 @@ import { google } from 'googleapis';
  * - 반환되는 데이터는 YouTube Data API v3의 video 리소스 형식을 따릅니다
  * - PostgreSQL 함수 등 외부 시스템과의 통합을 위해 원본 형식 그대로 반환합니다
  */
-export async function fetchYoutubeVideoApiData(videoId: string) {
+export async function fetchYoutubeVideoApiData(videoId: string): Promise<youtube_v3.Schema$Video> {
   try {
     const youtube = google.youtube({
       version: 'v3',

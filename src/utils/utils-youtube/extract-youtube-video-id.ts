@@ -11,7 +11,7 @@
  * @param urlOrId - YouTube URL 또는 비디오 ID 문자열
  * @returns 추출된 11자리 비디오 ID 또는 null (추출 실패 시)
  */
-export const extractVideoId = (urlOrId: string): string | null => {
+export const extractYouTubeVideoId = (urlOrId: string): string | null => {
   // 빈 값이나 null 체크
   if (!urlOrId) return null;
 

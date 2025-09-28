@@ -10,14 +10,14 @@ import DBSbYoutubeVideoProcessingLog from "../db-ctrls/db-sb-ctrls/db-sb-youtube
 export async function ctrlVideoStatus(req: Request, res: Response) {
   try {
     const { videoId } = req.params;
-    
+
     const log = await DBSbYoutubeVideoProcessingLog.selectByVideoId(videoId);
     const status = log.data?.[0];
 
     if (!status) {
       return res.status(404).json({
         error: "Video not found",
-        videoId
+        videoId,
       });
     }
 
@@ -27,19 +27,18 @@ export async function ctrlVideoStatus(req: Request, res: Response) {
       progress: {
         api_fetched: status.is_api_data_fetched || false,
         transcript_fetched: status.is_transcript_fetched || false,
-        pinecone_processed: status.is_pinecone_processed || false
+        pinecone_processed: status.is_pinecone_processed || false,
       },
       error: status.error_message || null,
-      updated_at: status.updated_at
+      updated_at: status.updated_at,
     });
-
   } catch (error: unknown) {
     const err = error as Error;
-    console.error('Status check failed:', err);
-    
+    console.error("Status check failed:", err);
+
     return res.status(500).json({
       error: "Failed to get video status",
-      message: err.message
+      message: err.message,
     });
   }
 }

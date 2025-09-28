@@ -1,12 +1,13 @@
 import {
   F_YOUTUBE_VIDEO_PROCESSING_LOG,
+  LIST_LIMIT,
   ResponseDBSelect,
   SQL_DB_TABLE,
   TSqlYoutubeVideoProcessingLog,
   TSqlYoutubeVideoProcessingLogInsert,
   TSqlYoutubeVideoProcessingLogUpdate,
 } from "aiqna_common_v1";
-import sbdb from "../../config/supabase.js";
+import supabaseClient from "../../config/supabase-client.js";
 import { ErrorYoutubeVideoProcessingLogDuplicate } from "../../errors/error-youtube-video-processing-log.js";
 
 /**
@@ -22,18 +23,22 @@ export default class DBSbYoutubeVideoProcessingLog {
    * @returns Youtube 비디오 처리 로그
    */
   static async selectList(
-    start: number,
-    limit: number = 36,
+    start: number = LIST_LIMIT.start,
+    limit: number = LIST_LIMIT.default,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
     try {
-      const query = sbdb
+      const query = supabaseClient
         .from(SQL_DB_TABLE.youtube_video_processing_logs)
         .select("*", { count: "exact" })
-        .order(F_YOUTUBE_VIDEO_PROCESSING_LOG.created_at.id, { ascending: false })
+        .order(F_YOUTUBE_VIDEO_PROCESSING_LOG.created_at.id, {
+          ascending: false,
+        })
         .range(start, start + limit - 1);
 
       const { data, error, count } = await query
-        .order(F_YOUTUBE_VIDEO_PROCESSING_LOG.created_at.id, { ascending: true })
+        .order(F_YOUTUBE_VIDEO_PROCESSING_LOG.created_at.id, {
+          ascending: true,
+        })
         .overrideTypes<TSqlYoutubeVideoProcessingLog[]>();
 
       if (error) {
@@ -65,7 +70,7 @@ export default class DBSbYoutubeVideoProcessingLog {
     log: TSqlYoutubeVideoProcessingLogInsert,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
     try {
-      const { data, error } = await sbdb
+      const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.youtube_video_processing_logs)
         .insert(log)
         .select()
@@ -96,10 +101,19 @@ export default class DBSbYoutubeVideoProcessingLog {
     }
   }
 
-  // ✅ Upsert 메서드 추가
-  static async upsert(videoId: string, data: TSqlYoutubeVideoProcessingLogInsert) {
-    const { data: existing } = await DBSbYoutubeVideoProcessingLog.selectByVideoId(data.video_id);
-    
+  /**
+   * Youtube 비디오 처리 로그 등록 기능
+   * @param videoId 비디오 아이디
+   * @param data Youtube 비디오 처리 로그 정보
+   * @returns Youtube 비디오 처리 로그 정보
+   */
+  static async upsert(
+    videoId: string,
+    data: TSqlYoutubeVideoProcessingLogInsert,
+  ) {
+    const { data: existing } =
+      await DBSbYoutubeVideoProcessingLog.selectByVideoId(data.video_id);
+
     if (existing && existing.length > 0) {
       // 이미 존재하면 업데이트
       return DBSbYoutubeVideoProcessingLog.updateDetailByVideoId(videoId, data);
@@ -118,10 +132,12 @@ export default class DBSbYoutubeVideoProcessingLog {
     videoId: string,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
     try {
-      const { data, error, count } = await sbdb
+      const { data, error, count } = await supabaseClient
         .from(SQL_DB_TABLE.youtube_video_processing_logs)
         .select("*", { count: "exact" })
-        .order(F_YOUTUBE_VIDEO_PROCESSING_LOG.created_at.id, { ascending: true })
+        .order(F_YOUTUBE_VIDEO_PROCESSING_LOG.created_at.id, {
+          ascending: true,
+        })
         .eq(F_YOUTUBE_VIDEO_PROCESSING_LOG.video_id.id, videoId)
         .overrideTypes<TSqlYoutubeVideoProcessingLog[]>();
 
@@ -156,7 +172,7 @@ export default class DBSbYoutubeVideoProcessingLog {
     logUpdate: TSqlYoutubeVideoProcessingLogUpdate,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
     try {
-      const { data, error } = await sbdb
+      const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.youtube_video_processing_logs)
         .update(logUpdate)
         .eq(F_YOUTUBE_VIDEO_PROCESSING_LOG.video_id.id, videoId)
@@ -192,7 +208,7 @@ export default class DBSbYoutubeVideoProcessingLog {
     videoId: string,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
     try {
-      const { data, error } = await sbdb
+      const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.youtube_video_processing_logs)
         .delete()
         .eq(F_YOUTUBE_VIDEO_PROCESSING_LOG.video_id.id, videoId)

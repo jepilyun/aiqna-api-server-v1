@@ -7,8 +7,9 @@ import {
   TSqlYoutubeVideoDetailInsert,
   TSqlYoutubeVideoDetailUpdate,
   TSqlYoutubeVideoList,
+  LIST_LIMIT,
 } from "aiqna_common_v1";
-import sbdb from "../../config/supabase.js";
+import supabaseClient from "../../config/supabase-client.js";
 import { ErrorYoutubeVideoDuplicate } from "../../errors/error-youtube-video.js";
 import { youtube_v3 } from "googleapis";
 
@@ -25,11 +26,11 @@ export default class DBSbYoutubeVideo {
    * @returns Youtube 비디오
    */
   static async selectList(
-    start: number,
-    limit: number = 36,
+    start: number = LIST_LIMIT.start,
+    limit: number = LIST_LIMIT.default,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoList[]>> {
     try {
-      const query = sbdb
+      const query = supabaseClient
         .from(SQL_DB_TABLE.youtube_videos)
         .select(SQL_DB_COLUMNS_YOUTUBE_VIDEO_LIST.join(","), { count: "exact" })
         .order(F_YOUTUBE_VIDEO.created_at.id, { ascending: false })
@@ -62,13 +63,13 @@ export default class DBSbYoutubeVideo {
   /**
    * Youtube 비디오 등록 기능
    * @param log Youtube 비디오 정보
-   * @returns 
+   * @returns
    */
   static async insert(
     log: TSqlYoutubeVideoDetailInsert,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
     try {
-      const { data, error } = await sbdb
+      const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.youtube_videos)
         .insert(log)
         .select()
@@ -103,13 +104,13 @@ export default class DBSbYoutubeVideo {
   /**
    * Youtube 비디오 등록 기능
    * @param json Youtube 비디오 정보
-   * @returns 
+   * @returns
    */
   static async upsert(
     json: youtube_v3.Schema$Video,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
     try {
-      const { data, error } = await sbdb
+      const { data, error } = await supabaseClient
         .rpc("upsert_youtube_video_api_data", { p_video_data: json })
         .select()
         .overrideTypes<TSqlYoutubeVideoDetail[]>();
@@ -143,7 +144,7 @@ export default class DBSbYoutubeVideo {
     videoId: string,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
     try {
-      const { data, error, count } = await sbdb
+      const { data, error, count } = await supabaseClient
         .from(SQL_DB_TABLE.youtube_videos)
         .select("*", { count: "exact" })
         .order(F_YOUTUBE_VIDEO.created_at.id, { ascending: true })
@@ -181,7 +182,7 @@ export default class DBSbYoutubeVideo {
     logUpdate: TSqlYoutubeVideoDetailUpdate,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
     try {
-      const { data, error } = await sbdb
+      const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.youtube_videos)
         .update(logUpdate)
         .eq(F_YOUTUBE_VIDEO.video_id.id, videoId)
@@ -217,7 +218,7 @@ export default class DBSbYoutubeVideo {
     videoId: string,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
     try {
-      const { data, error } = await sbdb
+      const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.youtube_videos)
         .delete()
         .eq(F_YOUTUBE_VIDEO.video_id.id, videoId)

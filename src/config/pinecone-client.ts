@@ -9,9 +9,12 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const apiKey = process.env.PINECONE_API_KEY;
+
 if (!apiKey) throw new Error("PINECONE_API_KEY 가 설정되지 않았습니다.");
 
-export const pcdb = new Pinecone({ apiKey });
+const pineconeClient = new Pinecone({ apiKey });
+
+export default pineconeClient;
 
 // 메타데이터 타입들 (참고용)
 // type LooseMetadata = Record<string, RecordMetadataValue>;

@@ -1,12 +1,13 @@
 import {
   F_PINECONE_PROCESSING_LOG,
+  LIST_LIMIT,
   ResponseDBSelect,
   SQL_DB_TABLE,
   TSqlPineconeProcessingLog,
   TSqlPineconeProcessingLogInsert,
   TSqlPineconeProcessingLogUpdate,
 } from "aiqna_common_v1";
-import sbdb from "../../config/supabase.js";
+import supabaseClient from "../../config/supabase-client.js";
 import {
   ErrorPineconeProcessingLogDuplicate,
   ErrorPineconeProcessingLogForeignKey,
@@ -25,11 +26,11 @@ export default class DBSbPineconeProcessingLog {
    * @returns Pinecone 처리 로그
    */
   static async selectList(
-    start: number,
-    limit: number = 36,
+    start: number = LIST_LIMIT.start,
+    limit: number = LIST_LIMIT.default,
   ): Promise<ResponseDBSelect<TSqlPineconeProcessingLog[]>> {
     try {
-      const query = sbdb
+      const query = supabaseClient
         .from(SQL_DB_TABLE.pinecone_processing_logs)
         .select("*", { count: "exact" })
         .order(F_PINECONE_PROCESSING_LOG.created_at.id, { ascending: false })
@@ -68,7 +69,7 @@ export default class DBSbPineconeProcessingLog {
     log: TSqlPineconeProcessingLogInsert,
   ): Promise<ResponseDBSelect<TSqlPineconeProcessingLog[]>> {
     try {
-      const { data, error } = await sbdb
+      const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.pinecone_processing_logs)
         .insert(log)
         .select()
@@ -111,7 +112,7 @@ export default class DBSbPineconeProcessingLog {
     videoId: string,
   ): Promise<ResponseDBSelect<TSqlPineconeProcessingLog[]>> {
     try {
-      const { data, error, count } = await sbdb
+      const { data, error, count } = await supabaseClient
         .from(SQL_DB_TABLE.pinecone_processing_logs)
         .select("*", { count: "exact" })
         .order(F_PINECONE_PROCESSING_LOG.created_at.id, { ascending: true })
@@ -149,7 +150,7 @@ export default class DBSbPineconeProcessingLog {
     logUpdate: TSqlPineconeProcessingLogUpdate,
   ): Promise<ResponseDBSelect<TSqlPineconeProcessingLog[]>> {
     try {
-      const { data, error } = await sbdb
+      const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.pinecone_processing_logs)
         .update(logUpdate)
         .eq(F_PINECONE_PROCESSING_LOG.video_id.id, videoId)
@@ -185,7 +186,7 @@ export default class DBSbPineconeProcessingLog {
     videoId: string,
   ): Promise<ResponseDBSelect<TSqlPineconeProcessingLog[]>> {
     try {
-      const { data, error } = await sbdb
+      const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.pinecone_processing_logs)
         .delete()
         .eq(F_PINECONE_PROCESSING_LOG.video_id.id, videoId)

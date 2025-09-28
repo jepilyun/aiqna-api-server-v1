@@ -6,7 +6,7 @@ import {
   TLanguage,
 } from "aiqna_common_v1";
 
-import sbdb from "../../config/supabase.js";
+import supabaseClient from "../../config/supabase-client.js";
 
 /**
  * DB Supabase I18n 클래스
@@ -20,7 +20,7 @@ export default class DBSbI18n {
    */
   static async selectAllLanguages(): Promise<ResponseDBSelect<TLanguage[]>> {
     try {
-      const { data, error } = await sbdb
+      const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.languages)
         .select("*");
 
@@ -50,7 +50,7 @@ export default class DBSbI18n {
    */
   static async selectAllCountries(): Promise<ResponseDBSelect<TCountry[]>> {
     try {
-      const { data, error } = await sbdb
+      const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.countries)
         .select("*");
 
@@ -82,7 +82,7 @@ export default class DBSbI18n {
     ResponseDBSelect<TCountryLanguage[]>
   > {
     try {
-      const { data, error } = await sbdb
+      const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.map_country_languages)
         .select("*");
 
