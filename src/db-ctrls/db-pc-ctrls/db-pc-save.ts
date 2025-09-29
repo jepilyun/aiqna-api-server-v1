@@ -8,6 +8,8 @@ import { chunkTranscript } from "../../utils/chunk-transcript.js";
 import pineconeClient from "../../config/pinecone-client.js";
 import { IEmbeddingProvider } from "../../types/shared.js";
 import { EmbeddingProviderFactory } from "../../utils/utils-embedding/embedding-provider-factory.js";
+import { TExtractedVideoMetadata } from "../../types/shared.js";
+
 
 /**
  * Pinecone 저장 함수 (Provider 기반)
@@ -15,6 +17,7 @@ import { EmbeddingProviderFactory } from "../../utils/utils-embedding/embedding-
 export async function saveToPineconeWithProvider(
   transcripts: TPineconeFullYouTubeTranscript[],
   videoMetadata: TPineconeYouTubeVideoMetadata,
+  extractedMetadata: Map<string, TExtractedVideoMetadata>, // 추가
   provider: IEmbeddingProvider,
   modelName?: string,
   indexName: string = PINECONE_INDEX_NAME.YOUTUBE_TRANSCRIPT_TRAVEL_SEOUL
@@ -24,6 +27,18 @@ export async function saveToPineconeWithProvider(
   const embeddingModel = modelName || provider.getDefaultModel();
 
   for (const transcript of transcripts) {
+    // 해당 언어의 추출된 메타데이터 가져오기
+    const langMetadata = extractedMetadata.get(transcript.language);
+    
+    if (langMetadata) {
+      console.log(`  Found metadata for ${transcript.language}:`, {
+        categories: langMetadata.categories,
+        keywords: langMetadata.keywords.length,
+        locations: langMetadata.locations.length,
+        names: langMetadata.names.length
+      });
+    }
+
     const chunks = chunkTranscript(transcript.segments);
 
     if (chunks.length === 0) {
@@ -35,7 +50,7 @@ export async function saveToPineconeWithProvider(
 
     const vectors = await Promise.all(
       chunks.map(async (chunk, idx) => {
-        // 5. 첫 5개만 상세 로그
+        // 첫 5개만 상세 로그
         if (idx < 5) {
           console.log(
             `  Chunk ${idx}: ${chunk.text.substring(0, 50)}... (${chunk.text.length} chars)`,
@@ -48,7 +63,7 @@ export async function saveToPineconeWithProvider(
         );
         const chunkId = `${videoMetadata.video_id}_${transcript.language}_${idx}`;
 
-        const metadata: Record<string, string | number | boolean> = {
+        const metadata: Record<string, string | number | boolean | string[]> = {
           video_id: videoMetadata.video_id,
           title: videoMetadata.title,
           language: transcript.language,
@@ -63,6 +78,7 @@ export async function saveToPineconeWithProvider(
           created_at: new Date().toISOString(),
         };
 
+        // 기존 비디오 메타데이터
         if (videoMetadata.channel_title) {
           metadata.channel_title = videoMetadata.channel_title;
         }
@@ -85,6 +101,22 @@ export async function saveToPineconeWithProvider(
           metadata.like_count = videoMetadata.like_count;
         }
 
+        // 추출된 메타데이터 추가 (있는 경우만)
+        if (langMetadata) {
+          if (langMetadata.categories.length > 0) {
+            metadata.categories = langMetadata.categories;
+          }
+          if (langMetadata.keywords.length > 0) {
+            metadata.keywords = langMetadata.keywords;
+          }
+          if (langMetadata.locations.length > 0) {
+            metadata.locations = langMetadata.locations;
+          }
+          if (langMetadata.names.length > 0) {
+            metadata.names = langMetadata.names;
+          }
+        }
+
         return {
           id: chunkId,
           values: embedding,
@@ -93,7 +125,7 @@ export async function saveToPineconeWithProvider(
       }),
     );
 
-    // 7. Pinecone 업로드 시작
+    // Pinecone 업로드
     const batchSize = 100;
     const totalBatches = Math.ceil(vectors.length / batchSize);
 
@@ -102,7 +134,8 @@ export async function saveToPineconeWithProvider(
       const batchNum = Math.floor(i / batchSize) + 1;
 
       console.log(
-        `  Batch ${batchNum}/${totalBatches}: uploading ${batch.length} vectors...`,
+        `  Batch ${batchNum}/${totalBatches}: uploading ${batch.length} vectors` +
+        (langMetadata ? ' (with extracted metadata)' : '') + '...'
       );
       await index.upsert(batch);
     }
@@ -133,14 +166,30 @@ const PROVIDER_CONFIGS = [
   // }
 ] as const;
 
+
 export async function processWithDifferentProviders(
   transcripts: TPineconeFullYouTubeTranscript[],
   videoMetadata: TPineconeYouTubeVideoMetadata,
+  extractedMetadata: Map<string, TExtractedVideoMetadata>
 ) {
+  // 메타데이터 로깅
+  console.log("\n=== Extracted Metadata ===");
+  extractedMetadata.forEach((metadata, language) => {
+    console.log(`[${language}]`, {
+      categories: metadata.categories,
+      keywords: metadata.keywords.slice(0, 5),
+      locations: metadata.locations,
+      names: metadata.names.slice(0, 3),
+      confidence: metadata.confidence_score
+    });
+  });
+  console.log("========================\n");
+
   transcripts.forEach((t, idx) => {
     console.log(`Transcript ${idx + 1}:`, {
       language: t.language,
       segments_count: t.segments?.length || 0,
+      has_metadata: extractedMetadata.has(t.language),
       first_segment_sample: t.segments?.[0]
         ? {
             text: t.segments[0].text?.substring(0, 50) + "...",
@@ -160,23 +209,21 @@ export async function processWithDifferentProviders(
   const results = await Promise.allSettled(
     PROVIDER_CONFIGS.map(async (config) => {
       try {
-        // 2. 각 provider 시작 전
         console.log(`[${config.type}] Starting...`);
 
         const provider = EmbeddingProviderFactory.createProvider(config.type);
         await saveToPineconeWithProvider(
           transcripts,
           videoMetadata,
+          extractedMetadata, // 추가
           provider,
           config.model,
           config.index,
         );
 
-        // 3. 각 provider 성공 후
         console.log(`[${config.type}] ✓ Success`);
         return { provider: config.type, status: "success" };
       } catch (error) {
-        // 4. 각 provider 실패 시
         console.error(`[${config.type}] ✗ Failed:`, (error as Error).message);
         return { provider: config.type, status: "error", error };
       }
@@ -185,7 +232,6 @@ export async function processWithDifferentProviders(
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
-  // 5. 최종 결과 요약
   console.log("\n=== Processing Summary ===");
   console.log(`All providers completed in ${elapsed}s`);
 

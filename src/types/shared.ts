@@ -55,3 +55,14 @@ export type TYouTubeVideoCaptionTrack = {
 export type TYouTubeVideoCaptionsAvailable = {
   caption_tracks?: TYouTubeVideoCaptionTrack[];  // 사용 가능한 모든 자막 트랙 목록
 }
+
+/**
+ * Extracted Video Metadata
+ */
+export type TExtractedVideoMetadata = {
+  categories: string[];
+  keywords: string[];
+  locations: string[];
+  names: string[];
+  confidence_score: number;
+};

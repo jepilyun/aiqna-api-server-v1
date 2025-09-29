@@ -17,6 +17,8 @@ import { youtube_v3 } from "googleapis";
 import { sleep } from "../utils/sleep.js";
 import { isRetryableError } from "../utils/is-retryable-error.js";
 import { extractTextFromYouTubeTranscriptSegment } from "../utils/utils-youtube/extract-transcript-segment.js";
+import { VideoMetadataExtractionService } from "../utils/utils-ai/extract-metadata.js";
+import { TExtractedVideoMetadata } from "../types/shared.js";
 
 
 /**
@@ -89,6 +91,8 @@ export async function ctrlProcessYoutubeVideo(req: Request, res: Response) {
  */
 export async function processYoutubeVideoData(videoId: string, retryCount = 0) {
   const MAX_RETRIES = 3;
+  const metadataExtractor = new VideoMetadataExtractionService();
+
 
   try {
     const youtubeVideoProcessingLog =
@@ -207,14 +211,56 @@ export async function processYoutubeVideoData(videoId: string, retryCount = 0) {
           .filter((t): t is TPineconeFullYouTubeTranscript => t !== null) || [];
     }
 
-    // 3. Pinecone 처리 (재시도 가능)
+    // 3. 메타데이터 추출 (새로 추가)
+    const extractedMetadata: Map<string, TExtractedVideoMetadata> = new Map();
+
+    if (transcripts.length > 0) {
+      try {
+        console.log(`Starting metadata extraction for ${videoId}...`);
+
+        for (const transcript of transcripts) {
+          // 전체 텍스트 생성
+          const fullText = transcript.segments
+            .map(seg => seg.text)
+            .join(' ');
+
+          // LLM으로 메타데이터 추출
+          const metadata = await metadataExtractor.extractMetadata(
+            videoId,
+            youtubeVideoApiData.snippet?.title || '',
+            fullText,
+            transcript.language
+          );
+
+          extractedMetadata.set(transcript.language, metadata);
+
+          console.log(`✓ Metadata extracted for ${transcript.language}:`, {
+            categories: metadata.categories.length,
+            keywords: metadata.keywords.length,
+            locations: metadata.locations.length,
+            names: metadata.names.length,
+            score: metadata.confidence_score
+          });
+
+          // Rate limit 방지 (Groq 무료 티어: 30 requests/min)
+          await sleep(2000);
+        }
+      } catch (metadataError) {
+        console.error("Metadata extraction failed:", metadataError);
+        
+        // 메타데이터 추출 실패는 전체 프로세스를 중단하지 않음
+        console.warn("Continuing without metadata...");
+      }
+    }
+
+    // 4. Pinecone 처리 (재시도 가능)
     if (!log?.is_pinecone_processed && transcripts.length > 0) {
       try {
         const videoMetadata = convertYouTubeApiDataToPineconeVideoMetadata(
           youtubeVideoApiData,
         );
 
-        await processWithDifferentProviders(transcripts, videoMetadata);
+        await processWithDifferentProviders(transcripts, videoMetadata, extractedMetadata);
 
         await DBSbYoutubeVideoProcessingLog.updateDetailByVideoId(videoId, {
           video_id: videoId,
