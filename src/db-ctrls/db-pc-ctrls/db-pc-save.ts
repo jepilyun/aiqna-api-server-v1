@@ -9,42 +9,27 @@ import pineconeClient from "../../config/pinecone-client.js";
 import { IEmbeddingProvider } from "../../types/shared.js";
 import { EmbeddingProviderFactory } from "../../utils/utils-embedding/embedding-provider-factory.js";
 import { TExtractedVideoMetadata } from "../../types/shared.js";
-
+import { VideoMetadataExtractionService } from "../../utils/utils-ai/extract-metadata.js";
 
 /**
- * Pinecone 저장 함수 (Provider 기반)
+ * Pinecone 저장 함수 (Provider 기반) - 청크별 메타데이터 추출
  */
 export async function saveToPineconeWithProvider(
   transcripts: TPineconeFullYouTubeTranscript[],
   videoMetadata: TPineconeYouTubeVideoMetadata,
-  extractedMetadata: Map<string, TExtractedVideoMetadata>, // 추가
   provider: IEmbeddingProvider,
   modelName?: string,
-  indexName: string = PINECONE_INDEX_NAME.YOUTUBE_TRANSCRIPT_TRAVEL_SEOUL
-    .OPENAI_SMALL,
+  indexName: string = PINECONE_INDEX_NAME.YOUTUBE_TRANSCRIPT_TRAVEL_SEOUL.OPENAI_SMALL,
 ): Promise<void> {
   const index = pineconeClient.index(indexName);
   const embeddingModel = modelName || provider.getDefaultModel();
+  const metadataExtractor = new VideoMetadataExtractionService();
 
   for (const transcript of transcripts) {
-    // 해당 언어의 추출된 메타데이터 가져오기
-    const langMetadata = extractedMetadata.get(transcript.language);
-    
-    if (langMetadata) {
-      console.log(`  Found metadata for ${transcript.language}:`, {
-        categories: langMetadata.categories,
-        keywords: langMetadata.keywords.length,
-        locations: langMetadata.locations.length,
-        names: langMetadata.names.length
-      });
-    }
-
     const chunks = chunkTranscript(transcript.segments);
 
     if (chunks.length === 0) {
-      console.warn(
-        `⚠️  No chunks generated for ${transcript.language}, skipping...`,
-      );
+      console.warn(`⚠️  No chunks generated for ${transcript.language}, skipping...`);
       continue;
     }
 
@@ -52,15 +37,33 @@ export async function saveToPineconeWithProvider(
       chunks.map(async (chunk, idx) => {
         // 첫 5개만 상세 로그
         if (idx < 5) {
-          console.log(
-            `  Chunk ${idx}: ${chunk.text.substring(0, 50)}... (${chunk.text.length} chars)`,
-          );
+          console.log(`  Chunk ${idx}: ${chunk.text.substring(0, 50)}... (${chunk.text.length} chars)`);
         }
 
-        const embedding = await provider.generateEmbedding(
-          chunk.text,
-          embeddingModel,
-        );
+        // 1. 임베딩 생성
+        const embedding = await provider.generateEmbedding(chunk.text, embeddingModel);
+        
+        // 2. 청크별 메타데이터 추출
+        let chunkMetadata: TExtractedVideoMetadata | null = null;
+        try {
+          chunkMetadata = await metadataExtractor.extractMetadata(
+            videoMetadata.video_id,
+            videoMetadata.title,
+            chunk.text, // 전체가 아닌 이 청크의 텍스트만
+            transcript.language
+          );
+
+          if (idx < 5) {
+            console.log(`    → Metadata:`, {
+              categories: chunkMetadata?.categories,
+              locations: chunkMetadata?.locations,
+              keywords: chunkMetadata?.keywords.slice(0, 3)
+            });
+          }
+        } catch (metadataError) {
+          console.warn(`    ⚠️  Metadata extraction failed for chunk ${idx}:`, metadataError);
+        }
+
         const chunkId = `${videoMetadata.video_id}_${transcript.language}_${idx}`;
 
         const metadata: Record<string, string | number | boolean | string[]> = {
@@ -79,42 +82,29 @@ export async function saveToPineconeWithProvider(
         };
 
         // 기존 비디오 메타데이터
-        if (videoMetadata.channel_title) {
-          metadata.channel_title = videoMetadata.channel_title;
-        }
-        if (videoMetadata.channel_id) {
-          metadata.channel_id = videoMetadata.channel_id;
-        }
-        if (videoMetadata.published_at) {
-          metadata.published_at = videoMetadata.published_at;
-        }
-        if (videoMetadata.thumbnail_url) {
-          metadata.thumbnail_url = videoMetadata.thumbnail_url;
-        }
-        if (videoMetadata.duration) {
-          metadata.duration = videoMetadata.duration;
-        }
-        if (videoMetadata.view_count) {
-          metadata.view_count = videoMetadata.view_count;
-        }
-        if (videoMetadata.like_count) {
-          metadata.like_count = videoMetadata.like_count;
-        }
+        if (videoMetadata.channel_title) metadata.channel_title = videoMetadata.channel_title;
+        if (videoMetadata.channel_id) metadata.channel_id = videoMetadata.channel_id;
+        if (videoMetadata.published_at) metadata.published_at = videoMetadata.published_at;
+        if (videoMetadata.thumbnail_url) metadata.thumbnail_url = videoMetadata.thumbnail_url;
+        if (videoMetadata.duration) metadata.duration = videoMetadata.duration;
+        if (videoMetadata.view_count) metadata.view_count = videoMetadata.view_count;
+        if (videoMetadata.like_count) metadata.like_count = videoMetadata.like_count;
 
-        // 추출된 메타데이터 추가 (있는 경우만)
-        if (langMetadata) {
-          if (langMetadata.categories.length > 0) {
-            metadata.categories = langMetadata.categories;
+        // 청크별 추출된 메타데이터 추가
+        if (chunkMetadata) {
+          if (chunkMetadata.categories.length > 0) {
+            metadata.categories = chunkMetadata.categories;
           }
-          if (langMetadata.keywords.length > 0) {
-            metadata.keywords = langMetadata.keywords;
+          if (chunkMetadata.keywords.length > 0) {
+            metadata.keywords = chunkMetadata.keywords;
           }
-          if (langMetadata.locations.length > 0) {
-            metadata.locations = langMetadata.locations;
+          if (chunkMetadata.locations.length > 0) {
+            metadata.locations = chunkMetadata.locations;
           }
-          if (langMetadata.names.length > 0) {
-            metadata.names = langMetadata.names;
+          if (chunkMetadata.names.length > 0) {
+            metadata.names = chunkMetadata.names;
           }
+          metadata.confidence_score = chunkMetadata.confidence_score;
         }
 
         return {
@@ -133,12 +123,11 @@ export async function saveToPineconeWithProvider(
       const batch = vectors.slice(i, i + batchSize);
       const batchNum = Math.floor(i / batchSize) + 1;
 
-      console.log(
-        `  Batch ${batchNum}/${totalBatches}: uploading ${batch.length} vectors` +
-        (langMetadata ? ' (with extracted metadata)' : '') + '...'
-      );
+      console.log(`  Batch ${batchNum}/${totalBatches}: uploading ${batch.length} vectors...`);
       await index.upsert(batch);
     }
+
+    console.log(`  ✓ Completed ${chunks.length} chunks for ${transcript.language}`);
   }
 }
 
@@ -167,29 +156,19 @@ const PROVIDER_CONFIGS = [
 ] as const;
 
 
+/**
+ * Process with Different Providers
+ * @param transcripts 
+ * @param videoMetadata 
+ */
 export async function processWithDifferentProviders(
   transcripts: TPineconeFullYouTubeTranscript[],
   videoMetadata: TPineconeYouTubeVideoMetadata,
-  extractedMetadata: Map<string, TExtractedVideoMetadata>
 ) {
-  // 메타데이터 로깅
-  console.log("\n=== Extracted Metadata ===");
-  extractedMetadata.forEach((metadata, language) => {
-    console.log(`[${language}]`, {
-      categories: metadata.categories,
-      keywords: metadata.keywords.slice(0, 5),
-      locations: metadata.locations,
-      names: metadata.names.slice(0, 3),
-      confidence: metadata.confidence_score
-    });
-  });
-  console.log("========================\n");
-
   transcripts.forEach((t, idx) => {
     console.log(`Transcript ${idx + 1}:`, {
       language: t.language,
       segments_count: t.segments?.length || 0,
-      has_metadata: extractedMetadata.has(t.language),
       first_segment_sample: t.segments?.[0]
         ? {
             text: t.segments[0].text?.substring(0, 50) + "...",
@@ -215,7 +194,6 @@ export async function processWithDifferentProviders(
         await saveToPineconeWithProvider(
           transcripts,
           videoMetadata,
-          extractedMetadata, // 추가
           provider,
           config.model,
           config.index,

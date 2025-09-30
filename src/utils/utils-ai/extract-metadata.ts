@@ -33,7 +33,7 @@ export class VideoMetadataExtractionService {
             content: prompt
           }
         ],
-        model: "llama-3.1-70b-versatile", // 또는 "mixtral-8x7b-32768"
+        model: "llama-3.3-70b-versatile", // 또는 "llama-3.1-8b-instant"
         temperature: 0.1,
         max_tokens: 2048,
         response_format: { type: "json_object" }

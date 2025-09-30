@@ -260,7 +260,7 @@ export async function processYoutubeVideoData(videoId: string, retryCount = 0) {
           youtubeVideoApiData,
         );
 
-        await processWithDifferentProviders(transcripts, videoMetadata, extractedMetadata);
+        await processWithDifferentProviders(transcripts, videoMetadata);
 
         await DBSbYoutubeVideoProcessingLog.updateDetailByVideoId(videoId, {
           video_id: videoId,
