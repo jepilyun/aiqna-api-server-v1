@@ -15,7 +15,7 @@ import { ErrorYoutubeVideoTranscriptDuplicate } from "../../errors/error-youtube
  * Youtube 비디오 트랜스크립트 관련 데이터베이스 작업을 수행하는 클래스
  * Youtube 비디오 트랜스크립트 등록, 조회, 수정, 삭제 기능 제공
  */
-export default class DBSbYoutubeVideoTranscript {
+export default class DBSqlYoutubeVideoTranscript {
   /**
    * Youtube 비디오 트랜스크립트 목록 조회 : Frontend 에서 SSG 만들 때 현재 활성화된 Youtube 비디오 트랜스크립트 코드 추출하기 위함 ex. ["seoul", "busan"]
    * @param start

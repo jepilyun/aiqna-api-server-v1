@@ -2,7 +2,7 @@ import {
   EMBEDDING_MODEL,
   PINECONE_INDEX_NAME,
   TPineconeFullYouTubeTranscript,
-  TPineconeYouTubeVideoMetadata,
+  TPineconeVectorMetadata,
 } from "aiqna_common_v1";
 import { chunkTranscript } from "../../utils/chunk-transcript.js";
 import pineconeClient from "../../config/pinecone-client.js";
@@ -16,7 +16,7 @@ import { VideoMetadataExtractionService } from "../../utils/utils-ai/extract-met
  */
 export async function saveToPineconeWithProvider(
   transcripts: TPineconeFullYouTubeTranscript[],
-  videoMetadata: TPineconeYouTubeVideoMetadata,
+  videoMetadata: Partial<TPineconeVectorMetadata>,
   provider: IEmbeddingProvider,
   modelName?: string,
   indexName: string = PINECONE_INDEX_NAME.YOUTUBE_TRANSCRIPT_TRAVEL_SEOUL.OPENAI_SMALL,
@@ -46,6 +46,9 @@ export async function saveToPineconeWithProvider(
         // 2. 청크별 메타데이터 추출
         let chunkMetadata: TExtractedVideoMetadata | null = null;
         try {
+          if (!videoMetadata.video_id || !videoMetadata.title) {
+            throw new Error("Video ID or Title Not Exists.")
+          }
           chunkMetadata = await metadataExtractor.extractMetadata(
             videoMetadata.video_id,
             videoMetadata.title,
@@ -67,8 +70,8 @@ export async function saveToPineconeWithProvider(
         const chunkId = `${videoMetadata.video_id}_${transcript.language}_${idx}`;
 
         const metadata: Record<string, string | number | boolean | string[]> = {
-          video_id: videoMetadata.video_id,
-          title: videoMetadata.title,
+          video_id: videoMetadata.video_id ?? "",
+          title: videoMetadata.title ?? "",
           language: transcript.language,
           chunk_index: idx,
           chunk_id: chunkId,
@@ -84,7 +87,7 @@ export async function saveToPineconeWithProvider(
         // 기존 비디오 메타데이터
         if (videoMetadata.channel_title) metadata.channel_title = videoMetadata.channel_title;
         if (videoMetadata.channel_id) metadata.channel_id = videoMetadata.channel_id;
-        if (videoMetadata.published_at) metadata.published_at = videoMetadata.published_at;
+        if (videoMetadata.published_date) metadata.published_at = videoMetadata.published_date;
         if (videoMetadata.thumbnail_url) metadata.thumbnail_url = videoMetadata.thumbnail_url;
         if (videoMetadata.duration) metadata.duration = videoMetadata.duration;
         if (videoMetadata.view_count) metadata.view_count = videoMetadata.view_count;
@@ -163,7 +166,7 @@ const PROVIDER_CONFIGS = [
  */
 export async function processWithDifferentProviders(
   transcripts: TPineconeFullYouTubeTranscript[],
-  videoMetadata: TPineconeYouTubeVideoMetadata,
+  videoMetadata: Partial<TPineconeVectorMetadata>,
 ) {
   transcripts.forEach((t, idx) => {
     console.log(`Transcript ${idx + 1}:`, {
@@ -191,6 +194,10 @@ export async function processWithDifferentProviders(
         console.log(`[${config.type}] Starting...`);
 
         const provider = EmbeddingProviderFactory.createProvider(config.type);
+
+        if (!videoMetadata) {
+          throw new Error("Metadata Needed");
+        }
         await saveToPineconeWithProvider(
           transcripts,
           videoMetadata,

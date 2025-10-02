@@ -18,7 +18,7 @@ import { youtube_v3 } from "googleapis";
  * Youtube 비디오 관련 데이터베이스 작업을 수행하는 클래스
  * Youtube 비디오 등록, 조회, 수정, 삭제 기능 제공
  */
-export default class DBSbYoutubeVideo {
+export default class DBSqlYoutubeVideo {
   /**
    * Youtube 비디오 목록 조회 : Frontend 에서 SSG 만들 때 현재 활성화된 Youtube 비디오 코드 추출하기 위함 ex. ["seoul", "busan"]
    * @param start

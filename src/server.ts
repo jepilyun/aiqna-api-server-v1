@@ -1,7 +1,8 @@
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
-import routesMain from "./routes/routes-api-main.js";
+import routesApiAdmin from "./routes/routes-api-admin.js";
+import routesApiUser from "./routes/routes-api-user.js";
 
 dotenv.config();
 
@@ -23,7 +24,8 @@ app.use(
 
 app.use(express.json());
 
-app.use("/api", routesMain);
+app.use("/api/admin", routesApiAdmin);
+app.use("/api/user", routesApiUser);
 
 const PORT = process.env.PORT || 3100;
 

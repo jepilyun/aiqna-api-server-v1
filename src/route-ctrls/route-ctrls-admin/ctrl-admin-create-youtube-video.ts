@@ -1,33 +1,27 @@
 import { Request, Response } from "express";
-import { fetchYoutubeVideoTranscriptByLanguage } from "../utils/utils-youtube/fetch-youtube-video-transcript.js";
-import { extractYouTubeVideoId } from "../utils/utils-youtube/extract-youtube-video-id.js";
-import DBSbYoutubeVideoProcessingLog from "../db-ctrls/db-sb-ctrls/db-sb-youtube-video-processing-log.js";
-import { fetchYoutubeVideoApiData } from "../utils/utils-youtube/fetch-youtube-video-api-data.js";
-import DBSbYoutubeVideo from "../db-ctrls/db-sb-ctrls/db-sb-youtube-video.js";
-import DBSbYoutubeVideoTranscript from "../db-ctrls/db-sb-ctrls/db-sb-youtube-video-transcript.js";
-import {
-  TPineconeFullYouTubeTranscript,
-  TPineconeYouTubeTranscriptSegment,
-  TPineconeYouTubeVideoMetadata,
-  TSqlYoutubeVideoTranscriptInsert,
-  TYouTubeTranscriptSegment,
-} from "aiqna_common_v1";
-import { processWithDifferentProviders } from "../db-ctrls/db-pc-ctrls/db-pc-save.js";
+import { extractYouTubeVideoId } from "../../utils/utils-youtube/extract-youtube-video-id.js";
+import DBSqlYoutubeVideoProcessingLog from "../../db-ctrls/db-sql-ctrls/db-sql-youtube-video-processing-log.js";
+import { TPineconeFullYouTubeTranscript, TPineconeVectorMetadata, TPineconeYouTubeTranscriptSegment, TSqlYoutubeVideoTranscriptInsert, TYouTubeTranscriptSegment } from "aiqna_common_v1";
+import { extractTextFromYouTubeTranscriptSegment } from "../../utils/utils-youtube/extract-transcript-segment.js";
+import DBSqlYoutubeVideoTranscript from "../../db-ctrls/db-sql-ctrls/db-sql-youtube-video-transcript.js";
+import { fetchYoutubeVideoTranscriptByLanguage } from "../../utils/utils-youtube/fetch-youtube-video-transcript.js";
 import { youtube_v3 } from "googleapis";
-import { sleep } from "../utils/sleep.js";
-import { isRetryableError } from "../utils/is-retryable-error.js";
-import { extractTextFromYouTubeTranscriptSegment } from "../utils/utils-youtube/extract-transcript-segment.js";
-import { VideoMetadataExtractionService } from "../utils/utils-ai/extract-metadata.js";
-import { TExtractedVideoMetadata } from "../types/shared.js";
-
+import { sleep } from "../../utils/sleep.js";
+import { isRetryableError } from "../../utils/is-retryable-error.js";
+import { processWithDifferentProviders } from "../../db-ctrls/db-vector-ctrls/db-vector-save.js";
+import { TExtractedVideoMetadata } from "../../types/shared.js";
+import DBSqlYoutubeVideo from "../../db-ctrls/db-sql-ctrls/db-sql-youtube-video.js";
+import { fetchYoutubeVideoApiData } from "../../utils/utils-youtube/fetch-youtube-video-api-data.js";
+import { VideoMetadataExtractionService } from "../../utils/utils-ai/extract-metadata.js";
 
 /**
- * YouTube Video Process Controller
+ * Ctrl For Create YouTube Video
  * @param req
  * @param res
  * @returns
  */
-export async function ctrlProcessYoutubeVideo(req: Request, res: Response) {
+export async function ctrlAdminCreateYouTubeVideo(req: Request, res: Response) {
+  console.log(req.body)
   try {
     const videoUrlOrId = req.body.id;
 
@@ -47,7 +41,7 @@ export async function ctrlProcessYoutubeVideo(req: Request, res: Response) {
 
     // 이미 처리 중인지 확인
     const existingLog =
-      await DBSbYoutubeVideoProcessingLog.selectByVideoId(videoId);
+      await DBSqlYoutubeVideoProcessingLog.selectByVideoId(videoId);
     const isProcessing =
       existingLog.data?.[0]?.processing_status === "processing";
 
@@ -83,6 +77,7 @@ export async function ctrlProcessYoutubeVideo(req: Request, res: Response) {
   }
 }
 
+
 /**
  * processYoutubeVideoData
  * YouTube 비디오 데이터 처리
@@ -96,7 +91,7 @@ export async function processYoutubeVideoData(videoId: string, retryCount = 0) {
 
   try {
     const youtubeVideoProcessingLog =
-      await DBSbYoutubeVideoProcessingLog.selectByVideoId(videoId);
+      await DBSqlYoutubeVideoProcessingLog.selectByVideoId(videoId);
     const log = youtubeVideoProcessingLog.data?.[0];
 
     // 1. API 데이터 처리 (재시도 가능)
@@ -105,10 +100,10 @@ export async function processYoutubeVideoData(videoId: string, retryCount = 0) {
     if (!log?.is_api_data_fetched) {
       try {
         youtubeVideoApiData = await fetchYoutubeVideoApiData(videoId);
-        await DBSbYoutubeVideo.upsert(youtubeVideoApiData);
+        await DBSqlYoutubeVideo.upsert(youtubeVideoApiData);
 
         if (!log) {
-          await DBSbYoutubeVideoProcessingLog.upsert(videoId, {
+          await DBSqlYoutubeVideoProcessingLog.upsert(videoId, {
             video_id: videoId,
             processing_status: "processing",
             is_api_data_fetched: true,
@@ -116,7 +111,7 @@ export async function processYoutubeVideoData(videoId: string, retryCount = 0) {
             is_pinecone_processed: false,
           });
         } else {
-          await DBSbYoutubeVideoProcessingLog.updateDetailByVideoId(videoId, {
+          await DBSqlYoutubeVideoProcessingLog.updateDetailByVideoId(videoId, {
             video_id: videoId,
             is_api_data_fetched: true,
           });
@@ -138,7 +133,7 @@ export async function processYoutubeVideoData(videoId: string, retryCount = 0) {
         throw apiError; 
       }
     } else {
-      const existingVideo = await DBSbYoutubeVideo.selectByVideoId(videoId);
+      const existingVideo = await DBSqlYoutubeVideo.selectByVideoId(videoId);
       youtubeVideoApiData = existingVideo.data?.[0];
     }
 
@@ -156,7 +151,7 @@ export async function processYoutubeVideoData(videoId: string, retryCount = 0) {
           "ko",
         ]);
 
-        await DBSbYoutubeVideoProcessingLog.updateDetailByVideoId(videoId, {
+        await DBSqlYoutubeVideoProcessingLog.updateDetailByVideoId(videoId, {
           video_id: videoId,
           is_transcript_fetched: true,
         });
@@ -173,7 +168,7 @@ export async function processYoutubeVideoData(videoId: string, retryCount = 0) {
         throw transcriptError;
       }
     } else {
-      const existingTranscripts = await DBSbYoutubeVideoTranscript.selectByVideoId(videoId);
+      const existingTranscripts = await DBSqlYoutubeVideoTranscript.selectByVideoId(videoId);
 
       transcripts =
         existingTranscripts.data
@@ -262,7 +257,7 @@ export async function processYoutubeVideoData(videoId: string, retryCount = 0) {
 
         await processWithDifferentProviders(transcripts, videoMetadata);
 
-        await DBSbYoutubeVideoProcessingLog.updateDetailByVideoId(videoId, {
+        await DBSqlYoutubeVideoProcessingLog.updateDetailByVideoId(videoId, {
           video_id: videoId,
           is_pinecone_processed: true,
           processing_status: "completed",
@@ -285,7 +280,7 @@ export async function processYoutubeVideoData(videoId: string, retryCount = 0) {
   } catch (error: unknown) {
     const err = error as Error;
 
-    await DBSbYoutubeVideoProcessingLog.updateDetailByVideoId(videoId, {
+    await DBSqlYoutubeVideoProcessingLog.updateDetailByVideoId(videoId, {
       video_id: videoId,
       processing_status: "failed",
       error_message: err.message,
@@ -301,13 +296,13 @@ export async function processYoutubeVideoData(videoId: string, retryCount = 0) {
 // 유틸리티 함수 추가
 function convertYouTubeApiDataToPineconeVideoMetadata(
   videoData: youtube_v3.Schema$Video,
-): TPineconeYouTubeVideoMetadata {
+): Partial<TPineconeVectorMetadata> {
   return {
     video_id: videoData.id || "",
     title: videoData.snippet?.title || "",
     channel_title: videoData.snippet?.channelTitle || "",
     channel_id: videoData.snippet?.channelId || "",
-    published_at: videoData.snippet?.publishedAt || "",
+    published_date: videoData.snippet?.publishedAt || "",
     thumbnail_url: videoData.snippet?.thumbnails?.high?.url || "",
     duration: videoData.contentDetails?.duration || "",
     view_count: parseInt(videoData.statistics?.viewCount || "0"),
@@ -341,7 +336,7 @@ async function saveMultipleLanguageTranscripts(
         transcriptResult.language,
       );
 
-      await DBSbYoutubeVideoTranscript.insert(transcriptData);
+      await DBSqlYoutubeVideoTranscript.insert(transcriptData);
 
       // segments_json을 Pinecone 형식으로 변환
       const pineconeSegments = convertYouTubeTranscriptSegmentsToPineconeFormat(

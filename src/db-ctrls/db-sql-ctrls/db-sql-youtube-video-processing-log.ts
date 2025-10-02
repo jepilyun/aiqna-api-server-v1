@@ -15,7 +15,7 @@ import { ErrorYoutubeVideoProcessingLogDuplicate } from "../../errors/error-yout
  * Youtube 비디오 처리 로그 관련 데이터베이스 작업을 수행하는 클래스
  * Youtube 비디오 처리 로그 등록, 조회, 수정, 삭제 기능 제공
  */
-export default class DBSbYoutubeVideoProcessingLog {
+export default class DBSqlYoutubeVideoProcessingLog {
   /**
    * Youtube 비디오 처리 로그 목록 조회 : Frontend 에서 SSG 만들 때 현재 활성화된 Youtube 비디오 처리 로그 코드 추출하기 위함 ex. ["seoul", "busan"]
    * @param start
@@ -112,14 +112,14 @@ export default class DBSbYoutubeVideoProcessingLog {
     data: TSqlYoutubeVideoProcessingLogInsert,
   ) {
     const { data: existing } =
-      await DBSbYoutubeVideoProcessingLog.selectByVideoId(data.video_id);
+      await DBSqlYoutubeVideoProcessingLog.selectByVideoId(data.video_id);
 
     if (existing && existing.length > 0) {
       // 이미 존재하면 업데이트
-      return DBSbYoutubeVideoProcessingLog.updateDetailByVideoId(videoId, data);
+      return DBSqlYoutubeVideoProcessingLog.updateDetailByVideoId(videoId, data);
     } else {
       // 없으면 삽입
-      return DBSbYoutubeVideoProcessingLog.insert(data);
+      return DBSqlYoutubeVideoProcessingLog.insert(data);
     }
   }
 

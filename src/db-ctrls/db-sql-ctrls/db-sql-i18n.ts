@@ -12,7 +12,7 @@ import supabaseClient from "../../config/supabase-client.js";
  * DB Supabase I18n 클래스
  * 국가, 언어 정보 조회 기능 제공
  */
-export default class DBSbI18n {
+export default class DBSqlI18n {
   /**
    * 모든 언어 정보를 조회하는 기능
    * @returns 언어 정보 목록

@@ -3,7 +3,7 @@ import openaiClient from "../config/openai-client.js";
 import {
   PINECONE_INDEX_NAME,
   SQL_DB_TABLE,
-  TPineconeYouTubeTranscriptMetadata,
+  TPineconeVectorMetadata,
   TSqlYoutubeVideoDetail,
 } from "aiqna_common_v1";
 import supabaseClient from "../config/supabase-client.js";
@@ -35,13 +35,13 @@ export type PineconeFilter = {
 } & Record<string, Primitive | Comparator>;
 
 // 메타데이터에 chunk 본문이 저장됐을 수도 있는 경우 대비
-type TPineconeChunkMetadataText = TPineconeYouTubeTranscriptMetadata &
+type TPineconeChunkMetadataText = TPineconeVectorMetadata &
   Partial<{
     text: string;
     transcript: string;
   }>;
 
-type PineconeHit<M extends TPineconeYouTubeTranscriptMetadata = TPineconeYouTubeTranscriptMetadata> = {
+type PineconeHit<M extends TPineconeVectorMetadata> = {
   id: string;
   score?: number;
   metadata?: M;
@@ -211,7 +211,7 @@ export async function ctrlSearchTravel(req: Request, res: Response) {
       .slice(0, Math.min(matches.length, 12))
       .map((m) => {
         const vId = m.metadata?.video_id ?? "unknown";
-        const s = m.metadata?.start_time;
+        const s = m.metadata?.video_start_time;
         const url = toYouTubeWatchUrl(vId, s);
         const text = m.metadata?.text ?? "";
         return {
@@ -231,8 +231,8 @@ export async function ctrlSearchTravel(req: Request, res: Response) {
           id: m.id,
           score: m.score,
           videoId: m.metadata?.video_id,
-          start: m.metadata?.start_time,
-          end: m.metadata?.end_time,
+          start: m.metadata?.video_start_time,
+          end: m.metadata?.video_end_time,
         })),
         videos,
         note: "No textual chunks found in metadata. Ensure chunk text is stored in metadata or fetchable by chunk_id.",
@@ -248,14 +248,14 @@ export async function ctrlSearchTravel(req: Request, res: Response) {
       answer,
       sources: matches.map((m) => {
         const vId = m.metadata?.video_id ?? null;
-        const url = vId ? toYouTubeWatchUrl(vId, m.metadata?.start_time) : null;
+        const url = vId ? toYouTubeWatchUrl(vId, m.metadata?.video_start_time) : null;
         return {
           id: m.id,
           score: m.score,
           videoId: vId,
           language: m.metadata?.language ?? null,
-          start: m.metadata?.start_time ?? null,
-          end: m.metadata?.end_time ?? null,
+          start: m.metadata?.video_start_time ?? null,
+          end: m.metadata?.video_end_time ?? null,
           url,
         };
       }),
