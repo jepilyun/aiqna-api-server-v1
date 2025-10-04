@@ -1,28 +1,33 @@
-import { IEmbeddingProvider } from "../../types/shared.js";
+import { IEmbeddingProvider } from "../types";
 
 /**
- * Jina AI Embedding Provider
+ * Voyage AI Embedding Provider
  */
-export class JinaEmbeddingProvider implements IEmbeddingProvider {
+export class VoyageEmbeddingProvider implements IEmbeddingProvider {
   private apiKey: string;
 
   constructor(apiKey?: string) {
-    this.apiKey = apiKey || process.env.JINA_API_KEY || "";
+    this.apiKey = apiKey || process.env.VOYAGE_API_KEY || "";
   }
 
   getDefaultModel(): string {
-    return "jina-embeddings-v2-base-en";
+    return "voyage-large-2";
   }
 
   getDimensions(model?: string): number {
-    console.log("model =====>", model);
-    return 768;
+    const modelName = model || this.getDefaultModel();
+    const dimensionMap: Record<string, number> = {
+      "voyage-large-2": 1536,
+      "voyage-code-2": 1536,
+      "voyage-2": 1024,
+    };
+    return dimensionMap[modelName] || 1536;
   }
 
   async generateEmbedding(text: string, model?: string): Promise<number[]> {
     const modelName = model || this.getDefaultModel();
 
-    const response = await fetch("https://api.jina.ai/v1/embeddings", {
+    const response = await fetch("https://api.voyageai.com/v1/embeddings", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -30,13 +35,13 @@ export class JinaEmbeddingProvider implements IEmbeddingProvider {
       },
       body: JSON.stringify({
         model: modelName,
-        input: [text],
+        input: text,
       }),
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(`Jina API Error: ${error.detail || "Unknown error"}`);
+      throw new Error(`Voyage API Error: ${error.message || "Unknown error"}`);
     }
 
     const data = await response.json();

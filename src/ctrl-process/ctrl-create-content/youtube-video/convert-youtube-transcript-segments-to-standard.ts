@@ -1,4 +1,4 @@
-import { TPineconeYouTubeTranscriptSegment, TYouTubeTranscriptSegment } from "aiqna_common_v1";
+import { TYouTubeTranscriptStandardSegment, TYouTubeTranscriptSegment } from "aiqna_common_v1";
 
 /**
  * convertSegmentsToPineconeFormat
@@ -6,9 +6,9 @@ import { TPineconeYouTubeTranscriptSegment, TYouTubeTranscriptSegment } from "ai
  * @param segments TYouTubeTranscriptSegment[]
  * @returns 
  */
-export function convertYouTubeTranscriptSegmentsToPineconeFormat(
+export function convertYouTubeTranscriptSegmentsToStandard(
   segments: TYouTubeTranscriptSegment[],
-): TPineconeYouTubeTranscriptSegment[] {
+): TYouTubeTranscriptStandardSegment[] {
   return segments.map((seg: TYouTubeTranscriptSegment) => {
     return {
       text: seg.transcript_segment_renderer.snippet?.text || "", // text 필드 확인

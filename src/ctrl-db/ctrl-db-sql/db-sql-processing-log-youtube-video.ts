@@ -96,6 +96,7 @@ export default class DBSqlProcessingLogYoutubeVideo {
   static async insert(
     logData: TSqlYoutubeVideoProcessingLogInsert,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
+    console.log("DEV DBSqlProcessingLogYoutubeVideo: ", logData);
     try {
       const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.youtube_video_processing_logs)

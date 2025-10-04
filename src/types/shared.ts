@@ -1,3 +1,4 @@
+import { TYouTubeTranscriptSegment } from "aiqna_common_v1";
 import { ERequestCreateContentType } from "../consts/const.js";
 
 
@@ -93,3 +94,16 @@ export type TExtractedVideoMetadata = {
   names: string[];
   confidence_score: number;
 };
+
+
+
+/**
+ * YouTube 비디오 자막 데이터
+ * innertubeClient 로 가져온 XML 파싱 결과
+ */
+export type TXMLParsedYouTubeTranscript = {
+  videoTitle: string;
+  language: string;
+  transcriptSegments: TYouTubeTranscriptSegment[];
+  availableLanguages?: string[];
+}

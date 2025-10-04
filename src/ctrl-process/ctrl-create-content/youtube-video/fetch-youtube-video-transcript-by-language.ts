@@ -1,7 +1,8 @@
-import { TYouTubeTranscriptSegment } from "aiqna_common_v1";
-import { TYouTubeVideoCaptionsAvailable, TYouTubeVideoCaptionTrack } from "../../../types/index.js";
+import { TYouTubeTranscriptSegment, TYouTubeTranscriptSegmentRenderer } from "aiqna_common_v1";
+import { TXMLParsedYouTubeTranscript, TYouTubeVideoCaptionsAvailable, TYouTubeVideoCaptionTrack } from "../../../types/index.js";
 import innertubeClient from "../../../config/innertube.js";
 import { fetchWithRetry } from "../../../utils/fetch-with-retry.js";
+import { parseYouTubeTranscriptXML } from "./parse-youtube-transcript-xml.js";
 
 
 /**
@@ -105,19 +106,14 @@ import { fetchWithRetry } from "../../../utils/fetch-with-retry.js";
 export async function fetchYoutubeVideoTranscriptByLanguage(
   videoId: string,
   targetLanguage?: string,
-): Promise<{
-  videoTitle: string;
-  language: string;
-  transcript: TYouTubeTranscriptSegment[];
-  availableLanguages?: string[];
-}> {
+): Promise<TXMLParsedYouTubeTranscript> {
   try {
-    const info = await innertubeClient.getInfo(videoId);
-    const videoTitle = info.basic_info?.title || "Untitled Video";
+    const innertubeVideoInfo = await innertubeClient.getInfo(videoId);
+    const videoTitle = innertubeVideoInfo.basic_info?.title || "Untitled Video";
 
     // 사용 가능한 자막 언어 목록 추출
-    const basicInfo = info.basic_info as Record<string, unknown>;
-    const captions = info.captions as unknown as TYouTubeVideoCaptionsAvailable;
+    const basicInfo = innertubeVideoInfo.basic_info as Record<string, unknown>;
+    const captions = innertubeVideoInfo.captions as unknown as TYouTubeVideoCaptionsAvailable;
     const availableLanguages: string[] = [];
 
     if (captions?.caption_tracks) {
@@ -126,7 +122,7 @@ export async function fetchYoutubeVideoTranscriptByLanguage(
           availableLanguages.push(track.language_code);
         }
       }
-      console.log(`Available languages: ${availableLanguages.join(", ")}`);
+      console.log(`Available languages of Video : ${videoId} => ${availableLanguages.join(", ")}`);
     }
 
     let transcriptData;
@@ -134,14 +130,13 @@ export async function fetchYoutubeVideoTranscriptByLanguage(
 
     // 특정 언어 자막 처리 (targetLanguage가 지정된 경우)
     if (targetLanguage && captions?.caption_tracks) {
-      // 1. 해당 언어의 자막 트랙 찾기
       const targetTrack = captions.caption_tracks.find(
         (track: TYouTubeVideoCaptionTrack) => track.language_code === targetLanguage,
       );
 
       if (targetTrack && targetTrack.base_url) {
         try {
-          // 2. base_url로 XML 자막 다운로드 (재시도 로직 포함)
+          // base_url로 XML 자막 다운로드 (재시도 로직 포함)
           // 예: https://www.youtube.com/api/timedtext?v=dQw4w9WgXcQ&lang=ko
           const response = await fetchWithRetry(
             targetTrack.base_url,
@@ -157,13 +152,13 @@ export async function fetchYoutubeVideoTranscriptByLanguage(
           //   <text start="2.5" dur="2.5">당신도 규칙을 알고 저도 압니다</text>
           // </transcript>
 
-          // 3. XML을 TYouTubeTranscriptSegment[]로 파싱
-          const segments = parseTranscriptFromUrl(transcriptText);
+          // XML을 TYouTubeTranscriptSegment[]로 파싱
+          const segments = parseYouTubeTranscriptXML(transcriptText);
 
           return {
             videoTitle,
             language: targetLanguage,
-            transcript: segments,
+            transcriptSegments: segments,
             availableLanguages,
           };
         } catch (fetchError) {
@@ -183,7 +178,7 @@ export async function fetchYoutubeVideoTranscriptByLanguage(
       }
     } else {
       // 기본 자막 처리 (targetLanguage 미지정 또는 fallback)
-      transcriptData = await info.getTranscript();
+      transcriptData = await innertubeVideoInfo.getTranscript();
       
       // 실제 사용된 언어 추론
       actualLanguage =
@@ -195,12 +190,24 @@ export async function fetchYoutubeVideoTranscriptByLanguage(
         "en";
     }
 
-    // getTranscript()로 가져온 데이터를 파싱
+    // innertubeVideoInfo.getTranscript()로 가져온 데이터를 파싱
     // Innertube의 내부 구조는 중첩된 객체 형태
     const transcriptObj = transcriptData as unknown as {
-      transcript?: { content?: { body?: { initial_segments?: unknown[] } } };
-      content?: { body?: { initial_segments?: unknown[] } };
-      body?: { initial_segments?: unknown[] };
+      transcript?: { 
+        content?: { 
+          body?: { 
+            initial_segments?: TYouTubeTranscriptSegmentRenderer[] 
+          } 
+        } 
+      };
+      content?: { 
+        body?: { 
+          initial_segments?: TYouTubeTranscriptSegmentRenderer[] 
+        } 
+      };
+      body?: { 
+        initial_segments?: TYouTubeTranscriptSegmentRenderer[] 
+      };
     };
 
     const segments =
@@ -210,8 +217,8 @@ export async function fetchYoutubeVideoTranscriptByLanguage(
       [];
 
     // 통일된 형식으로 변환
-    const transcript: TYouTubeTranscriptSegment[] = segments
-      .map((seg: unknown) => {
+    const transcriptSegments: TYouTubeTranscriptSegment[] = segments
+      .map((seg: TYouTubeTranscriptSegmentRenderer) => {
         const segment = seg as {
           snippet?: { text?: string };
           text?: string;
@@ -239,7 +246,7 @@ export async function fetchYoutubeVideoTranscriptByLanguage(
     return {
       videoTitle,
       language: actualLanguage || "unknown",
-      transcript,
+      transcriptSegments,
       availableLanguages,
     };
   } catch (error) {
@@ -248,112 +255,3 @@ export async function fetchYoutubeVideoTranscriptByLanguage(
   }
 }
 
-/**
- * YouTube 자막 XML을 파싱하여 TYouTubeTranscriptSegment[] 배열로 변환
- * 
- * **역할:**
- * - base_url로 다운로드한 XML 텍스트를 정규식으로 파싱
- * - HTML 엔티티 디코딩 (&amp; → &, &lt; → < 등)
- * - 밀리초 단위로 시간 변환 (초 → ms)
- * 
- * **fetchYoutubeVideoTranscriptByLanguage와의 관계:**
- * ```
- * fetchYoutubeVideoTranscriptByLanguage
- *   ↓ (targetLanguage 지정된 경우)
- * fetchWithRetry(base_url)
- *   ↓ (XML 텍스트 다운로드)
- * parseTranscriptFromUrl(xmlText)  ← 이 함수
- *   ↓ (파싱 완료)
- * TYouTubeTranscriptSegment[] 반환
- * ```
- * 
- * @param xmlText - YouTube 자막 XML 텍스트
- * @returns 파싱된 트랜스크립트 세그먼트 배열
- * 
- * @example
- * // 입력 XML:
- * const xml = `<?xml version="1.0"?>
- * <transcript>
- *   <text start="0" dur="2.5">We&amp;#39;re no strangers to love</text>
- *   <text start="2.5" dur="2.5">You know the rules and so do I</text>
- *   <text start="5.0" dur="3.0">A full commitment&amp;#39;s what I&amp;#39;m thinking of</text>
- * </transcript>`;
- * 
- * const segments = parseTranscriptFromUrl(xml);
- * 
- * // 출력:
- * // [
- * //   {
- * //     transcript_segment_renderer: {
- * //       snippet: { text: "We're no strangers to love" },
- * //       start_ms: "0",       // 0초 * 1000 = 0ms
- * //       end_ms: "2500"       // (0 + 2.5)초 * 1000 = 2500ms
- * //     }
- * //   },
- * //   {
- * //     transcript_segment_renderer: {
- * //       snippet: { text: "You know the rules and so do I" },
- * //       start_ms: "2500",    // 2.5초 * 1000 = 2500ms
- * //       end_ms: "5000"       // (2.5 + 2.5)초 * 1000 = 5000ms
- * //     }
- * //   },
- * //   {
- * //     transcript_segment_renderer: {
- * //       snippet: { text: "A full commitment's what I'm thinking of" },
- * //       start_ms: "5000",
- * //       end_ms: "8000"       // (5 + 3)초 * 1000 = 8000ms
- * //     }
- * //   }
- * // ]
- * 
- * @example
- * // HTML 엔티티 디코딩 예시:
- * // 원본 XML: <text start="10" dur="2">It&amp;#39;s a &amp;quot;great&amp;quot; day</text>
- * // 디코딩 결과: "It's a "great" day"
- * //
- * // 변환 규칙:
- * // &amp;   → &
- * // &lt;    → 
- * // &gt;    → >
- * // &quot;  → "
- * // &#39;   → '
- */
-function parseTranscriptFromUrl(xmlText: string): TYouTubeTranscriptSegment[] {
-  const segments: TYouTubeTranscriptSegment[] = [];
-  
-  // 정규식으로 <text> 태그 추출
-  // 매칭 예: <text start="0" dur="2.5">Hello world</text>
-  // match[1] = "0" (start)
-  // match[2] = "2.5" (dur)
-  // match[3] = "Hello world" (텍스트 내용)
-  const textMatches = xmlText.matchAll(
-    /<text start="([^"]+)" dur="([^"]+)"[^>]*>([^<]+)<\/text>/g,
-  );
-
-  for (const match of textMatches) {
-    const startSec = parseFloat(match[1]);         // 시작 시간 (초)
-    const durationSec = parseFloat(match[2]);      // 지속 시간 (초)
-    const startMs = startSec * 1000;               // 밀리초로 변환
-    const endMs = (startSec + durationSec) * 1000; // 종료 시간 계산
-
-    // HTML 엔티티 디코딩
-    // YouTube XML에는 특수문자가 인코딩되어 있음
-    const text = match[3]
-      .replace(/&amp;/g, "&")      // & 복원
-      .replace(/&lt;/g, "<")       // < 복원
-      .replace(/&gt;/g, ">")       // > 복원
-      .replace(/&quot;/g, '"')     // " 복원
-      .replace(/&#39;/g, "'");     // ' 복원
-
-    // TYouTubeTranscriptSegment 형식으로 변환
-    segments.push({
-      transcript_segment_renderer: {
-        snippet: { text },
-        start_ms: String(startMs),
-        end_ms: String(endMs),
-      },
-    });
-  }
-
-  return segments;
-}

@@ -31,7 +31,7 @@
     "@supabase/supabase-js": "^2.57.4",
     "@types/formidable": "^3.4.5",
     "@types/mime-types": "^3.0.1",
-    "aiqna_common_v1": "0.1.17",
+    "aiqna_common_v1": "0.1.19",
     "bcrypt": "^6.0.0",
     "cookie": "^1.0.2",
     "cookie-parser": "^1.4.7",
@@ -50,7 +50,7 @@
     "tripadvisor_api_module_v1": "^0.1.9",
     "uuid": "^13.0.0",
     "youtube_api_module_v1": "^0.1.20",
-    "youtubei.js": "^9.3.0"
+    "youtubei.js": "^15.1.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",

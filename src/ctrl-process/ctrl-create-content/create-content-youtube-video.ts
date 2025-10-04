@@ -6,12 +6,12 @@ import DBSqlYoutubeVideo from "../../ctrl-db/ctrl-db-sql/db-sql-youtube-video.js
 import { EProcessingStatusType, MAX_RETRIES } from "../../consts/const.js";
 import { isRetryableError } from "../../utils/is-retryable-error.js";
 import { sleep } from "../../utils/sleep.js";
-import { TPineconeFullYouTubeTranscript, TPineconeVectorMetadataForContent } from "aiqna_common_v1";
+import { TYouTubeTranscriptStandardFormat, TPineconeVectorMetadataForContent } from "aiqna_common_v1";
 import { saveYouTubeTranscriptsToDb } from "./youtube-video/save-youtube-transcripts-to-db.js";
 import DBSqlYoutubeVideoTranscript from "../../ctrl-db/ctrl-db-sql/db-sql-youtube-video-transcript.js";
-import { convertYouTubeTranscriptSegmentsToPineconeFormat } from "./youtube-video/convert-youtube-transcript-segments-to-pinecone-format.js";
+import { convertYouTubeTranscriptSegmentsToStandard } from "./youtube-video/convert-youtube-transcript-segments-to-standard.js";
 import { TExtractedVideoMetadata } from "../../types/shared.js";
-import { processWithDifferentProviders } from "../../ctrl-db/ctrl-db-vector/db-vector-save.js";
+import { saveYouTubeTranscriptsToPineconeWithProviders } from "./youtube-video/save-youtube-transcripts-to-pinecone.js";
 
 
 /**
@@ -36,20 +36,14 @@ export async function createContentYouTubeVideo(videoId: string, retryCount = 0)
         youtubeVideoApiData = await fetchYoutubeVideoApiData(videoId);
         await DBSqlYoutubeVideo.upsert(youtubeVideoApiData);
 
-        if (!log) {
-          await DBSqlProcessingLogYoutubeVideo.upsert({
-            video_id: videoId,
-            processing_status: EProcessingStatusType.processing,
-            is_api_data_fetched: true,
-            is_transcript_fetched: false,
-            is_pinecone_processed: false,
-          });
-        } else {
-          await DBSqlProcessingLogYoutubeVideo.updateByVideoId(videoId, {
-            video_id: videoId,
-            is_api_data_fetched: true,
-          });
-        }
+        // upsert 사용 - 존재하면 업데이트, 없으면 삽입
+        await DBSqlProcessingLogYoutubeVideo.upsert({
+          video_id: videoId,
+          processing_status: EProcessingStatusType.processing,
+          is_api_data_fetched: true,
+          is_transcript_fetched: false,
+          is_pinecone_processed: false,
+        });
       } catch (apiError) {
         console.error("API fetch failed:", apiError);
 
@@ -72,11 +66,11 @@ export async function createContentYouTubeVideo(videoId: string, retryCount = 0)
     }
 
     if (!youtubeVideoApiData) {
-      throw new Error("Failed to fetch video data");
+      throw new Error("Failed to fetch YouTube Video API dat.");
     }
 
     // 2. 트랜스크립트 처리 (재시도 가능)
-    let transcripts: TPineconeFullYouTubeTranscript[] = [];
+    let transcripts: TYouTubeTranscriptStandardFormat[] = [];
 
     if (!log?.is_transcript_fetched) {
       try {
@@ -129,7 +123,7 @@ export async function createContentYouTubeVideo(videoId: string, retryCount = 0)
               parsedSegments = t.segments_json;
             }
 
-            const segments = convertYouTubeTranscriptSegmentsToPineconeFormat(parsedSegments);
+            const segments = convertYouTubeTranscriptSegmentsToStandard(parsedSegments);
 
             return {
               videoId,
@@ -137,7 +131,7 @@ export async function createContentYouTubeVideo(videoId: string, retryCount = 0)
               segments,
             };
           })
-          .filter((t): t is TPineconeFullYouTubeTranscript => t !== null) || [];
+          .filter((t): t is TYouTubeTranscriptStandardFormat => t !== null) || [];
     }
 
     // 3. 메타데이터 추출 (새로 추가)
@@ -189,7 +183,7 @@ export async function createContentYouTubeVideo(videoId: string, retryCount = 0)
           youtubeVideoApiData,
         );
 
-        await processWithDifferentProviders(transcripts, videoMetadata);
+        await saveYouTubeTranscriptsToPineconeWithProviders(transcripts, videoMetadata);
 
         await DBSqlProcessingLogYoutubeVideo.updateByVideoId(videoId, {
           video_id: videoId,

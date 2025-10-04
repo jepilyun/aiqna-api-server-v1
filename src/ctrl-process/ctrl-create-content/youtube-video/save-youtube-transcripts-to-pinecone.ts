@@ -1,22 +1,22 @@
 import {
   PINECONE_INDEX_NAME,
-  TPineconeFullYouTubeTranscript,
+  TYouTubeTranscriptStandardFormat,
   TPineconeVectorMetadataForContent,
   TPineconeVector,
 } from "aiqna_common_v1";
-import { chunkTranscript } from "../../utils/chunk-transcript.js";
-import { IEmbeddingProvider } from "../../types/shared.js";
-import { EmbeddingProviderFactory } from "../../utils/utils-embedding/embedding-provider-factory.js";
-import { TExtractedVideoMetadata } from "../../types/shared.js";
-import { YouTubeVideoMetadataExtractor } from "../../ctrl-process/ctrl-create-content/youtube-video/youtube-video-metadata-extractor.js";
-import { PROVIDER_CONFIGS } from "../../consts/const.js";
-import DBPinecone from "./db-pinecone.js";
+import { chunkYouTubeVideoTranscript } from "./chunk-youtube-video-transcript.js";
+import { IEmbeddingProvider } from "../../../types/shared.js";
+import { EmbeddingProviderFactory } from "../../../embedding/embedding-provider-factory.js";
+import { TExtractedVideoMetadata } from "../../../types/shared.js";
+import { YouTubeVideoMetadataExtractor } from "./youtube-video-metadata-extractor.js";
+import { PROVIDER_CONFIGS } from "../../../consts/const.js";
+import DBPinecone from "../../../ctrl-db/ctrl-db-vector/db-pinecone.js";
 
 /**
  * Pinecone 저장 함수 (Provider 기반) - 청크별 메타데이터 추출
  */
-export async function saveToPineconeWithProvider(
-  transcripts: TPineconeFullYouTubeTranscript[],
+async function saveYouTubeTranscripsToPinecone(
+  transcripts: TYouTubeTranscriptStandardFormat[],
   videoMetadata: Partial<TPineconeVectorMetadataForContent>,
   provider: IEmbeddingProvider,
   modelName?: string,
@@ -26,7 +26,7 @@ export async function saveToPineconeWithProvider(
   const metadataExtractor = new YouTubeVideoMetadataExtractor();
 
   for (const transcript of transcripts) {
-    const chunks = chunkTranscript(transcript.segments);
+    const chunks = chunkYouTubeVideoTranscript(transcript.segments);
 
     if (chunks.length === 0) {
       console.warn(`⚠️  No chunks generated for ${transcript.language}, skipping...`);
@@ -35,14 +35,14 @@ export async function saveToPineconeWithProvider(
 
     const vectors: TPineconeVector[] = await Promise.all(
       chunks.map(async (chunk, idx) => {
-        // 첫 5개만 상세 로그
-        if (idx < 5) {
+        // 첫 3개만 상세 로그
+        if (idx < 3) {
           console.log(`  Chunk ${idx}: ${chunk.text.substring(0, 50)}... (${chunk.text.length} chars)`);
         }
 
         // 1. 임베딩 생성
         const embedding = await provider.generateEmbedding(chunk.text, embeddingModel);
-        
+
         // 2. 청크별 메타데이터 추출
         let chunkMetadata: TExtractedVideoMetadata | null = null;
         try {
@@ -56,7 +56,7 @@ export async function saveToPineconeWithProvider(
             transcript.language
           );
 
-          if (idx < 5) {
+          if (idx < 3) {
             console.log(`    → Metadata:`, {
               categories: chunkMetadata?.categories,
               locations: chunkMetadata?.locations,
@@ -130,12 +130,10 @@ export async function saveToPineconeWithProvider(
  * @param transcripts 
  * @param videoMetadata 
  */
-export async function processWithDifferentProviders(
-  transcripts: TPineconeFullYouTubeTranscript[],
+export async function saveYouTubeTranscriptsToPineconeWithProviders(
+  transcripts: TYouTubeTranscriptStandardFormat[],
   videoMetadata: Partial<TPineconeVectorMetadataForContent>,
 ) {
-  const startTime = Date.now();
-
   const results = await Promise.allSettled(
     PROVIDER_CONFIGS.map(async (config) => {
       try {
@@ -146,7 +144,7 @@ export async function processWithDifferentProviders(
         if (!videoMetadata) {
           throw new Error("Metadata Needed");
         }
-        await saveToPineconeWithProvider(
+        await saveYouTubeTranscripsToPinecone(
           transcripts,
           videoMetadata,
           provider,
@@ -163,11 +161,6 @@ export async function processWithDifferentProviders(
     }),
   );
 
-  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-
-  console.log("\n=== Processing Summary ===");
-  console.log(`All providers completed in ${elapsed}s`);
-
   results.forEach((result, idx) => {
     const config = PROVIDER_CONFIGS[idx];
     if (result.status === "fulfilled") {
@@ -178,9 +171,6 @@ export async function processWithDifferentProviders(
   });
 
   const succeeded = results.filter((r) => r.status === "fulfilled").length;
-  const failed = results.filter((r) => r.status === "rejected").length;
-  console.log(`\nResults: ${succeeded} succeeded, ${failed} failed`);
-  console.log("==========================\n");
 
   if (succeeded === 0) {
     throw new Error("All embedding providers failed");

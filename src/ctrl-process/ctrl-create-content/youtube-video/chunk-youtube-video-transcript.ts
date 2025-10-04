@@ -1,8 +1,8 @@
-import { TPineconeYouTubeTranscriptSegment } from "aiqna_common_v1";
+import { TYouTubeTranscriptStandardSegment } from "aiqna_common_v1";
 
-type Chunk = { text: string; startTime: number; endTime: number };
+type ChunkYouTueVideoTranscript = { text: string; startTime: number; endTime: number };
 
-type ChunkTranscriptOptions = {
+type ChunkYouTubeVideoTranscriptOptions = {
   // === 기존 옵션(후방호환) ===
   maxChars?: number; // 청크 최대 길이(문자)
   overlapChars?: number; // 겹침 길이(문자)
@@ -36,17 +36,17 @@ type ChunkTranscriptOptions = {
  * @returns 병합된 세그먼트 배열
  */
 function coalesceSmallSegments(
-  segs: TPineconeYouTubeTranscriptSegment[],
+  segs: TYouTubeTranscriptStandardSegment[],
   maxGapSec: number,
   minGroupChars: number,
-): TPineconeYouTubeTranscriptSegment[] {
+): TYouTubeTranscriptStandardSegment[] {
   if (!segs.length) return segs;
-  const out: TPineconeYouTubeTranscriptSegment[] = [];
-  let bucket: TPineconeYouTubeTranscriptSegment[] = [segs[0]];
+  const out: TYouTubeTranscriptStandardSegment[] = [];
+  let bucket: TYouTubeTranscriptStandardSegment[] = [segs[0]];
 
-  const textLen = (arr: TPineconeYouTubeTranscriptSegment[]) =>
+  const textLen = (arr: TYouTubeTranscriptStandardSegment[]) =>
     arr.map((x) => x.text).join(" ").length;
-  const gap = (a: TPineconeYouTubeTranscriptSegment, b: TPineconeYouTubeTranscriptSegment) =>
+  const gap = (a: TYouTubeTranscriptStandardSegment, b: TYouTubeTranscriptStandardSegment) =>
     b.start - (a.start + a.duration);
 
   for (let i = 1; i < segs.length; i++) {
@@ -65,8 +65,8 @@ function coalesceSmallSegments(
   return out;
 
   function mergeBucket(
-    b: TPineconeYouTubeTranscriptSegment[],
-  ): TPineconeYouTubeTranscriptSegment {
+    b: TYouTubeTranscriptStandardSegment[],
+  ): TYouTubeTranscriptStandardSegment {
     const start = b[0].start;
     const end = b[b.length - 1].start + b[b.length - 1].duration;
     return {
@@ -88,8 +88,8 @@ function coalesceSmallSegments(
  * @param options - 옵션
  * @returns 분할된 청크 배열
  */
-export function chunkTranscript(
-  segments: TPineconeYouTubeTranscriptSegment[],
+export function chunkYouTubeVideoTranscript(
+  segments: TYouTubeTranscriptStandardSegment[],
   {
     // === 기본값 조정 (브이로그 데이터 기준) ===
     maxChars = 1000,
@@ -113,8 +113,8 @@ export function chunkTranscript(
     useCoalesce = true, // ★ 기본 사용
     coalesceMaxGapSec = 0.8,
     coalesceMinGroupChars = 40,
-  }: ChunkTranscriptOptions = {},
-): Chunk[] {
+  }: ChunkYouTubeVideoTranscriptOptions = {},
+): ChunkYouTueVideoTranscript[] {
   if (!segments?.length) return [];
 
   // ---------- 전처리: 잡음 제거/공백 정규화 ----------
@@ -130,7 +130,7 @@ export function chunkTranscript(
     return s;
   };
 
-  let cleaned: TPineconeYouTubeTranscriptSegment[] = [];
+  let cleaned: TYouTubeTranscriptStandardSegment[] = [];
   for (const seg of segments) {
     const text = normalize(seg.text ?? "");
     if (text.length >= dropShortSegUnder) {
@@ -166,14 +166,14 @@ export function chunkTranscript(
     : minChars;
 
   // ---------- 헬퍼 ----------
-  const chunks: Chunk[] = [];
-  let bucket: TPineconeYouTubeTranscriptSegment[] = [];
+  const chunks: ChunkYouTueVideoTranscript[] = [];
+  let bucket: TYouTubeTranscriptStandardSegment[] = [];
   let bucketLen = 0; // lengthOf 합(공백 포함)
 
-  const segLen = (s: TPineconeYouTubeTranscriptSegment) =>
+  const segLen = (s: TYouTubeTranscriptStandardSegment) =>
     lengthOf((s.text ?? "") + " ");
 
-  const pushChunk = (segs: TPineconeYouTubeTranscriptSegment[]) => {
+  const pushChunk = (segs: TYouTubeTranscriptStandardSegment[]) => {
     if (!segs.length) return;
     const text = segs
       .map((s) => s.text ?? "")
@@ -187,11 +187,11 @@ export function chunkTranscript(
   };
 
   const takeOverlapTail = (
-    segs: TPineconeYouTubeTranscriptSegment[],
+    segs: TYouTubeTranscriptStandardSegment[],
     needBudget: number,
   ) => {
     // 뒤에서부터 필요 예산만큼 세그먼트를 겹침으로
-    const out: TPineconeYouTubeTranscriptSegment[] = [];
+    const out: TYouTubeTranscriptStandardSegment[] = [];
     let acc = 0;
     for (let i = segs.length - 1; i >= 0; i--) {
       const t = (segs[i].text ?? "") + " ";
@@ -202,7 +202,7 @@ export function chunkTranscript(
     return out;
   };
 
-  const fitsTimeMax = (segs: TPineconeYouTubeTranscriptSegment[]) => {
+  const fitsTimeMax = (segs: TYouTubeTranscriptStandardSegment[]) => {
     if (!maxDurationSec) return true;
     const start = segs[0].start ?? 0;
     const last = segs[segs.length - 1];
@@ -253,7 +253,7 @@ export function chunkTranscript(
     const lastLen = lengthOf(last.text);
     if (lastLen < Math.max(Math.round(minBudget * 0.6), 1)) {
       // ★ minBudget 기준
-      const merged: Chunk = {
+      const merged: ChunkYouTueVideoTranscript = {
         text: (prev.text + " " + last.text).replace(/\s+/g, " ").trim(),
         startTime: prev.startTime,
         endTime: last.endTime,
@@ -310,32 +310,3 @@ export function chunkTranscript(
 
   return chunks;
 }
-
-// const cueEn = /\[\s*(?:music|applause|laughter|laughs|sfx|singing|crowd|cheering|clapping|silence|background noise|inaudible|beep|crosstalk|speaker ?\d+|sighs|gasps)\s*\]/gi;
-// const cueKo = /\[\s*(?:음악|박수|웃음|효과음|노래|관중|환호|정적|잡음|청취불가|삐|겹말|발화자 ?\d+|한숨|탄성)\s*\]/g;
-
-// function stripCues(text: string, lang: 'en'|'ko'|'auto'='auto') {
-//   if (lang === 'en') return text.replace(cueEn, '');
-//   if (lang === 'ko') return text.replace(cueKo, '');
-//   return text.replace(cueEn, '').replace(cueKo, '');
-// }
-
-// const fillers = new Set([
-//   'uh','um','erm','uhh','umm','like','you','know','i','mean',
-//   "kinda","sort","of","kind","of"
-// ]);
-
-// function tidyEnglishTicks(s: string) {
-//   // 연속 중복 구두점 축소
-//   s = s.replace(/([!?.,])\1{1,}/g, '$1');
-//   // 연속 filler 축소(예: "uh uh uh" → "uh")
-//   const out: string[] = [];
-//   for (const w of s.split(/\s+/)) {
-//     const prev = out[out.length - 1];
-//     if (prev && prev.toLowerCase() === w.toLowerCase() && fillers.has(w.toLowerCase())) {
-//       continue;
-//     }
-//     out.push(w);
-//   }
-//   return out.join(' ');
-// }
