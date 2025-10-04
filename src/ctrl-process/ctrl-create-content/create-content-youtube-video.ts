@@ -24,7 +24,6 @@ export async function createContentYouTubeVideo(videoId: string, retryCount = 0)
   const youtubeVideoMetadataExtractor = new YouTubeVideoMetadataExtractor();
 
   try {
-    
     const youtubeVideoProcessingLog = await DBSqlProcessingLogYoutubeVideo.selectByVideoId(videoId);
     const log = youtubeVideoProcessingLog.data?.[0];
 
@@ -41,8 +40,6 @@ export async function createContentYouTubeVideo(videoId: string, retryCount = 0)
           video_id: videoId,
           processing_status: EProcessingStatusType.processing,
           is_api_data_fetched: true,
-          is_transcript_fetched: false,
-          is_pinecone_processed: false,
         });
       } catch (apiError) {
         console.error("API fetch failed:", apiError);
@@ -221,7 +218,11 @@ export async function createContentYouTubeVideo(videoId: string, retryCount = 0)
   }
 }
 
-// 유틸리티 함수 추가
+/**
+ * Convert 
+ * @param videoData 
+ * @returns 
+ */
 function convertYouTubeApiDataToPineconeVideoMetadata(
   videoData: youtube_v3.Schema$Video,
 ): Partial<TPineconeVectorMetadataForContent> {

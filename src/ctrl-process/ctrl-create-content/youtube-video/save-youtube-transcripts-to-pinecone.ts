@@ -36,8 +36,8 @@ async function saveYouTubeTranscripsToPinecone(
     const vectors: TPineconeVector[] = await Promise.all(
       chunks.map(async (chunk, idx) => {
         // 첫 3개만 상세 로그
-        if (idx < 3) {
-          console.log(`  Chunk ${idx}: ${chunk.text.substring(0, 50)}... (${chunk.text.length} chars)`);
+        if (idx < 2) {
+          console.log(`Chunk ${idx}: ${chunk.text.substring(0, 50)}... (${chunk.text.length} chars)`);
         }
 
         // 1. 임베딩 생성
@@ -56,8 +56,8 @@ async function saveYouTubeTranscripsToPinecone(
             transcript.language
           );
 
-          if (idx < 3) {
-            console.log(`    → Metadata:`, {
+          if (idx < 2) {
+            console.log(`→ Metadata:`, {
               categories: chunkMetadata?.categories,
               locations: chunkMetadata?.locations,
               keywords: chunkMetadata?.keywords.slice(0, 3)
