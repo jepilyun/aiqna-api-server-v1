@@ -1,29 +1,29 @@
 import {
-  EMBEDDING_MODEL,
   PINECONE_INDEX_NAME,
   TPineconeFullYouTubeTranscript,
-  TPineconeVectorMetadata,
+  TPineconeVectorMetadataForContent,
+  TPineconeVector,
 } from "aiqna_common_v1";
 import { chunkTranscript } from "../../utils/chunk-transcript.js";
-import pineconeClient from "../../config/pinecone-client.js";
 import { IEmbeddingProvider } from "../../types/shared.js";
 import { EmbeddingProviderFactory } from "../../utils/utils-embedding/embedding-provider-factory.js";
 import { TExtractedVideoMetadata } from "../../types/shared.js";
-import { VideoMetadataExtractionService } from "../../utils/utils-ai/extract-metadata.js";
+import { YouTubeVideoMetadataExtractor } from "../../ctrl-process/ctrl-create-content/youtube-video/youtube-video-metadata-extractor.js";
+import { PROVIDER_CONFIGS } from "../../consts/const.js";
+import DBPinecone from "./db-pinecone.js";
 
 /**
  * Pinecone 저장 함수 (Provider 기반) - 청크별 메타데이터 추출
  */
 export async function saveToPineconeWithProvider(
   transcripts: TPineconeFullYouTubeTranscript[],
-  videoMetadata: Partial<TPineconeVectorMetadata>,
+  videoMetadata: Partial<TPineconeVectorMetadataForContent>,
   provider: IEmbeddingProvider,
   modelName?: string,
   indexName: string = PINECONE_INDEX_NAME.YOUTUBE_TRANSCRIPT_TRAVEL_SEOUL.OPENAI_SMALL,
 ): Promise<void> {
-  const index = pineconeClient.index(indexName);
   const embeddingModel = modelName || provider.getDefaultModel();
-  const metadataExtractor = new VideoMetadataExtractionService();
+  const metadataExtractor = new YouTubeVideoMetadataExtractor();
 
   for (const transcript of transcripts) {
     const chunks = chunkTranscript(transcript.segments);
@@ -33,7 +33,7 @@ export async function saveToPineconeWithProvider(
       continue;
     }
 
-    const vectors = await Promise.all(
+    const vectors: TPineconeVector[] = await Promise.all(
       chunks.map(async (chunk, idx) => {
         // 첫 5개만 상세 로그
         if (idx < 5) {
@@ -49,10 +49,10 @@ export async function saveToPineconeWithProvider(
           if (!videoMetadata.video_id || !videoMetadata.title) {
             throw new Error("Video ID or Title Not Exists.")
           }
-          chunkMetadata = await metadataExtractor.extractMetadata(
+          chunkMetadata = await metadataExtractor.extractMetadataFromFullTranscript(
             videoMetadata.video_id,
             videoMetadata.title,
-            chunk.text, // 전체가 아닌 이 청크의 텍스트만
+            chunk.text,
             transcript.language
           );
 
@@ -118,46 +118,12 @@ export async function saveToPineconeWithProvider(
       }),
     );
 
-    // Pinecone 업로드
-    const batchSize = 100;
-    const totalBatches = Math.ceil(vectors.length / batchSize);
-
-    for (let i = 0; i < vectors.length; i += batchSize) {
-      const batch = vectors.slice(i, i + batchSize);
-      const batchNum = Math.floor(i / batchSize) + 1;
-
-      console.log(`  Batch ${batchNum}/${totalBatches}: uploading ${batch.length} vectors...`);
-      await index.upsert(batch);
-    }
+    // DBPinecone을 사용한 배치 업로드
+    await DBPinecone.upsertBatch(indexName, vectors, 100);
 
     console.log(`  ✓ Completed ${chunks.length} chunks for ${transcript.language}`);
   }
 }
-
-// 설정 파일
-const PROVIDER_CONFIGS = [
-  {
-    type: "openai",
-    model: EMBEDDING_MODEL.OPENAI.SMALL,
-    index: PINECONE_INDEX_NAME.YOUTUBE_TRANSCRIPT_TRAVEL_SEOUL.OPENAI_SMALL,
-  },
-  // {
-  //   type: 'cohere',
-  //   model: EMBEDDING_MODEL.COHERE.MULTI,
-  //   index: PINECONE_INDEX_NAME.YOUTUBE_TRANSCRIPT_TRAVEL_SEOUL.COHERE_MULTI
-  // },
-  // {
-  //   type: 'voyage',
-  //   model: EMBEDDING_MODEL.VOYAGE.LARGE_2,
-  //   index: PINECONE_INDEX_NAME.YOUTUBE_TRANSCRIPT_TRAVEL_SEOUL.VOYAGE_LARGE_2
-  // },
-  // {
-  //   type: 'huggingface',
-  //   model: EMBEDDING_MODEL.HUGGINGFACE.KO_SROBERTA_MULTITASK,
-  //   index: PINECONE_INDEX_NAME.YOUTUBE_TRANSCRIPT_TRAVEL_SEOUL.HF_KOREAN
-  // }
-] as const;
-
 
 /**
  * Process with Different Providers
@@ -166,26 +132,8 @@ const PROVIDER_CONFIGS = [
  */
 export async function processWithDifferentProviders(
   transcripts: TPineconeFullYouTubeTranscript[],
-  videoMetadata: Partial<TPineconeVectorMetadata>,
+  videoMetadata: Partial<TPineconeVectorMetadataForContent>,
 ) {
-  transcripts.forEach((t, idx) => {
-    console.log(`Transcript ${idx + 1}:`, {
-      language: t.language,
-      segments_count: t.segments?.length || 0,
-      first_segment_sample: t.segments?.[0]
-        ? {
-            text: t.segments[0].text?.substring(0, 50) + "...",
-            startTime: t.segments[0].start,
-            duration: t.segments[0].duration,
-          }
-        : "NO SEGMENTS",
-    });
-  });
-  console.log("========================\n");
-  console.log(
-    `Starting parallel processing for ${PROVIDER_CONFIGS.length} providers...`,
-  );
-
   const startTime = Date.now();
 
   const results = await Promise.allSettled(

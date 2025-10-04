@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import DBSqlYoutubeVideoProcessingLog from "../db-ctrls/db-sql-ctrls/db-sql-youtube-video-processing-log.js";
+import DBSqlProcessingLogYoutubeVideo from "../ctrl-db/ctrl-db-sql/db-sql-processing-log-youtube-video";
 
 /**
  * YouTube Video Process Controller
@@ -11,7 +11,7 @@ export async function ctrlVideoStatus(req: Request, res: Response) {
   try {
     const { videoId } = req.params;
 
-    const log = await DBSqlYoutubeVideoProcessingLog.selectByVideoId(videoId);
+    const log = await DBSqlProcessingLogYoutubeVideo.selectByVideoId(videoId);
     const status = log.data?.[0];
 
     if (!status) {

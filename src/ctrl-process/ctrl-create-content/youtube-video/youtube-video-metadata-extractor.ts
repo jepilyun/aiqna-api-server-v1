@@ -1,14 +1,14 @@
-import groq from "../../config/groq.js";
-import { TExtractedVideoMetadata } from "../../types/shared.js";
+import groq from "../../../config/groq.js";
+import { TExtractedVideoMetadata } from "../../../types/shared.js";
 
 /**
- * Video Metadata Extraction Service
+ * Video Metadata Extractor
  */
-export class VideoMetadataExtractionService {
+export class YouTubeVideoMetadataExtractor {
   /**
-   * 전체 트랜스크립트에서 메타데이터 추출
+   * 전체 YouTube Video 트랜스크립트에서 메타데이터 추출
    */
-  async extractMetadata(
+  async extractMetadataFromFullTranscript(
     videoId: string,
     videoTitle: string,
     fullTranscriptText: string,

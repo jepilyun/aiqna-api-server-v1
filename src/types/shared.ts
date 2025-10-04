@@ -1,3 +1,30 @@
+import { ERequestCreateContentType } from "../consts/const.js";
+
+
+/**
+ * Request Create Content Type (string literal type for flexibility)
+ */
+export type TRequestCreateContentType = `${ERequestCreateContentType}`;
+
+/**
+ * 
+ */
+export type TRequestCreateContentData = {
+  videoId?: string;
+  instagramUrl?: string;
+  blogUrl?: string;
+  text?: string;
+}
+
+/**
+ * Request Create Content
+ */
+export type TRequestCreateContent = {
+  type: TRequestCreateContentType;
+  data: TRequestCreateContentData;
+};
+
+
 /**
  * Embedding Provider 인터페이스
  */ 

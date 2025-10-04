@@ -3,7 +3,7 @@ import openaiClient from "../config/openai-client.js";
 import {
   PINECONE_INDEX_NAME,
   SQL_DB_TABLE,
-  TPineconeVectorMetadata,
+  TPineconeVectorMetadataForContent,
   TSqlYoutubeVideoDetail,
 } from "aiqna_common_v1";
 import supabaseClient from "../config/supabase-client.js";
@@ -35,13 +35,13 @@ export type PineconeFilter = {
 } & Record<string, Primitive | Comparator>;
 
 // 메타데이터에 chunk 본문이 저장됐을 수도 있는 경우 대비
-type TPineconeChunkMetadataText = TPineconeVectorMetadata &
+type TPineconeChunkMetadataText = TPineconeVectorMetadataForContent &
   Partial<{
     text: string;
     transcript: string;
   }>;
 
-type PineconeHit<M extends TPineconeVectorMetadata> = {
+type PineconeHit<M extends TPineconeVectorMetadataForContent> = {
   id: string;
   score?: number;
   metadata?: M;

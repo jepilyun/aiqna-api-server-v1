@@ -1,7 +1,7 @@
 import { TYouTubeTranscriptSegment } from "aiqna_common_v1";
-import { TYouTubeVideoCaptionsAvailable, TYouTubeVideoCaptionTrack } from "../../types/index.js";
-import innertubeClient from "../../config/innertube.js";
-import { fetchWithRetry } from "../fetch-with-retry.js";
+import { TYouTubeVideoCaptionsAvailable, TYouTubeVideoCaptionTrack } from "../../../types/index.js";
+import innertubeClient from "../../../config/innertube.js";
+import { fetchWithRetry } from "../../../utils/fetch-with-retry.js";
 
 
 /**

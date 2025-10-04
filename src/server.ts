@@ -1,8 +1,8 @@
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
-import routesApiAdmin from "./routes/routes-api-admin.js";
-import routesApiUser from "./routes/routes-api-user.js";
+import routesApiAdmin from "./router/router-api-admin.js";
+import routesApiUser from "./router/router-api-user.js";
 
 dotenv.config();
 

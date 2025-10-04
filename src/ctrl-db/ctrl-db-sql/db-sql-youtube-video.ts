@@ -14,30 +14,27 @@ import { ErrorYoutubeVideoDuplicate } from "../../errors/error-youtube-video.js"
 import { youtube_v3 } from "googleapis";
 
 /**
- * DBSbYoutubeVideo
+ * DBSqlYoutubeVideo
  * Youtube 비디오 관련 데이터베이스 작업을 수행하는 클래스
  * Youtube 비디오 등록, 조회, 수정, 삭제 기능 제공
  */
 export default class DBSqlYoutubeVideo {
   /**
-   * Youtube 비디오 목록 조회 : Frontend 에서 SSG 만들 때 현재 활성화된 Youtube 비디오 코드 추출하기 위함 ex. ["seoul", "busan"]
-   * @param start
-   * @param limit
-   * @returns Youtube 비디오
+   * Youtube 비디오 목록 조회
+   * @param start 시작 인덱스
+   * @param limit 조회할 개수
+   * @returns Youtube 비디오 목록과 총 개수
    */
   static async selectList(
     start: number = LIST_LIMIT.start,
     limit: number = LIST_LIMIT.default,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoList[]>> {
     try {
-      const query = supabaseClient
+      const { data, error, count } = await supabaseClient
         .from(SQL_DB_TABLE.youtube_videos)
         .select(SQL_DB_COLUMNS_YOUTUBE_VIDEO_LIST.join(","), { count: "exact" })
         .order(F_YOUTUBE_VIDEO.created_at.id, { ascending: false })
-        .range(start, start + limit - 1);
-
-      const { data, error, count } = await query
-        .order(F_YOUTUBE_VIDEO.created_at.id, { ascending: true })
+        .range(start, start + limit - 1)
         .overrideTypes<TSqlYoutubeVideoList[]>();
 
       if (error) {
@@ -49,10 +46,7 @@ export default class DBSqlYoutubeVideo {
       return { data: data || [], count: count || 0 };
     } catch (error: unknown) {
       if (error instanceof Error) {
-        throw new Error(
-          error.message ||
-            "#2 Youtube 비디오 목록 조회(SELECT LIST) 중 알 수 없는 오류가 발생했습니다.",
-        );
+        throw error;
       }
       throw new Error(
         "#3 Youtube 비디오 목록 조회(SELECT LIST) 중 알 수 없는 오류가 발생했습니다.",
@@ -61,9 +55,42 @@ export default class DBSqlYoutubeVideo {
   }
 
   /**
+   * video_id로 Youtube 비디오 조회
+   * @param videoId 비디오 아이디
+   * @returns Youtube 비디오 상세 정보
+   */
+  static async selectByVideoId(
+    videoId: string,
+  ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
+    try {
+      const { data, error, count } = await supabaseClient
+        .from(SQL_DB_TABLE.youtube_videos)
+        .select("*", { count: "exact" })
+        .eq(F_YOUTUBE_VIDEO.video_id.id, videoId)
+        .order(F_YOUTUBE_VIDEO.created_at.id, { ascending: true })
+        .overrideTypes<TSqlYoutubeVideoDetail[]>();
+
+      if (error) {
+        throw new Error(
+          `#1 Youtube 비디오 조회(SELECT By VideoId) 중 오류 발생 >>> ${error.message}`,
+        );
+      }
+
+      return { data: data || [], count: count || 0 };
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(
+        "#3 Youtube 비디오 조회(SELECT By VideoId) 중 알 수 없는 오류가 발생했습니다.",
+      );
+    }
+  }
+
+  /**
    * Youtube 비디오 등록 기능
    * @param log Youtube 비디오 정보
-   * @returns
+   * @returns Youtube 비디오 정보
    */
   static async insert(
     log: TSqlYoutubeVideoDetailInsert,
@@ -77,7 +104,7 @@ export default class DBSqlYoutubeVideo {
 
       if (error) {
         if (error.code === "23505") {
-          // PRIMARY KEY 중복	23505	unique_violation
+          // UNIQUE 제약 위반
           throw new ErrorYoutubeVideoDuplicate(log.video_id);
         } else {
           throw new Error(
@@ -89,22 +116,19 @@ export default class DBSqlYoutubeVideo {
       return { data: data || [] };
     } catch (error: unknown) {
       if (error instanceof Error) {
-        throw new Error(
-          error.message ||
-            "#2 Youtube 비디오 등록(INSERT) 중 알 수 없는 오류가 발생했습니다.",
-        );
+        throw error;
       }
       throw new Error(
         "#3 Youtube 비디오 등록(INSERT) 중 알 수 없는 오류가 발생했습니다.",
       );
     }
   }
-  // (alias) fetchYoutubeVideoApiData(videoId: string): Promise<youtube_v3.Schema$Video>
 
   /**
-   * Youtube 비디오 등록 기능
-   * @param json Youtube 비디오 정보
-   * @returns
+   * YouTube API 데이터를 사용한 비디오 등록/수정 (upsert)
+   * YouTube API v3 Schema를 받아 DB 저장용 함수(RPC)를 통해 처리
+   * @param json YouTube API v3 Schema$Video 객체
+   * @returns Youtube 비디오 정보
    */
   static async upsert(
     json: youtube_v3.Schema$Video,
@@ -117,56 +141,17 @@ export default class DBSqlYoutubeVideo {
 
       if (error) {
         throw new Error(
-          `#1 Youtube 비디오 등록(UPSERT) 중 오류 발생 >>> ${error.message}`,
+          `#1 Youtube 비디오 Upsert 중 오류 발생 >>> ${error.message}`,
         );
       }
 
       return { data: data || [] };
     } catch (error: unknown) {
       if (error instanceof Error) {
-        throw new Error(
-          error.message ||
-            "#2 Youtube 비디오 등록(UPSERT) 중 알 수 없는 오류가 발생했습니다.",
-        );
+        throw error;
       }
       throw new Error(
-        "#3 Youtube 비디오 등록(UPSERT) 중 알 수 없는 오류가 발생했습니다.",
-      );
-    }
-  }
-
-  /**
-   * Youtube 비디오 목록 검색 (name, name_ko)
-   * @param videoId 검색 키워드
-   * @returns Youtube 비디오 목록과 총 개수
-   */
-  static async selectByVideoId(
-    videoId: string,
-  ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
-    try {
-      const { data, error, count } = await supabaseClient
-        .from(SQL_DB_TABLE.youtube_videos)
-        .select("*", { count: "exact" })
-        .order(F_YOUTUBE_VIDEO.created_at.id, { ascending: true })
-        .eq(F_YOUTUBE_VIDEO.video_id.id, videoId)
-        .overrideTypes<TSqlYoutubeVideoDetail[]>();
-
-      if (error) {
-        throw new Error(
-          `#1 Youtube 비디오 목록 검색(SEARCH By Keyword) 중 오류 발생 >>> ${error.message}`,
-        );
-      }
-
-      return { data: data || [], count: count || 0 };
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        throw new Error(
-          error.message ||
-            "#2 Youtube 비디오 목록 검색(SEARCH By Keyword) 중 알 수 없는 오류가 발생했습니다.",
-        );
-      }
-      throw new Error(
-        "#3 Youtube 비디오 목록 검색(SEARCH By Keyword) 중 알 수 없는 오류가 발생했습니다.",
+        "#3 Youtube 비디오 Upsert 중 알 수 없는 오류가 발생했습니다.",
       );
     }
   }
@@ -174,10 +159,10 @@ export default class DBSqlYoutubeVideo {
   /**
    * Youtube 비디오 정보 수정 기능
    * @param videoId 비디오 아이디
-   * @param logUpdate Youtube 비디오 정보
+   * @param logUpdate Youtube 비디오 수정 정보
    * @returns Youtube 비디오 정보
    */
-  static async updateDetailByVideoId(
+  static async updateByVideoId(
     videoId: string,
     logUpdate: TSqlYoutubeVideoDetailUpdate,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
@@ -186,7 +171,7 @@ export default class DBSqlYoutubeVideo {
         .from(SQL_DB_TABLE.youtube_videos)
         .update(logUpdate)
         .eq(F_YOUTUBE_VIDEO.video_id.id, videoId)
-        .select() // 영향 받은 row 확인을 위해 select 필요
+        .select()
         .overrideTypes<TSqlYoutubeVideoDetail[]>();
 
       if (error) {
@@ -198,10 +183,7 @@ export default class DBSqlYoutubeVideo {
       return { data: data || [] };
     } catch (error: unknown) {
       if (error instanceof Error) {
-        throw new Error(
-          error.message ||
-            "#2 Youtube 비디오 정보 수정(UPDATE) 중 알 수 없는 오류가 발생했습니다.",
-        );
+        throw error;
       }
       throw new Error(
         "#3 Youtube 비디오 정보 수정(UPDATE) 중 알 수 없는 오류가 발생했습니다.",
@@ -210,11 +192,11 @@ export default class DBSqlYoutubeVideo {
   }
 
   /**
-   * Youtube 비디오 트랜스크립트 정보 삭제 기능
+   * Youtube 비디오 삭제 기능
    * @param videoId 비디오 아이디
-   * @returns Youtube 비디오 정보
+   * @returns 삭제된 Youtube 비디오 정보
    */
-  static async deleteDetailByVideoId(
+  static async deleteByVideoId(
     videoId: string,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
     try {
@@ -222,7 +204,7 @@ export default class DBSqlYoutubeVideo {
         .from(SQL_DB_TABLE.youtube_videos)
         .delete()
         .eq(F_YOUTUBE_VIDEO.video_id.id, videoId)
-        .select() // 삭제된 행 유무 확인용
+        .select()
         .overrideTypes<TSqlYoutubeVideoDetail[]>();
 
       if (error) {
@@ -234,10 +216,7 @@ export default class DBSqlYoutubeVideo {
       return { data: data || [] };
     } catch (error: unknown) {
       if (error instanceof Error) {
-        throw new Error(
-          error.message ||
-            "#2 Youtube 비디오 정보 삭제(DELETE) 중 알 수 없는 오류가 발생했습니다.",
-        );
+        throw error;
       }
       throw new Error(
         "#3 Youtube 비디오 정보 삭제(DELETE) 중 알 수 없는 오류가 발생했습니다.",
