@@ -87,7 +87,7 @@ export type TYouTubeVideoCaptionsAvailable = {
 /**
  * Extracted Video Metadata
  */
-export type TExtractedVideoMetadata = {
+export type TAnalyzedYouTubeVideoMetadata = {
   categories: string[];
   keywords: string[];
   locations: string[];

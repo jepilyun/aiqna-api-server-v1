@@ -7,8 +7,8 @@ import {
 import { chunkYouTubeVideoTranscript } from "./chunk-youtube-video-transcript.js";
 import { IEmbeddingProvider } from "../../../types/shared.js";
 import { EmbeddingProviderFactory } from "../../../embedding/embedding-provider-factory.js";
-import { TExtractedVideoMetadata } from "../../../types/shared.js";
-import { YouTubeVideoMetadataExtractor } from "./youtube-video-metadata-extractor.js";
+import { TAnalyzedYouTubeVideoMetadata } from "../../../types/shared.js";
+import { YouTubeVideoMetadataAnalyzerByAI } from "./youtube-video-metadata-extractor.js";
 import { PROVIDER_CONFIGS } from "../../../consts/const.js";
 import DBPinecone from "../../../ctrl-db/ctrl-db-vector/db-pinecone.js";
 
@@ -23,7 +23,7 @@ async function saveYouTubeTranscripsToPinecone(
   indexName: string = PINECONE_INDEX_NAME.YOUTUBE_TRANSCRIPT_TRAVEL_SEOUL.OPENAI_SMALL,
 ): Promise<void> {
   const embeddingModel = modelName || provider.getDefaultModel();
-  const metadataExtractor = new YouTubeVideoMetadataExtractor();
+  const metadataExtractor = new YouTubeVideoMetadataAnalyzerByAI();
 
   for (const transcript of transcripts) {
     const chunks = chunkYouTubeVideoTranscript(transcript.segments);
@@ -44,12 +44,12 @@ async function saveYouTubeTranscripsToPinecone(
         const embedding = await provider.generateEmbedding(chunk.text, embeddingModel);
 
         // 2. 청크별 메타데이터 추출
-        let chunkMetadata: TExtractedVideoMetadata | null = null;
+        let chunkMetadata: TAnalyzedYouTubeVideoMetadata | null = null;
         try {
           if (!videoMetadata.video_id || !videoMetadata.title) {
             throw new Error("Video ID or Title Not Exists.")
           }
-          chunkMetadata = await metadataExtractor.extractMetadataFromFullTranscript(
+          chunkMetadata = await metadataExtractor.analyzeFromFullTranscript(
             videoMetadata.video_id,
             videoMetadata.title,
             chunk.text,
@@ -128,11 +128,11 @@ async function saveYouTubeTranscripsToPinecone(
 /**
  * Process with Different Providers
  * @param transcripts 
- * @param videoMetadata 
+ * @param vectorMetadata 
  */
 export async function saveYouTubeTranscriptsToPineconeWithProviders(
   transcripts: TYouTubeTranscriptStandardFormat[],
-  videoMetadata: Partial<TPineconeVectorMetadataForContent>,
+  vectorMetadata: Partial<TPineconeVectorMetadataForContent>,
 ) {
   const results = await Promise.allSettled(
     PROVIDER_CONFIGS.map(async (config) => {
@@ -141,12 +141,12 @@ export async function saveYouTubeTranscriptsToPineconeWithProviders(
 
         const provider = EmbeddingProviderFactory.createProvider(config.type);
 
-        if (!videoMetadata) {
+        if (!vectorMetadata) {
           throw new Error("Metadata Needed");
         }
         await saveYouTubeTranscripsToPinecone(
           transcripts,
-          videoMetadata,
+          vectorMetadata,
           provider,
           config.model,
           config.index,

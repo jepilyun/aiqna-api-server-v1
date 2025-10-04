@@ -1,19 +1,19 @@
 import groq from "../../../config/groq.js";
-import { TExtractedVideoMetadata } from "../../../types/shared.js";
+import { TAnalyzedYouTubeVideoMetadata } from "../../../types/shared.js";
 
 /**
  * Video Metadata Extractor
  */
-export class YouTubeVideoMetadataExtractor {
+export class YouTubeVideoMetadataAnalyzerByAI {
   /**
    * 전체 YouTube Video 트랜스크립트에서 메타데이터 추출
    */
-  async extractMetadataFromFullTranscript(
+  async analyzeFromFullTranscript(
     videoId: string,
     videoTitle: string,
     fullTranscriptText: string,
     language: string
-  ): Promise<TExtractedVideoMetadata> {
+  ): Promise<TAnalyzedYouTubeVideoMetadata> {
     // 텍스트가 너무 길면 처음 8000자만 사용 (Groq 토큰 제한)
     const truncatedText = fullTranscriptText.length > 8000 
       ? fullTranscriptText.substring(0, 8000) + "..."
