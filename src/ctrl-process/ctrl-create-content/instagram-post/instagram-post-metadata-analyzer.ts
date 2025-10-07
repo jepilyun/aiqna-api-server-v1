@@ -1,32 +1,39 @@
+import { TSqlInstagramPostDetail } from "aiqna_common_v1";
 import groq from "../../../config/groq.js";
-import { TAnalyzedYouTubeVideoMetadata } from "../../../types/shared.js";
+import { TAnalyzedContentMetadata } from "../../../types/shared.js";
 
 /**
  * Video Metadata Extractor
  */
-export class YouTubeVideoMetadataAnalyzerByAI {
+export class InstagramPostMetadataAnalyzerByAI {
   /**
-   * 전체 YouTube Video 트랜스크립트에서 메타데이터 추출
+   * 전체 Instagram 포스트에서 메타데이터 추출
    */
-  async analyzeFromFullTranscript(
-    videoId: string,
-    videoTitle: string,
-    fullTranscriptText: string,
-    language: string
-  ): Promise<TAnalyzedYouTubeVideoMetadata> {
-    // 텍스트가 너무 길면 처음 8000자만 사용 (Groq 토큰 제한)
-    const truncatedText = fullTranscriptText.length > 8000 
-      ? fullTranscriptText.substring(0, 8000) + "..."
-      : fullTranscriptText;
+  async analyzeFromInstagramPost(
+    instagramPost: TSqlInstagramPostDetail,
+  ): Promise<TAnalyzedContentMetadata> {
+    let content = "";
 
-    const prompt = this.buildPrompt(videoTitle, truncatedText, language);
+    if (instagramPost.content) {
+      content = instagramPost.content.substring(0, 8000);
+    } else if (instagramPost.og_description) {
+      content = instagramPost.og_description.substring(0, 8000);
+    } else if (instagramPost.og_title) {
+      content = instagramPost.og_title.substring(0, 8000);
+    }
+
+    if (content.length === 0) {
+      throw new Error("Content is empty");
+    }
+
+    const prompt = this.buildPrompt(content);
 
     try {
       const completion = await groq.chat.completions.create({
         messages: [
           {
             role: "system",
-            content: this.getSystemPrompt(language)
+            content: this.getSystemPrompt()
           },
           {
             role: "user",
@@ -50,7 +57,7 @@ export class YouTubeVideoMetadataAnalyzerByAI {
       };
 
     } catch (error) {
-      console.error(`Metadata extraction failed for ${videoId}:`, error);
+      console.error(`Metadata extraction failed for ${instagramPost.instagram_post_url}:`, error);
       
       // 실패 시 빈 메타데이터 반환
       return {
@@ -66,10 +73,10 @@ export class YouTubeVideoMetadataAnalyzerByAI {
   /**
    * Get System Prompt
    */
-  private getSystemPrompt(language: string): string {
-    return `You are an expert at analyzing YouTube video transcripts about Korean travel, food, and lifestyle content.
+  private getSystemPrompt(): string {
+    return `You are an expert at analyzing instagram content about Korean travel, food, and lifestyle content.
 
-Your task is to extract structured metadata from the transcript.
+Your task is to extract structured metadata from the instagram content.
 
 Respond ONLY in valid JSON format:
 {
@@ -122,19 +129,13 @@ Respond ONLY in valid JSON format:
 
   /**
    * Build Prompt
-   * @param videoTitle 
-   * @param transcriptText 
-   * @param language 
+   * @param content 
    * @returns 
    */
-  private buildPrompt(videoTitle: string, transcriptText: string, language: string): string {
-    return `Video Title: ${videoTitle}
-Language: ${language}
+  private buildPrompt(content: string): string {
+    return `Instagram Content: ${content}
 
-Transcript:
-${transcriptText}
-
-Extract metadata from this video transcript following the system instructions.
+Extract metadata from this instagram content following the system instructions.
 Return valid JSON only.`;
   }
 }

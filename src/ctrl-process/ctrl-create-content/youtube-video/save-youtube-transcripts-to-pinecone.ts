@@ -7,20 +7,20 @@ import {
 import { chunkYouTubeVideoTranscript } from "./chunk-youtube-video-transcript.js";
 import { IEmbeddingProvider } from "../../../types/shared.js";
 import { EmbeddingProviderFactory } from "../../../embedding/embedding-provider-factory.js";
-import { TAnalyzedYouTubeVideoMetadata } from "../../../types/shared.js";
-import { YouTubeVideoMetadataAnalyzerByAI } from "./youtube-video-metadata-extractor.js";
+import { TAnalyzedContentMetadata } from "../../../types/shared.js";
+import { YouTubeVideoMetadataAnalyzerByAI } from "./youtube-video-metadata-analyzer.js";
 import { PROVIDER_CONFIGS } from "../../../consts/const.js";
 import DBPinecone from "../../../ctrl-db/ctrl-db-vector/db-pinecone.js";
 
 /**
  * Pinecone 저장 함수 (Provider 기반) - 청크별 메타데이터 추출
  */
-async function saveYouTubeTranscripsToPinecone(
+async function saveYouTubeTranscriptsToPinecone(
   transcripts: TYouTubeTranscriptStandardFormat[],
   videoMetadata: Partial<TPineconeVectorMetadataForContent>,
   provider: IEmbeddingProvider,
   modelName?: string,
-  indexName: string = PINECONE_INDEX_NAME.YOUTUBE_TRANSCRIPT_TRAVEL_SEOUL.OPENAI_SMALL,
+  indexName: string = PINECONE_INDEX_NAME.TRAVEL_SEOUL.OPENAI_SMALL,
 ): Promise<void> {
   const embeddingModel = modelName || provider.getDefaultModel();
   const metadataExtractor = new YouTubeVideoMetadataAnalyzerByAI();
@@ -44,7 +44,7 @@ async function saveYouTubeTranscripsToPinecone(
         const embedding = await provider.generateEmbedding(chunk.text, embeddingModel);
 
         // 2. 청크별 메타데이터 추출
-        let chunkMetadata: TAnalyzedYouTubeVideoMetadata | null = null;
+        let chunkMetadata: TAnalyzedContentMetadata | null = null;
         try {
           if (!videoMetadata.video_id || !videoMetadata.title) {
             throw new Error("Video ID or Title Not Exists.")
@@ -137,14 +137,12 @@ export async function saveYouTubeTranscriptsToPineconeWithProviders(
   const results = await Promise.allSettled(
     PROVIDER_CONFIGS.map(async (config) => {
       try {
-        console.log(`[${config.type}] Starting...`);
-
         const provider = EmbeddingProviderFactory.createProvider(config.type);
 
         if (!vectorMetadata) {
           throw new Error("Metadata Needed");
         }
-        await saveYouTubeTranscripsToPinecone(
+        await saveYouTubeTranscriptsToPinecone(
           transcripts,
           vectorMetadata,
           provider,

@@ -1,29 +1,4 @@
 import { TYouTubeTranscriptSegment } from "aiqna_common_v1";
-import { ERequestCreateContentType } from "../consts/const.js";
-
-
-/**
- * Request Create Content Type (string literal type for flexibility)
- */
-export type TRequestCreateContentType = `${ERequestCreateContentType}`;
-
-/**
- * 
- */
-export type TRequestCreateContentData = {
-  videoId?: string;
-  instagramUrl?: string;
-  blogUrl?: string;
-  text?: string;
-}
-
-/**
- * Request Create Content
- */
-export type TRequestCreateContent = {
-  type: TRequestCreateContentType;
-  data: TRequestCreateContentData;
-};
 
 
 /**
@@ -85,9 +60,9 @@ export type TYouTubeVideoCaptionsAvailable = {
 }
 
 /**
- * Extracted Video Metadata
+ * Extracted Content(YouTube Video, Instagram Post) Metadata
  */
-export type TAnalyzedYouTubeVideoMetadata = {
+export type TAnalyzedContentMetadata = {
   categories: string[];
   keywords: string[];
   locations: string[];
@@ -106,4 +81,17 @@ export type TXMLParsedYouTubeTranscript = {
   language: string;
   transcriptSegments: TYouTubeTranscriptSegment[];
   availableLanguages?: string[];
+}
+
+
+
+export type TInstagramPostHTMLMetadata = {
+  og_title?: string | null;
+  og_description?: string | null;
+  og_image?: string | null;
+  og_url?: string | null;
+  og_ios_url?: string | null;
+  og_android_package?: string | null;
+  og_android_url?: string | null;
+  local_image_url?: string | null;
 }

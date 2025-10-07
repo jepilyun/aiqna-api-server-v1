@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
-import { TRequestCreateContent } from "../../types";
-import { ERequestCreateContentType } from "../../consts/const.js";
 import { createContentYouTubeVideo } from "../../ctrl-process/ctrl-create-content/create-content-youtube-video.js";
+import { ERequestCreateContentType, TRequestCreateContent } from "aiqna_common_v1";
+import { createContentInstagramPost } from "../../ctrl-process/ctrl-create-content/create-content-instagram-post.js";
 
 /**
  * Ctrl For Create Content (Text, YouTube Video, Instagram, Blog)
@@ -42,9 +42,9 @@ export async function ctrlAdminCreateContent(req: Request, res: Response) {
           throw new Error("Instagram URL does not exist.")
         }
 
-        // createContentInstagramPost(data.instagramUrl).catch((err) => {
-        //   console.error(`Background processing failed for ${data}:`, err);
-        // });
+        createContentInstagramPost(data.instagramUrl).catch((err) => {
+          console.error(`Background processing failed for ${data}:`, err);
+        });
         break;
       case ERequestCreateContentType.Blog:
         res.json({

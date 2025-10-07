@@ -38,7 +38,7 @@ export async function ctrlAdminCreateYouTubeVideo(req: Request, res: Response) {
         success: true,
         videoId,
         message: "Already processing",
-        statusUrl: `/api/main/video-status/${videoId}`,
+        statusUrl: `/api/process-status/youtube-video/${videoId}`,
       });
     }
 

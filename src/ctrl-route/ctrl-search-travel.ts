@@ -155,7 +155,7 @@ export async function ctrlSearchTravel(req: Request, res: Response) {
     })();
 
     const pc = await pineconeClient
-      .index(PINECONE_INDEX_NAME.YOUTUBE_TRANSCRIPT_TRAVEL_SEOUL.OPENAI_SMALL)
+      .index(PINECONE_INDEX_NAME.TRAVEL_SEOUL.OPENAI_SMALL)
       .query({
         topK: Math.min(Math.max(topK, 1), 50),
         vector: queryEmbedding,

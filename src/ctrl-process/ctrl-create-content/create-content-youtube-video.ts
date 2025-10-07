@@ -2,14 +2,13 @@ import { youtube_v3 } from "googleapis";
 import DBSqlProcessingLogYoutubeVideo from "../../ctrl-db/ctrl-db-sql/db-sql-processing-log-youtube-video.js";
 import { fetchYoutubeVideoApiData } from "./youtube-video/fetch-youtube-video-api-data.js";
 import DBSqlYoutubeVideo from "../../ctrl-db/ctrl-db-sql/db-sql-youtube-video.js";
-import { EProcessingStatusType, MAX_RETRIES } from "../../consts/const.js";
-import { isRetryableError } from "../../utils/is-retryable-error.js";
-import { sleep } from "../../utils/sleep.js";
-import { TYouTubeTranscriptStandardFormat, TPineconeVectorMetadataForContent, TSqlYoutubeVideoProcessingLog } from "aiqna_common_v1";
+import { TYouTubeTranscriptStandardFormat, TPineconeVectorMetadataForContent, TSqlYoutubeVideoProcessingLog, EProcessingStatusType, ERequestCreateContentType } from "aiqna_common_v1";
 import { saveYouTubeTranscriptsToDb } from "./youtube-video/save-youtube-transcripts-to-db.js";
 import DBSqlYoutubeVideoTranscript from "../../ctrl-db/ctrl-db-sql/db-sql-youtube-video-transcript.js";
 import { convertYouTubeTranscriptSegmentsToStandard } from "./youtube-video/convert-youtube-transcript-segments-to-standard.js";
 import { saveYouTubeTranscriptsToPineconeWithProviders } from "./youtube-video/save-youtube-transcripts-to-pinecone.js";
+import { withRetry } from "../../utils/retry-process.js";
+import { handleProcessingError } from "../../utils/handle-processing-error.js";
 
 
 /**
@@ -17,11 +16,6 @@ import { saveYouTubeTranscriptsToPineconeWithProviders } from "./youtube-video/s
  * YouTube 비디오 데이터 처리
  * @param videoId
  * @returns
- */
-// create-content-youtube-video.ts
-
-/**
- * YouTube 비디오 전체 처리 오케스트레이터
  */
 export async function createContentYouTubeVideo(
   videoId: string, 
@@ -41,7 +35,7 @@ export async function createContentYouTubeVideo(
 
     return { success: true, videoId };
   } catch (error) {
-    await handleProcessingError(videoId, error, retryCount);
+    await handleProcessingError(ERequestCreateContentType.YoutubeVideo, videoId, error, retryCount);
     throw error;
   }
 }
@@ -141,28 +135,6 @@ async function processYouTubeVideoToPinecone(
   );
 }
 
-/**
- * 재시도 로직 추상화
- */
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  retryCount: number,
-  operationName: string
-): Promise<T> {
-  try {
-    return await fn();
-  } catch (error) {
-    console.error(`${operationName} failed:`, error);
-
-    if (retryCount < MAX_RETRIES && isRetryableError(error)) {
-      console.log(`Retrying ${operationName} (${retryCount + 1}/${MAX_RETRIES})...`);
-      await sleep(1000 * (retryCount + 1));
-      return withRetry(fn, retryCount + 1, operationName);
-    }
-
-    throw error;
-  }
-}
 
 
 async function loadExistingTranscripts(
@@ -202,18 +174,6 @@ async function loadExistingTranscripts(
     .filter((t): t is TYouTubeTranscriptStandardFormat => t !== null) || [];
 
   return transcripts;
-}
-
-
-
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function handleProcessingError(videoId: string, error: any, retryCount: number) {
-  await DBSqlProcessingLogYoutubeVideo.updateByVideoId(videoId, {
-    processing_status: "failed",
-    error_message: error?.message ? error.message : "",
-    retry_count: retryCount,
-  });
 }
 
 
