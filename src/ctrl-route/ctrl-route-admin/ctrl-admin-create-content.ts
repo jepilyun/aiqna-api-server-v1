@@ -1,113 +1,281 @@
 import { Request, Response } from "express";
-import { createContentYouTubeVideo } from "../../ctrl-process/ctrl-create-content/create-content-youtube-video.js";
 import { ERequestCreateContentType, TRequestCreateContent } from "aiqna_common_v1";
+import { createContentYouTubeVideo } from "../../ctrl-process/ctrl-create-content/create-content-youtube-video.js";
 import { createContentInstagramPost } from "../../ctrl-process/ctrl-create-content/create-content-instagram-post.js";
 import { createContentBlogPost } from "../../ctrl-process/ctrl-create-content/create-content-blog-post.js";
 import { createContentText } from "../../ctrl-process/ctrl-create-content/create-content-text.js";
 
+// 타입 정의 개선
+type ContentValidator<T> = (data: T) => { isValid: boolean; error?: string };
+type ContentProcessor<T> = (data: T) => Promise<void>;
+
+// 각 타입별 성공 응답 타입 정의
+type YouTubeSuccessResponse = {
+  success: true;
+  videoId: string;
+  message: string;
+  statusUrl: string;
+};
+
+type InstagramSuccessResponse = {
+  success: true;
+  instagramUrl: string;
+  message: string;
+  statusUrl: string;
+};
+
+type BlogSuccessResponse = {
+  success: true;
+  blogUrl: string;
+  message: string;
+  statusUrl: string;
+};
+
+type TextSuccessResponse = {
+  success: true;
+  text: string;
+  message: string;
+  statusUrl: string;
+};
+
+// Union 타입으로 통합
+type SuccessResponse =
+  | YouTubeSuccessResponse
+  | InstagramSuccessResponse
+  | BlogSuccessResponse
+  | TextSuccessResponse;
+
+// 공통 유틸리티
+class ContentProcessingUtils {
+  static async processContent<T>(
+    res: Response,
+    data: T,
+    validator: ContentValidator<T>,
+    processor: ContentProcessor<T>,
+    successResponse: SuccessResponse
+  ): Promise<void> {
+    // 1. 먼저 검증
+    const validation = validator(data);
+    if (!validation.isValid) {
+      throw new Error(validation.error || "Validation failed");
+    }
+
+    // 2. 검증 성공 후 응답
+    res.json(successResponse);
+
+    // 3. 백그라운드 처리 (응답 후)
+    processor(data).catch((err) => {
+      console.error(`Background processing failed:`, err);
+    });
+  }
+
+  static getValidationError(type: string, field: string): string {
+    return `${field} is required for ${type} type`;
+  }
+}
+
+// 각 타입별 검증 함수
+const validators = {
+  [ERequestCreateContentType.YoutubeVideo]: (
+    data: TRequestCreateContent["data"]
+  ): { isValid: boolean; error?: string } => {
+    if (!data.youtubeVideo?.videoId) {
+      return {
+        isValid: false,
+        error: ContentProcessingUtils.getValidationError("YouTube Video", "videoId"),
+      };
+    }
+    return { isValid: true };
+  },
+
+  [ERequestCreateContentType.Instagram]: (
+    data: TRequestCreateContent["data"]
+  ): { isValid: boolean; error?: string } => {
+    if (!data.instagram?.instagramPostUrl) {
+      return {
+        isValid: false,
+        error: ContentProcessingUtils.getValidationError("Instagram", "instagramPostUrl"),
+      };
+    }
+    return { isValid: true };
+  },
+
+  [ERequestCreateContentType.Blog]: (
+    data: TRequestCreateContent["data"]
+  ): { isValid: boolean; error?: string } => {
+    if (!data.blog?.blogPostUrl) {
+      return {
+        isValid: false,
+        error: ContentProcessingUtils.getValidationError("Blog", "blogPostUrl"),
+      };
+    }
+    return { isValid: true };
+  },
+
+  [ERequestCreateContentType.Text]: (
+    data: TRequestCreateContent["data"]
+  ): { isValid: boolean; error?: string } => {
+    if (!data.text?.content) {
+      return {
+        isValid: false,
+        error: ContentProcessingUtils.getValidationError("Text", "content"),
+      };
+    }
+    return { isValid: true };
+  },
+};
+
+// 각 타입별 프로세서 함수
+const processors = {
+  [ERequestCreateContentType.YoutubeVideo]: async (
+    data: TRequestCreateContent["data"]
+  ): Promise<void> => {
+    if (!data.youtubeVideo?.videoId) {
+      throw new Error("Video ID is missing");
+    }
+    await createContentYouTubeVideo(data.youtubeVideo.videoId);
+  },
+
+  [ERequestCreateContentType.Instagram]: async (
+    data: TRequestCreateContent["data"]
+  ): Promise<void> => {
+    if (!data.instagram) {
+      throw new Error("Instagram data is missing");
+    }
+    const instagram = data.instagram;
+    await createContentInstagramPost(
+      instagram.instagramPostUrl,
+      instagram.description,
+      instagram.userId,
+      instagram.userProfileUrl,
+      instagram.postDate,
+      instagram.tags
+    );
+  },
+
+  [ERequestCreateContentType.Blog]: async (
+    data: TRequestCreateContent["data"]
+  ): Promise<void> => {
+    if (!data.blog) {
+      throw new Error("Blog data is missing");
+    }
+    const blog = data.blog;
+    await createContentBlogPost(
+      blog.blogPostUrl,
+      blog.title || "",
+      blog.content || "",
+      blog.publishedDate,
+      blog.tags,
+      blog.platform,
+      blog.platformUrl
+    );
+  },
+
+  [ERequestCreateContentType.Text]: async (
+    data: TRequestCreateContent["data"]
+  ): Promise<void> => {
+    if (!data.text) {
+      throw new Error("Text data is missing");
+    }
+    const text = data.text;
+    await createContentText(text.content, text.title);
+  },
+};
+
+// 각 타입별 성공 응답 생성 함수
+const responseGenerators: {
+  [K in ERequestCreateContentType]: (data: TRequestCreateContent["data"]) => SuccessResponse;
+} = {
+  [ERequestCreateContentType.YoutubeVideo]: (
+    data: TRequestCreateContent["data"]
+  ): YouTubeSuccessResponse => {
+    if (!data.youtubeVideo?.videoId) {
+      throw new Error("Video ID is missing");
+    }
+    return {
+      success: true,
+      videoId: data.youtubeVideo.videoId,
+      message: "Processing started",
+      statusUrl: `/api/process-status/youtube-video/${data.youtubeVideo.videoId}`,
+    };
+  },
+
+  [ERequestCreateContentType.Instagram]: (
+    data: TRequestCreateContent["data"]
+  ): InstagramSuccessResponse => {
+    if (!data.instagram?.instagramPostUrl) {
+      throw new Error("Instagram URL is missing");
+    }
+    return {
+      success: true,
+      instagramUrl: data.instagram.instagramPostUrl,
+      message: "Processing started",
+      statusUrl: `/api/process-status/instagram-post`,
+    };
+  },
+
+  [ERequestCreateContentType.Blog]: (
+    data: TRequestCreateContent["data"]
+  ): BlogSuccessResponse => {
+    if (!data.blog?.blogPostUrl) {
+      throw new Error("Blog URL is missing");
+    }
+    return {
+      success: true,
+      blogUrl: data.blog.blogPostUrl,
+      message: "Processing started",
+      statusUrl: `/api/process-status/blog-post`,
+    };
+  },
+
+  [ERequestCreateContentType.Text]: (
+    data: TRequestCreateContent["data"]
+  ): TextSuccessResponse => {
+    if (!data.text?.content) {
+      throw new Error("Text content is missing");
+    }
+    return {
+      success: true,
+      text: data.text.content,
+      message: "Processing started",
+      statusUrl: `/api/process-status/text`,
+    };
+  },
+};
+
 /**
  * Ctrl For Create Content (Text, YouTube Video, Instagram, Blog)
- * @param req
- * @param res
- * @returns
  */
 export async function ctrlAdminCreateContent(req: Request, res: Response) {
   try {
     const { type, data } = req.body as TRequestCreateContent;
 
-    switch (type) {
-      case ERequestCreateContentType.YoutubeVideo:
-        res.json({
-          success: true,
-          videoId: data.youtubeVideo?.videoId,
-          message: "Processing started",
-          statusUrl: `/api/process-status/youtube-video/${data.youtubeVideo?.videoId}`,
-        });
-
-        if (!data.youtubeVideo?.videoId) {
-          throw new Error("Video ID does not exist.")
-        }
-
-        createContentYouTubeVideo(data.youtubeVideo?.videoId).catch((err) => {
-          console.error(`Background processing failed for ${data.youtubeVideo?.videoId}:`, err);
-        });
-        break;
-      case ERequestCreateContentType.Instagram:
-        res.json({
-          success: true,
-          instagramUrl: data.instagram?.instagramPostUrl,
-          message: "Processing started",
-          statusUrl: `/api/process-status/instagram-post`,
-        });
-
-        if (!data.instagram?.instagramPostUrl) {
-          throw new Error("Instagram URL does not exist.")
-        }
-
-        createContentInstagramPost(
-          data.instagram?.instagramPostUrl,
-          data.instagram?.description,
-          data.instagram?.userId,
-          data.instagram?.userProfileUrl,
-          data.instagram?.postDate,
-          data.instagram?.tags
-        ).catch((err) => {
-          console.error(`Background processing failed for ${data.instagram?.instagramPostUrl}:`, err);
-        });
-        break;
-      case ERequestCreateContentType.Blog:
-        res.json({
-          success: true,
-          blogUrl: data.blog?.blogPostUrl,
-          message: "Processing started",
-          statusUrl: `/api/process-status/blog-post`,
-        });
-
-        if (!data.blog?.blogPostUrl) {
-          throw new Error("Blog URL does not exist.")
-        }
-
-        createContentBlogPost(
-          data.blog?.blogPostUrl,
-          data.blog?.title || "",
-          data.blog?.content || "",
-          data.blog?.publishedDate,
-          data.blog?.tags,
-          data.blog?.platform,
-          data.blog?.platformUrl
-        ).catch((err) => {
-          console.error(`Background processing failed for ${data}:`, err);
-        });
-        break;
-      case ERequestCreateContentType.Text:
-        res.json({
-          success: true,
-          text: data.text,
-          message: "Processing started",
-          statusUrl: `/api/process-status/text`,
-        });
-
-        if (!data.text) {
-          throw new Error("Text does not exist.")
-        }
-
-        createContentText(
-          data.text.content,
-          data.text.title
-        ).catch((err) => {
-          console.error(`Background processing failed for ${data}:`, err);
-        });
-        break;
-      default:
-        throw new Error(`The type ${type} is not supported.`);
+    // 지원하지 않는 타입 체크
+    if (!validators[type]) {
+      return res.status(400).json({
+        success: false,
+        error: `Unsupported content type: ${type}`,
+      });
     }
+
+    // 공통 처리 함수 호출
+    await ContentProcessingUtils.processContent(
+      res,
+      data,
+      validators[type],
+      processors[type],
+      responseGenerators[type](data)
+    );
   } catch (error: unknown) {
     const err = error as Error;
-    console.error("Initial validation failed:", err);
+    console.error("Content processing failed:", err);
 
-    return res.status(500).json({
-      error: "Failed to initiate video processing",
-      message: err.message,
-    });
+    if (!res.headersSent) {
+      return res.status(400).json({
+        success: false,
+        error: "Failed to initiate content processing",
+        message: err.message,
+      });
+    }
   }
 }

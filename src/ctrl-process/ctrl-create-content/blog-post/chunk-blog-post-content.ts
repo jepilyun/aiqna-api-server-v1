@@ -19,14 +19,14 @@ type ChunkBlogPostContentOptions = {
 };
 
 /**
- * Blog Post 콘텐츠를 청크로 분할
+ * Blog Post 콘텐츠를 청크로 분할 (개선 버전)
  */
 export function chunkBlogPostContent(
   content: string,
   {
-    maxChars = 1000,
-    overlapChars = 200,
-    minChars = 400,
+    maxChars = 800,      // ✅ 800자로 줄임
+    overlapChars = 100,  // ✅ 100자로 줄임
+    minChars = 200,      // ✅ 200자로 줄임
     cleanText = true,
     
     maxTokens,
@@ -49,24 +49,39 @@ export function chunkBlogPostContent(
   const useTokens = !!(tokenCounter && (maxTokens || overlapTokens || minTokens));
   const lengthOf = (t: string) => useTokens ? tokenCounter!(t) : t.length;
 
-  const maxBudget = useTokens ? (maxTokens ?? 900) : maxChars;
+  const maxBudget = useTokens ? (maxTokens ?? 700) : maxChars;
   const overlapBudget = Math.min(
-    useTokens ? (overlapTokens ?? 180) : overlapChars,
+    useTokens ? (overlapTokens ?? 80) : overlapChars,
     maxBudget
   );
   const minBudget = useTokens
-    ? (minTokens ?? Math.round(minChars / 4))
+    ? (minTokens ?? 150)
     : minChars;
 
   const chunks: ChunkBlogPostContent[] = [];
   
-  // 문장 단위로 분리 (마침표, 느낌표, 물음표 기준)
-  const sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text];
-  
+  // ✅ 개선된 문장 분리: 마침표/느낌표/물음표 뒤 공백 기준
+  const sentences = text
+    .split(/([.!?]+\s*)/)  // \s+ → \s* (공백 0개 이상)
+    .reduce((acc: string[], curr, idx, arr) => {
+      if (idx % 2 === 0 && curr.trim()) {
+        const punctuation = arr[idx + 1] || '';
+        acc.push(curr + punctuation);
+      }
+      return acc;
+    }, [])
+    .filter(s => s.trim());
+
+  // 문장이 없으면 강제로 분할
+  if (sentences.length === 0) {
+    sentences.push(text);
+  }
+
   let currentChunk = '';
   let currentLength = 0;
 
-  for (const sentence of sentences) {
+  for (let i = 0; i < sentences.length; i++) {
+    const sentence = sentences[i];
     const sentenceLength = lengthOf(sentence);
     const candidateLength = currentLength + sentenceLength;
 
@@ -74,37 +89,26 @@ export function chunkBlogPostContent(
     if (currentChunk && candidateLength > maxBudget) {
       // 현재 청크가 최소 크기를 만족하면 저장
       if (currentLength >= minBudget) {
+        const trimmedChunk = currentChunk.trim();
         chunks.push({
-          text: currentChunk.trim(),
+          text: trimmedChunk,
           index: chunks.length,
         });
 
-        // 겹침(overlap) 처리: 현재 청크 끝부분 일부를 다음 청크에 포함
-        const words = currentChunk.split(' ');
-        let overlapText = '';
-        let overlapLen = 0;
-        
-        for (let i = words.length - 1; i >= 0; i--) {
-          const word = words[i] + ' ';
-          const wordLen = lengthOf(word);
-          if (overlapLen + wordLen <= overlapBudget) {
-            overlapText = word + overlapText;
-            overlapLen += wordLen;
-          } else {
-            break;
-          }
-        }
+        // ✅ 개선된 Overlap: 문자 기반으로 정확히 자르기
+        const overlapStart = Math.max(0, trimmedChunk.length - overlapBudget);
+        const overlapText = trimmedChunk.substring(overlapStart);
 
-        currentChunk = overlapText + sentence;
+        currentChunk = overlapText + ' ' + sentence;
         currentLength = lengthOf(currentChunk);
       } else {
         // 최소 크기 미만이면 계속 누적
-        currentChunk += sentence;
+        currentChunk += ' ' + sentence;
         currentLength = candidateLength;
       }
     } else {
       // 아직 예산 내이면 계속 누적
-      currentChunk += sentence;
+      currentChunk += (currentChunk ? ' ' : '') + sentence;
       currentLength = candidateLength;
     }
   }

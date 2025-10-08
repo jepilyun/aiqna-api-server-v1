@@ -4,12 +4,13 @@ import {
   TPineconeVectorMetadataForContent,
   TPineconeVector,
   TSqlInstagramPostDetail,
+  ERequestCreateContentType,
 } from "aiqna_common_v1";
 import { TAnalyzedContentMetadata } from "../../../types/shared.js";
 import { InstagramPostMetadataAnalyzerByAI } from "./instagram-post-metadata-analyzer.js";
 import DBPinecone from "../../../ctrl-db/ctrl-db-vector/db-pinecone.js";
-import { InstagramHelper } from "../../../utils/instagram-helper.js";
 import { EmbeddingProviderFactory } from "../../../embedding/embedding-provider-factory.js";
+import { ContentKeyManager } from "../../../utils/content-key-manager.js";
 
 
 /**
@@ -45,10 +46,10 @@ export async function saveInstagramPostToPinecone(
     instagramPost
   );
   
-  const id = InstagramHelper.extractPostId(instagramPost.instagram_post_url);
+  const contentKey = ContentKeyManager.createContentKey(ERequestCreateContentType.Instagram, instagramPost.instagram_post_url);
 
   const metadata: TPineconeMetadata = {
-    id: id,
+    id: contentKey,
     text: content,
     text_length: content.length,
     embedding_model: embeddingModel,
@@ -76,7 +77,7 @@ export async function saveInstagramPostToPinecone(
 
   // ✅ TPineconeVector 객체 생성
   const vector: TPineconeVector = {
-    id: id,
+    id: contentKey,
     values: embedding,  // ⭐ 임베딩 벡터를 values에 전달
     metadata: metadata,
   };

@@ -8,7 +8,7 @@ import {
 import { withRetry } from "../../utils/retry-process.js";
 import { handleProcessingError } from "../../utils/handle-processing-error.js";
 import DBSqlProcessingLogText from "../../ctrl-db/ctrl-db-sql/db-sql-processing-log-text.js";
-import { QueryHashManager } from "../../utils/query-hash-manager.js";
+import { ContentKeyManager } from "../../utils/content-key-manager.js";
 import DBSqlText from "../../ctrl-db/ctrl-db-sql/db-sql-text.js";
 import { convertTextDataToPineconeMetadata } from "./text/convert-text-data-to-pinecone-metadata.js";
 import { saveTextToPinecone } from "./text/save-text-to-pinecone.js";
@@ -22,82 +22,86 @@ export async function createContentText(
   title?: string | null,
   retryCount = 0
 ) {
-  try {
-    const log = await getProcessingLogText(content);
+  // ✅ hash_key를 한 번만 생성
+  const hashKey = ContentKeyManager.createContentKey(
+    ERequestCreateContentType.Text, 
+    content
+  );
 
-    // 1.  Text 처리
-    const textData = await processText(
-      content,
-      title ?? null,
-      log,
-      retryCount
-    );
+  try {
+    // ✅ 로그와 기존 데이터를 동시에 확인
+    const [log, existingText] = await Promise.all([
+      getProcessingLogText(hashKey),
+      getExistingText(hashKey)
+    ]);
+
+    // 1. Text 처리 (없으면 생성, 있으면 반환)
+    const textData = existingText 
+      ? existingText 
+      : await createNewText(hashKey, content, title ?? null, retryCount);
 
     // 2. Pinecone 저장
-    await processTextToPinecone(
-      textData, // ✅ content 대신 textData 객체 전달
-      log,
-      retryCount
-    );
+    await processTextToPinecone(textData, log, retryCount);
 
     return { success: true, content };
   } catch (error) {
-    await handleProcessingError(ERequestCreateContentType.Text, content, error, retryCount);
+    await handleProcessingError(
+      ERequestCreateContentType.Text, 
+      content, 
+      error, 
+      retryCount
+    );
     throw error;
   }
 }
 
 /**
- * Get Processing Log
+ * Get Processing Log (hash_key를 인자로 받음)
  */
-async function getProcessingLogText(content: string) {
-  const result = await DBSqlProcessingLogText.selectByHashKey(QueryHashManager.hash16(content));
+async function getProcessingLogText(hashKey: string) {
+  const result = await DBSqlProcessingLogText.selectByHashKey(hashKey);
   return result.data?.[0];
 }
 
 /**
- * 1. Fetch Text Content
+ * Get Existing Text (hash_key를 인자로 받음)
  */
-async function processText(
+async function getExistingText(hashKey: string) {
+  const result = await DBSqlText.selectByHashKey(hashKey);
+  return result.data?.[0];
+}
+
+/**
+ * Create New Text
+ */
+async function createNewText(
+  hashKey: string,
   content: string,
   title: string | null,
-  log?: TSqlTextProcessingLog,
   retryCount: number = 0
 ): Promise<TSqlTextDetail> {
-  // 먼저 DB에서 데이터가 실제로 있는지 확인
-  const existing = await DBSqlText.selectByHashKey(QueryHashManager.hash16(content));
-
-  // 데이터가 이미 있으면 바로 반환
-  if (existing.data?.[0]) {
-    console.log("✅ Data already exists in DB, returning...");
-    return existing.data[0];
-  }
-
-  // 데이터가 없으면 새로 가져오기
-  console.log("📥 No data found, fetching new data...");
+  console.log("📥 No data found, creating new data...");
   
   return await withRetry(
     async () => {
-      // ✅ TSqlBlogPostDetailInsert 매핑
       const insertData: TSqlTextDetailInsert = {
-        hash_key: QueryHashManager.hash16(content),
+        hash_key: hashKey,
         content: content,
         title: title ?? undefined,
       };
 
       console.log("💾 Inserting data:", insertData);
       
-      // ✅ DBSqlText 사용
       await DBSqlText.upsert(insertData);
 
-      // ✅ Processing Log 업데이트
+      // Processing Log 업데이트
       await DBSqlProcessingLogText.upsert({
-        hash_key: QueryHashManager.hash16(content),
+        hash_key: hashKey,
         processing_status: EProcessingStatusType.processing,
       });
 
       // 방금 저장한 데이터 조회
-      const created = await DBSqlText.selectByHashKey(QueryHashManager.hash16(content));
+      const created = await DBSqlText.selectByHashKey(hashKey);
       console.log("✅ Created record:", created);
 
       if (!created.data?.[0]) {
@@ -107,15 +111,15 @@ async function processText(
       return created.data[0];
     },
     retryCount,
-    'API fetch'
+    'Text creation'
   );
 }
 
 /**
- * 2. Pinecone 처리
+ * Pinecone 처리
  */
 async function processTextToPinecone(
-  textData: TSqlTextDetail, // ✅ 파라미터 타입 수정
+  textData: TSqlTextDetail,
   log?: TSqlTextProcessingLog,
   retryCount: number = 0
 ): Promise<void> {
@@ -131,7 +135,6 @@ async function processTextToPinecone(
       const metadata = convertTextDataToPineconeMetadata(textData);
       await saveTextToPinecone(textData, metadata);
       
-      // ✅ DBSqlProcessingLogText 사용
       await DBSqlProcessingLogText.updateByHashKey(textData.hash_key, {
         is_pinecone_processed: true,
         processing_status: EProcessingStatusType.completed,

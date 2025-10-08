@@ -1,5 +1,3 @@
-// blog-post/chunk-blog-post-content.ts
-
 type ChunkTextContent = { 
   text: string; 
   index: number;
@@ -19,14 +17,14 @@ type ChunkTextContentOptions = {
 };
 
 /**
- * Text 콘텐츠를 청크로 분할
+ * Text 콘텐츠를 청크로 분할 (개선 버전)
  */
 export function chunkTextContent(
   content: string,
   {
-    maxChars = 1000,
-    overlapChars = 200,
-    minChars = 400,
+    maxChars = 800,
+    overlapChars = 100,
+    minChars = 200,
     cleanText = true,
     
     maxTokens,
@@ -35,81 +33,77 @@ export function chunkTextContent(
     tokenCounter,
   }: ChunkTextContentOptions = {},
 ): ChunkTextContent[] {
-  if (!content || content.trim().length === 0) return [];
-
-  // 전처리: 공백 정리
-  let text = content;
-  if (cleanText) {
-    text = text
-      .replace(/\s+/g, ' ')
-      .trim();
+  if (!content || content.trim().length === 0) {
+    console.log('❌ Empty content, returning empty array');
+    return [];
   }
 
-  // 토큰 기반 vs 문자 기반
+  let text = content;
+  if (cleanText) {
+    text = text.replace(/\s+/g, ' ').trim();
+  }
+
   const useTokens = !!(tokenCounter && (maxTokens || overlapTokens || minTokens));
   const lengthOf = (t: string) => useTokens ? tokenCounter!(t) : t.length;
 
-  const maxBudget = useTokens ? (maxTokens ?? 900) : maxChars;
+  const maxBudget = useTokens ? (maxTokens ?? 700) : maxChars;
   const overlapBudget = Math.min(
-    useTokens ? (overlapTokens ?? 180) : overlapChars,
+    useTokens ? (overlapTokens ?? 80) : overlapChars,
     maxBudget
   );
-  const minBudget = useTokens
-    ? (minTokens ?? Math.round(minChars / 4))
-    : minChars;
+  const minBudget = useTokens ? (minTokens ?? 150) : minChars;
 
   const chunks: ChunkTextContent[] = [];
   
-  // 문장 단위로 분리 (마침표, 느낌표, 물음표 기준)
-  const sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text];
-  
+  const sentences = text
+    .split(/([.!?]+\s*)/)
+    .reduce((acc: string[], curr, idx, arr) => {
+      if (idx % 2 === 0 && curr.trim()) {
+        const punctuation = arr[idx + 1] || '';
+        acc.push(curr + punctuation);
+      }
+      return acc;
+    }, [])
+    .filter(s => s.trim());
+
+  if (sentences.length === 0) {
+    console.log('⚠️ No sentences found, using entire text as one chunk');
+    sentences.push(text);
+  }
+
   let currentChunk = '';
   let currentLength = 0;
 
-  for (const sentence of sentences) {
+  for (let i = 0; i < sentences.length; i++) {
+    const sentence = sentences[i];
     const sentenceLength = lengthOf(sentence);
     const candidateLength = currentLength + sentenceLength;
 
-    // 현재 청크 + 새 문장이 최대 크기를 초과하는 경우
     if (currentChunk && candidateLength > maxBudget) {
-      // 현재 청크가 최소 크기를 만족하면 저장
       if (currentLength >= minBudget) {
+        
+        const trimmedChunk = currentChunk.trim();
+        
         chunks.push({
-          text: currentChunk.trim(),
+          text: trimmedChunk,
           index: chunks.length,
         });
 
-        // 겹침(overlap) 처리: 현재 청크 끝부분 일부를 다음 청크에 포함
-        const words = currentChunk.split(' ');
-        let overlapText = '';
-        let overlapLen = 0;
-        
-        for (let i = words.length - 1; i >= 0; i--) {
-          const word = words[i] + ' ';
-          const wordLen = lengthOf(word);
-          if (overlapLen + wordLen <= overlapBudget) {
-            overlapText = word + overlapText;
-            overlapLen += wordLen;
-          } else {
-            break;
-          }
-        }
+        const overlapStart = Math.max(0, trimmedChunk.length - overlapBudget);
+        const overlapText = trimmedChunk.substring(overlapStart);
 
-        currentChunk = overlapText + sentence;
+        currentChunk = overlapText + ' ' + sentence;
         currentLength = lengthOf(currentChunk);
       } else {
-        // 최소 크기 미만이면 계속 누적
-        currentChunk += sentence;
+        currentChunk += ' ' + sentence;
         currentLength = candidateLength;
       }
     } else {
-      // 아직 예산 내이면 계속 누적
-      currentChunk += sentence;
+      currentChunk += (currentChunk ? ' ' : '') + sentence;
       currentLength = candidateLength;
     }
   }
 
-  // 마지막 청크 추가
   if (currentChunk.trim()) {
     chunks.push({
       text: currentChunk.trim(),
@@ -117,7 +111,6 @@ export function chunkTextContent(
     });
   }
 
-  // 청크가 없는 경우 전체를 하나의 청크로
   if (chunks.length === 0 && text.trim()) {
     chunks.push({
       text: text.trim(),

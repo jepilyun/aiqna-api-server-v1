@@ -60,7 +60,8 @@ export async function saveYouTubeTranscriptsToDb(
   }
 
   if (savedTranscripts.length === 0) {
-    throw new Error("No transcripts available for any language");
+    console.log("자막이 없습니다.");
+    return []; // 빈 배열 반환
   }
 
   console.log(`총 ${savedTranscripts.length}개 언어 저장 완료`);

@@ -1,67 +1,66 @@
+// ctrl-admin-create-youtube-video.ts
 import { Request, Response } from "express";
 import { YouTubeHelper } from "../../utils/youtube-helper.js";
 import DBSqlProcessingLogYoutubeVideo from "../../ctrl-db/ctrl-db-sql/db-sql-processing-log-youtube-video.js";
 import { createContentYouTubeVideo } from "../../ctrl-process/ctrl-create-content/create-content-youtube-video.js";
+import { ContentProcessingHelper } from "../../utils/content-processing-helper.js";
 
-/**
- * Ctrl For Create YouTube Video
- * @param req
- * @param res
- * @returns
- */
 export async function ctrlAdminCreateYouTubeVideo(req: Request, res: Response) {
   try {
     const videoUrlOrId = req.body.id;
 
     if (!videoUrlOrId) {
-      return res.status(400).json({
-        error: "Video ID or URL is required",
-      });
+      return ContentProcessingHelper.sendError(
+        res,
+        400,
+        "Video ID or URL is required"
+      );
     }
 
     const videoId = YouTubeHelper.extractVideoId(videoUrlOrId as string);
 
     if (!videoId) {
-      return res.status(400).json({
-        error: "Invalid YouTube Video ID or URL format",
-      });
+      return ContentProcessingHelper.sendError(
+        res,
+        400,
+        "Invalid YouTube Video ID or URL format"
+      );
     }
 
-    // 이미 처리 중인지 확인
-    const existingLog =
-      await DBSqlProcessingLogYoutubeVideo.selectByVideoId(videoId);
-    const isProcessing =
-      existingLog.data?.[0]?.processing_status === "processing";
-
-    if (isProcessing) {
-      return res.json({
+    // 공통 헬퍼 사용
+    await ContentProcessingHelper.processContent(res, { videoId }, {
+      extractKey: (data) => data.videoId,
+      
+      checkExisting: async (videoId) => {
+        const existingLog = await DBSqlProcessingLogYoutubeVideo.selectByVideoId(videoId);
+        return {
+          isProcessing: existingLog.data?.[0]?.processing_status === "processing",
+          data: existingLog.data?.[0],
+        };
+      },
+      
+      processor: async (data) => {
+        await createContentYouTubeVideo(data.videoId);
+      },
+      
+      createResponse: (videoId, isAlreadyProcessing) => ({
         success: true,
         videoId,
-        message: "Already processing",
+        message: isAlreadyProcessing ? "Already processing" : "Processing started",
         statusUrl: `/api/process-status/youtube-video/${videoId}`,
-      });
-    }
-
-    // 즉시 응답
-    res.json({
-      success: true,
-      videoId,
-      message: "Processing started",
-      statusUrl: `/api/main/video-status/${videoId}`,
-    });
-
-    // 백그라운드 처리
-    createContentYouTubeVideo(videoId).catch((err) => {
-      console.error(`Background processing failed for ${videoId}:`, err);
+      }),
     });
   } catch (error: unknown) {
     const err = error as Error;
-    console.error("Initial validation failed:", err);
-
-    return res.status(500).json({
-      error: "Failed to initiate video processing",
-      message: err.message,
-    });
+    console.error("YouTube video processing failed:", err);
+    
+    if (!res.headersSent) {
+      ContentProcessingHelper.sendError(
+        res,
+        500,
+        "Failed to initiate video processing",
+        err.message
+      );
+    }
   }
 }
-

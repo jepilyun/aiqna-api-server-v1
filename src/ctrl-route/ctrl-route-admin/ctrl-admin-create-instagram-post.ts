@@ -1,65 +1,61 @@
+// ctrl-admin-create-instagram-post.ts
 import { Request, Response } from "express";
+import { TRequestCreateContent } from "aiqna_common_v1";
 import DBSqlProcessingLogInstagramPost from "../../ctrl-db/ctrl-db-sql/db-sql-processing-log-instagram-post.js";
 import { createContentInstagramPost } from "../../ctrl-process/ctrl-create-content/create-content-instagram-post.js";
-import { TRequestCreateContent } from "aiqna_common_v1";
+import { ContentProcessingHelper } from "../../utils/content-processing-helper.js";
 
-/**
- * Ctrl For Create Instagram Post
- * @param req
- * @param res
- * @returns
- */
 export async function ctrlAdminCreateInstagramPost(req: Request, res: Response) {
   try {
     const { data } = req.body as TRequestCreateContent;
 
     if (!data.instagram?.instagramPostUrl) {
-      return res.status(400).json({
-        error: "Instagram Post URL is required",
-      });
+      return ContentProcessingHelper.sendError(
+        res,
+        400,
+        "Instagram Post URL is required"
+      );
     }
 
-    // 이미 처리 중인지 확인
-    const existingLog =
-      await DBSqlProcessingLogInstagramPost.selectByPostUrl(data.instagram?.instagramPostUrl);
-    const isProcessing =
-      existingLog.data?.[0]?.processing_status === "processing";
-
-    if (isProcessing) {
-      return res.json({
+    await ContentProcessingHelper.processContent(res, data.instagram, {
+      extractKey: (instagram) => instagram.instagramPostUrl,
+      
+      checkExisting: async (postUrl) => {
+        const existingLog = await DBSqlProcessingLogInstagramPost.selectByPostUrl(postUrl);
+        return {
+          isProcessing: existingLog.data?.[0]?.processing_status === "processing",
+        };
+      },
+      
+      processor: async (instagram) => {
+        await createContentInstagramPost(
+          instagram.instagramPostUrl,
+          instagram.description,
+          instagram.userId,
+          instagram.userProfileUrl,
+          instagram.postDate,
+          instagram.tags
+        );
+      },
+      
+      createResponse: (postUrl, isAlreadyProcessing) => ({
         success: true,
-        instagramUrl: data.instagram?.instagramPostUrl,
-        message: "Already processing",
+        instagramUrl: postUrl,
+        message: isAlreadyProcessing ? "Already processing" : "Processing started",
         statusUrl: `/api/process-status/instagram-post`,
-      });
-    }
-
-    // 즉시 응답
-    res.json({
-      success: true,
-      instagramUrl: data.instagram?.instagramPostUrl,
-      message: "Processing started",
-      statusUrl: `/api/process-status/instagram-post`,
-    });
-
-    // 백그라운드 처리
-    createContentInstagramPost(
-      data.instagram?.instagramPostUrl,
-      data.instagram?.description,
-      data.instagram?.userId,
-      data.instagram?.userProfileUrl,
-      data.instagram?.postDate,
-      data.instagram?.tags
-    ).catch((err) => {
-      console.error(`Background processing failed for ${data.instagram?.instagramPostUrl}:`, err);
+      }),
     });
   } catch (error: unknown) {
     const err = error as Error;
-    console.error("Initial validation failed:", err);
-
-    return res.status(500).json({
-      error: "Failed to initiate video processing",
-      message: err.message,
-    });
+    console.error("Instagram post processing failed:", err);
+    
+    if (!res.headersSent) {
+      ContentProcessingHelper.sendError(
+        res,
+        500,
+        "Failed to initiate instagram processing",
+        err.message
+      );
+    }
   }
 }

@@ -3,6 +3,7 @@ import {
   TYouTubeTranscriptStandardFormat,
   TPineconeVectorMetadataForContent,
   TPineconeVector,
+  ERequestCreateContentType,
 } from "aiqna_common_v1";
 import { chunkYouTubeVideoTranscript } from "./chunk-youtube-video-transcript.js";
 import { IEmbeddingProvider } from "../../../types/shared.js";
@@ -11,6 +12,7 @@ import { TAnalyzedContentMetadata } from "../../../types/shared.js";
 import { YouTubeVideoMetadataAnalyzerByAI } from "./youtube-video-metadata-analyzer.js";
 import { PROVIDER_CONFIGS } from "../../../consts/const.js";
 import DBPinecone from "../../../ctrl-db/ctrl-db-vector/db-pinecone.js";
+import { ContentKeyManager } from "../../../utils/content-key-manager.js";
 
 /**
  * Pinecone 저장 함수 (Provider 기반) - 청크별 메타데이터 추출
@@ -25,7 +27,12 @@ async function saveYouTubeTranscriptsToPinecone(
   const embeddingModel = modelName || provider.getDefaultModel();
   const metadataExtractor = new YouTubeVideoMetadataAnalyzerByAI();
 
+  if (!videoMetadata.video_id) {
+    throw new Error("Video ID Not Exists.");
+  }
+
   for (const transcript of transcripts) {
+    const contentKey = ContentKeyManager.createContentKey(ERequestCreateContentType.YoutubeVideo, videoMetadata.video_id, transcript.language);
     const chunks = chunkYouTubeVideoTranscript(transcript.segments);
 
     if (chunks.length === 0) {
@@ -67,7 +74,7 @@ async function saveYouTubeTranscriptsToPinecone(
           console.warn(`    ⚠️  Metadata extraction failed for chunk ${idx}:`, metadataError);
         }
 
-        const chunkId = `${videoMetadata.video_id}_${transcript.language}_${idx}`;
+        const chunkId = ContentKeyManager.createChunkId(contentKey, idx);
 
         const metadata: Record<string, string | number | boolean | string[]> = {
           video_id: videoMetadata.video_id ?? "",

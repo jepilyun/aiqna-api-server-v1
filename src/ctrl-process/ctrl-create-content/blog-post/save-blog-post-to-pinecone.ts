@@ -4,12 +4,14 @@ import {
   TPineconeVectorMetadataForContent,
   TPineconeVector,
   TSqlBlogPostDetail,
+  ERequestCreateContentType,
 } from "aiqna_common_v1";
 import { TAnalyzedContentMetadata } from "../../../types/shared.js";
 import { BlogPostMetadataAnalyzerByAI } from "./blog-post-metadata-analyzer.js";
 import DBPinecone from "../../../ctrl-db/ctrl-db-vector/db-pinecone.js";
 import { EmbeddingProviderFactory } from "../../../embedding/embedding-provider-factory.js";
 import { chunkBlogPostContent } from "./chunk-blog-post-content.js";
+import { ContentKeyManager } from "../../../utils/content-key-manager.js";
 
 /**
  * Pinecone 저장 함수 (Provider 기반) - 청크별 메타데이터 추출
@@ -23,6 +25,11 @@ export async function saveBlogPostToPinecone(
   const provider = EmbeddingProviderFactory.createProvider("openai");
   const embeddingModel = modelName || provider.getDefaultModel();
   const metadataExtractor = new BlogPostMetadataAnalyzerByAI();
+
+  const contentKey = ContentKeyManager.createContentKey(
+    ERequestCreateContentType.Blog, 
+    blogPost.blog_post_url
+  );
 
   // 콘텐츠 준비
   let content = "";
@@ -41,9 +48,9 @@ export async function saveBlogPostToPinecone(
 
   // 청크 생성
   const chunks = chunkBlogPostContent(content, {
-    maxChars: 1000,
-    overlapChars: 200,
-    minChars: 400,
+    maxChars: 800,      // ✅ 800자로 줄임
+    overlapChars: 100,  // ✅ 100자로 줄임
+    minChars: 200,      // ✅ 200자로 줄임
   });
 
   console.log(`📦 Created ${chunks.length} chunks for ${blogPost.blog_post_url}`);
@@ -58,19 +65,27 @@ export async function saveBlogPostToPinecone(
     chunks.map(async (chunk, idx) => {
       // 로그 (첫 2개만)
       if (idx < 2) {
-        console.log(`Chunk ${idx}: ${chunk.text.substring(0, 50)}... (${chunk.text.length} chars)`);
+        console.log(`\n📄 Chunk ${idx}:`);
+        console.log(`   Length: ${chunk.text.length} chars`);
+        console.log(`   Preview: ${chunk.text.substring(0, 80)}...`);
       }
 
-      // 1. 임베딩 생성
+      // 1. 임베딩 생성 (청크 텍스트 사용)
       const embedding = await provider.generateEmbedding(chunk.text, embeddingModel);
 
-      // 2. 청크별 메타데이터 추출
+      // 2. ✅ 청크별 메타데이터 추출 - 각 청크의 텍스트로 분석
       let extractedMetadata: TAnalyzedContentMetadata | null = null;
       try {
-        extractedMetadata = await metadataExtractor.analyzeFromBlogPost(blogPost);
+        // ✅ 청크 텍스트로 임시 객체 생성
+        const chunkBlogPost: TSqlBlogPostDetail = {
+          ...blogPost,
+          content: chunk.text, // ✅ 각 청크의 실제 텍스트 사용
+        };
+        
+        extractedMetadata = await metadataExtractor.analyzeFromBlogPost(chunkBlogPost);
 
         if (idx < 2) {
-          console.log(`→ Metadata:`, {
+          console.log(`   Metadata:`, {
             categories: extractedMetadata?.categories,
             locations: extractedMetadata?.locations,
             keywords: extractedMetadata?.keywords.slice(0, 3),
@@ -81,18 +96,21 @@ export async function saveBlogPostToPinecone(
       }
 
       // 청크 ID 생성
-      const chunkId = `${blogPost.blog_post_url}_${idx}`;
+      const chunkId = ContentKeyManager.createChunkId(contentKey, idx);
 
       const metadata: TPineconeMetadata = {
         blog_post_url: blogPost.blog_post_url,
         chunk_index: idx,
         chunk_id: chunkId,
-        text: chunk.text,
+        text: chunk.text, // ✅ 각 청크의 실제 텍스트
         text_length: chunk.text.length,
         embedding_model: embeddingModel,
         embedding_dimensions: provider.getDimensions(embeddingModel),
         created_at: new Date().toISOString(),
-        ...blogPostMetadata,
+        // ✅ content 제외하고 나머지만 포함
+        ...Object.fromEntries(
+          Object.entries(blogPostMetadata).filter(([key]) => key !== 'blog_content')
+        ),
       };
 
       // 청크별 추출된 메타데이터 추가
@@ -121,7 +139,8 @@ export async function saveBlogPostToPinecone(
   );
 
   // Pinecone 배치 업로드
+  console.log(`\n💾 Uploading ${vectors.length} vectors to Pinecone...`);
   await DBPinecone.upsertBatch(indexName, vectors, 100);
 
-  console.log(`✓ Completed ${chunks.length} chunks for ${blogPost.blog_post_url}`);
+  console.log(`✅ Completed ${chunks.length} chunks for ${blogPost.blog_post_url}\n`);
 }
