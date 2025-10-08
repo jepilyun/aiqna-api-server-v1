@@ -1,25 +1,25 @@
-import { TSqlInstagramPostDetail } from "aiqna_common_v1";
+import { TSqlBlogPostDetail } from "aiqna_common_v1";
 import groq from "../../../config/groq.js";
 import { TAnalyzedContentMetadata } from "../../../types/shared.js";
 
 /**
- * Video Metadata Extractor
+ * Blog Post Metadata Extractor
  */
-export class InstagramPostMetadataAnalyzerByAI {
+export class BlogPostMetadataAnalyzerByAI {
   /**
-   * 전체 Instagram 포스트에서 메타데이터 추출
+   * 전체 Blog Post에서 메타데이터 추출
    */
-  async analyzeFromInstagramPost(
-    instagramPost: TSqlInstagramPostDetail,
+  async analyzeFromBlogPost(
+    blogPost: TSqlBlogPostDetail,
   ): Promise<TAnalyzedContentMetadata> {
     let content = "";
 
-    if (instagramPost.description) {
-      content = instagramPost.description.substring(0, 8000);
-    } else if (instagramPost.og_description) {
-      content = instagramPost.og_description.substring(0, 8000);
-    } else if (instagramPost.og_title) {
-      content = instagramPost.og_title.substring(0, 8000);
+    if (blogPost.content) {
+      content = blogPost.content.substring(0, 8000);
+    } else if (blogPost.og_description) {
+      content = blogPost.og_description.substring(0, 8000);
+    } else if (blogPost.og_title) {
+      content = blogPost.og_title.substring(0, 8000);
     }
 
     if (content.length === 0) {
@@ -57,7 +57,7 @@ export class InstagramPostMetadataAnalyzerByAI {
       };
 
     } catch (error) {
-      console.error(`Metadata extraction failed for ${instagramPost.instagram_post_url}:`, error);
+      console.error(`Metadata extraction failed for ${blogPost.blog_post_url}:`, error);
       
       // 실패 시 빈 메타데이터 반환
       return {
@@ -74,9 +74,9 @@ export class InstagramPostMetadataAnalyzerByAI {
    * Get System Prompt
    */
   private getSystemPrompt(): string {
-    return `You are an expert at analyzing instagram content about Korean travel, food, and lifestyle content.
+    return `You are an expert at analyzing blog post content about Korean travel, food, and lifestyle content.
 
-Your task is to extract structured metadata from the instagram content.
+Your task is to extract structured metadata from the blog post content.
 
 Respond ONLY in valid JSON format:
 {
@@ -133,9 +133,9 @@ Respond ONLY in valid JSON format:
    * @returns 
    */
   private buildPrompt(content: string): string {
-    return `Instagram Content: ${content}
+    return `Blog Post Content: ${content}
 
-Extract metadata from this instagram content following the system instructions.
+Extract metadata from this blog post content following the system instructions.
 Return valid JSON only.`;
   }
 }

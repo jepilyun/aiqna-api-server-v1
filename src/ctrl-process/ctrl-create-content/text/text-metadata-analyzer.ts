@@ -1,26 +1,22 @@
-import { TSqlInstagramPostDetail } from "aiqna_common_v1";
+import { TSqlTextDetail } from "aiqna_common_v1";
 import groq from "../../../config/groq.js";
 import { TAnalyzedContentMetadata } from "../../../types/shared.js";
 
 /**
- * Video Metadata Extractor
+ * Text Metadata Extractor
  */
-export class InstagramPostMetadataAnalyzerByAI {
+export class TextMetadataAnalyzerByAI {
   /**
-   * 전체 Instagram 포스트에서 메타데이터 추출
+   * 전체 Blog Post에서 메타데이터 추출
    */
-  async analyzeFromInstagramPost(
-    instagramPost: TSqlInstagramPostDetail,
+  async analyzeFromText(
+    textData: TSqlTextDetail,
   ): Promise<TAnalyzedContentMetadata> {
     let content = "";
 
-    if (instagramPost.description) {
-      content = instagramPost.description.substring(0, 8000);
-    } else if (instagramPost.og_description) {
-      content = instagramPost.og_description.substring(0, 8000);
-    } else if (instagramPost.og_title) {
-      content = instagramPost.og_title.substring(0, 8000);
-    }
+    if (textData.content) {
+      content = textData.content.substring(0, 8000);
+    } 
 
     if (content.length === 0) {
       throw new Error("Content is empty");
@@ -57,7 +53,7 @@ export class InstagramPostMetadataAnalyzerByAI {
       };
 
     } catch (error) {
-      console.error(`Metadata extraction failed for ${instagramPost.instagram_post_url}:`, error);
+      console.error(`Metadata extraction failed for ${textData.hash_key}:`, error);
       
       // 실패 시 빈 메타데이터 반환
       return {
@@ -74,9 +70,9 @@ export class InstagramPostMetadataAnalyzerByAI {
    * Get System Prompt
    */
   private getSystemPrompt(): string {
-    return `You are an expert at analyzing instagram content about Korean travel, food, and lifestyle content.
+    return `You are an expert at analyzing text content about Korean travel, food, and lifestyle content.
 
-Your task is to extract structured metadata from the instagram content.
+Your task is to extract structured metadata from the text content.
 
 Respond ONLY in valid JSON format:
 {
@@ -133,9 +129,9 @@ Respond ONLY in valid JSON format:
    * @returns 
    */
   private buildPrompt(content: string): string {
-    return `Instagram Content: ${content}
+    return `Text Content: ${content}
 
-Extract metadata from this instagram content following the system instructions.
+Extract metadata from this text content following the system instructions.
 Return valid JSON only.`;
   }
 }

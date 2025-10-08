@@ -15,22 +15,35 @@ import { saveInstagramPostToPinecone } from "./instagram-post/save-instagram-pos
  * @returns
  */
 export async function createContentInstagramPost(
-  instagramUrl: string, 
+  instagramPostUrl: string,
+  description: string | null = null,
+  userId: string | null = null,
+  userProfileUrl: string | null = null,
+  postDate: string | null = null,
+  tags: string[] | null = null,
   retryCount = 0
 ) {
   try {
-    const log = await getProcessingLogInstagramPost(instagramUrl);
+    const log = await getProcessingLogInstagramPost(instagramPostUrl);
 
-    // // 1. Instagram Metadata 처리
-    const instagramPost = await processInstagramPost(instagramUrl, log, retryCount);
-    console.log(instagramPost);
+    // 1. Instagram Metadata 처리
+    const instagramPost = await processInstagramPost(
+      instagramPostUrl,
+      description,
+      userId,
+      userProfileUrl,
+      postDate,
+      tags,
+      log,
+      retryCount
+    );
 
-    // // 2. Pinecone 저장
+    // 2. Pinecone 저장
     await processInstagramPostToPinecone(instagramPost, log, retryCount);
 
-    return { success: true, instagramUrl };
+    return { success: true, instagramPostUrl };
   } catch (error) {
-    await handleProcessingError(ERequestCreateContentType.Instagram, instagramUrl, error, retryCount);
+    await handleProcessingError(ERequestCreateContentType.Instagram, instagramPostUrl, error, retryCount);
     throw error;
   }
 }
@@ -50,6 +63,11 @@ async function getProcessingLogInstagramPost(instagramPostUrl: string) {
  */
 async function processInstagramPost(
   instagramPostUrl: string,
+  description: string | null = null,
+  userId: string | null = null,
+  userProfileUrl: string | null = null,
+  postDate: string | null = null,
+  tags: string[] | null = null,
   log: TSqlInstagramPostProcessingLog,
   retryCount: number
 ): Promise<TSqlInstagramPostDetail> {
@@ -70,6 +88,11 @@ async function processInstagramPost(
       // TInstagramPostHTMLMetadata → TSqlInstagramPostDetailInsert 매핑
       const insertData: TSqlInstagramPostDetailInsert = {
         instagram_post_url: instagramPostUrl,
+        description: description,
+        user_id: userId,
+        user_profile_url: userProfileUrl,
+        published_date: postDate,
+        tags: tags ?? [],
         og_title: metadata.og_title,
         og_description: metadata.og_description,
         og_image: metadata.og_image,

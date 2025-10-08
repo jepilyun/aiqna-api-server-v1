@@ -95,3 +95,12 @@ export type TInstagramPostHTMLMetadata = {
   og_android_url?: string | null;
   local_image_url?: string | null;
 }
+
+
+export type TBlogPostHTMLMetadata = {
+  og_title?: string | null;
+  og_description?: string | null;
+  og_image?: string | null;
+  og_url?: string | null;
+  local_image_url?: string | null;
+}

@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { extractYouTubeVideoId } from "../../ctrl-process/ctrl-create-content/youtube-video/extract-youtube-video-id.js";
+import { YouTubeHelper } from "../../utils/youtube-helper.js";
 import DBSqlProcessingLogYoutubeVideo from "../../ctrl-db/ctrl-db-sql/db-sql-processing-log-youtube-video.js";
 import { createContentYouTubeVideo } from "../../ctrl-process/ctrl-create-content/create-content-youtube-video.js";
 
@@ -19,7 +19,7 @@ export async function ctrlAdminCreateYouTubeVideo(req: Request, res: Response) {
       });
     }
 
-    const videoId = extractYouTubeVideoId(videoUrlOrId as string);
+    const videoId = YouTubeHelper.extractVideoId(videoUrlOrId as string);
 
     if (!videoId) {
       return res.status(400).json({

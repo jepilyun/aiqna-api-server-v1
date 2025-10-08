@@ -8,7 +8,7 @@ import {
 import { TAnalyzedContentMetadata } from "../../../types/shared.js";
 import { InstagramPostMetadataAnalyzerByAI } from "./instagram-post-metadata-analyzer.js";
 import DBPinecone from "../../../ctrl-db/ctrl-db-vector/db-pinecone.js";
-import { InstagramHelper } from "./instagram-helper.js";
+import { InstagramHelper } from "../../../utils/instagram-helper.js";
 import { EmbeddingProviderFactory } from "../../../embedding/embedding-provider-factory.js";
 
 
@@ -27,8 +27,8 @@ export async function saveInstagramPostToPinecone(
 
   let content = "";
 
-  if (instagramPost.content) {
-    content = instagramPost.content.substring(0, 8000);
+  if (instagramPost.description) {
+    content = instagramPost.description.substring(0, 8000);
   } else if (instagramPost.og_description) {
     content = instagramPost.og_description.substring(0, 8000);
   } else if (instagramPost.og_title) {
