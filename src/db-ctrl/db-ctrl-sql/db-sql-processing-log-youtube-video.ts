@@ -89,6 +89,31 @@ export default class DBSqlProcessingLogYoutubeVideo {
   }
 
   /**
+   * 대기 중인 작업 조회
+   */
+  static async selectPendingJobs(options: {
+    limit?: number;
+    orderBy?: 'created_at' | 'priority';
+  }): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
+    const { limit = 1, orderBy = 'created_at' } = options;
+
+    const { data, error } = await supabaseClient
+      .from(SQL_DB_TABLE.youtube_video_processing_logs)
+      .select('*')
+      .eq(F_YOUTUBE_VIDEO_PROCESSING_LOG.is_transcript_exist.id, true)
+      .eq(F_YOUTUBE_VIDEO_PROCESSING_LOG.is_transcript_fetched.id, false)
+      .neq(F_YOUTUBE_VIDEO_PROCESSING_LOG.processing_status.id, 'processing') // 처리 중인 것 제외
+      .order(orderBy, { ascending: true })
+      .limit(limit);
+
+    if (error) {
+      throw new Error(`Failed to fetch pending jobs: ${error.message}`);
+    }
+
+    return { data: data || [] };
+  }
+
+  /**
    * Youtube 비디오 처리 로그 등록 기능
    * @param logData Youtube 비디오 처리 로그 정보
    * @returns Youtube 비디오 처리 로그 정보

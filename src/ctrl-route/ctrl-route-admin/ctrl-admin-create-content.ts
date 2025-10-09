@@ -3,7 +3,7 @@ import {
   ERequestCreateContentType,
   TRequestCreateContent,
 } from "aiqna_common_v1";
-import { processCreateYouTubeVideo } from "../../process/process-create-content/process-create-youtube-video.js";
+import { requestYouTubeVideoProcessing } from "../../process/process-create-content/request-youtube-video-processing.js";
 import { processCreateInstagramPost } from "../../process/process-create-content/process-create-instagram-post.js";
 import { processContentBlogPost } from "../../process/process-create-content/process-create-blog-post.js";
 import { processCreateText } from "../../process/process-create-content/process-create-text.js";
@@ -144,7 +144,7 @@ const processors = {
     if (!data.youtubeVideo?.videoId) {
       throw new Error("Video ID is missing");
     }
-    await processCreateYouTubeVideo(data.youtubeVideo.videoId);
+    await requestYouTubeVideoProcessing(data.youtubeVideo.videoId);
   },
 
   [ERequestCreateContentType.Instagram]: async (

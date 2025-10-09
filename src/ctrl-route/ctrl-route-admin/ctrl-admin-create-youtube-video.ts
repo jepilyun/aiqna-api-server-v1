@@ -2,8 +2,8 @@
 import { Request, Response } from "express";
 import { YouTubeHelper } from "../../content/content-youtube-video/youtube-helper.js";
 import DBSqlProcessingLogYoutubeVideo from "../../db-ctrl/db-ctrl-sql/db-sql-processing-log-youtube-video.js";
-import { processCreateYouTubeVideo } from "../../process/process-create-content/process-create-youtube-video.js";
 import { HelperContentProcessing } from "../../content/content-common/helper-content-processing.js";
+import { requestYouTubeVideoProcessing } from "../../process/process-create-content/request-youtube-video-processing.js";
 
 export async function ctrlAdminCreateYouTubeVideo(req: Request, res: Response) {
   try {
@@ -40,7 +40,7 @@ export async function ctrlAdminCreateYouTubeVideo(req: Request, res: Response) {
       },
       
       processor: async (data) => {
-        await processCreateYouTubeVideo(data.videoId);
+        await requestYouTubeVideoProcessing(data.videoId);
       },
       
       createResponse: (videoId, isAlreadyProcessing) => ({
