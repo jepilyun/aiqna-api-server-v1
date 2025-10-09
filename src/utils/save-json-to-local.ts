@@ -7,14 +7,14 @@ import path from 'path';
  * @param json 저장할 JSON 데이터
  * @param fileName 파일명
  * @param subName 언어 코드
- * @param storagePath 저장할 폴더 경로 (기본값: './data/transcripts')
+ * @param storagePath 저장할 폴더 경로 (기본값: '~/Downloads/aiqna/youtube/transcripts')
  * @returns 저장된 파일 경로
  */
 export async function saveJsonToLocal(
   json: unknown,
   fileName: string,
   subName: string,
-  storagePath: string = './data/transcripts',
+  storagePath: string = '../data/transcripts',
 ): Promise<string> {
   try {
     // ~ 확장

@@ -1,3 +1,5 @@
+import path from "path";
+import fs from "fs/promises";
 import { TYouTubeTranscriptStandardFormat, TSqlYoutubeVideoTranscriptInsert, TYouTubeTranscriptAnySegment,
   TYouTubeTranscriptCueGroupSegment,
   TYouTubeTranscriptCueRenderer,
@@ -11,21 +13,36 @@ import { fetchYoutubeVideoTranscriptByLanguage } from "./fetch-youtube-video-tra
 import DBSqlYoutubeVideoTranscript from "../../../ctrl-db/ctrl-db-sql/db-sql-youtube-video-transcript.js";
 import { convertYouTubeTranscriptSegmentsToStandard } from "./convert-youtube-transcript-segments-to-standard.js";
 import { TXMLParsedYouTubeTranscript } from "../../../types/shared.js";
+import { saveJsonToLocal } from "../../../utils/save-json-to-local.js";
 
 /**
- * 여러 언어의 트랜스크립트를 저장하고 결과 반환
+ * 여러 언어의 트랜스크립트를 저장하고 결과 반환 (로컬 캐시 우선)
  * @param videoId
  * @param languages
+ * @param storagePath
  * @returns
  */
 export async function saveYouTubeTranscriptsToDb(
   videoId: string,
   languages: string[] = ["ko", "en"],
+  storagePath: string = '../data/transcripts',
 ): Promise<TYouTubeTranscriptStandardFormat[]> {
   const savedTranscripts: TYouTubeTranscriptStandardFormat[] = [];
 
   for (const lang of languages) {
     try {
+      // 1. 먼저 로컬 파일 확인
+      const localData = await loadTranscriptFromLocal(videoId, lang, storagePath);
+      
+      if (localData) {
+        // 로컬 파일이 있으면 사용
+        savedTranscripts.push(localData);
+        console.log(`✓ ${lang} 트랜스크립트 로컬 파일 사용`);
+        continue;
+      }
+
+      // 2. 로컬 파일이 없으면 fetch
+      console.log(`🌐 Fetching ${lang} transcript from YouTube...`);
       const transcriptResult = await fetchYoutubeVideoTranscriptByLanguage(
         videoId,
         lang,
@@ -44,30 +61,71 @@ export async function saveYouTubeTranscriptsToDb(
         transcriptData.segments_json,
       );
 
-      // 저장된 트랜스크립트 데이터 반환용으로 추가
-      savedTranscripts.push({
+      // 저장할 데이터 구조
+      const transcriptToSave: TYouTubeTranscriptStandardFormat = {
         videoId,
         language: transcriptData.language || transcriptResult.language,
         segments: pineconeSegments,
-      });
+      };
 
-      console.log(`✓ ${transcriptResult.language} 트랜스크립트 저장 완료`);
+      // 3. 로컬에 저장
+      await saveJsonToLocal(
+        transcriptToSave,
+        videoId,
+        lang,
+        storagePath
+      );
+
+      savedTranscripts.push(transcriptToSave);
+      console.log(`✓ ${transcriptResult.language} 트랜스크립트 fetch 및 저장 완료`);
     } catch (error) {
       const err = error as Error;
-      console.log(`✗ ${lang} 트랜스크립트 없음: ${err.message}`);
+      console.log(`✗ ${lang} 트랜스크립트 처리 실패: ${err.message}`);
       continue;
     }
   }
 
   if (savedTranscripts.length === 0) {
     console.log("자막이 없습니다.");
-    return []; // 빈 배열 반환
+    return [];
   }
 
-  console.log(`총 ${savedTranscripts.length}개 언어 저장 완료`);
+  console.log(`총 ${savedTranscripts.length}개 언어 처리 완료`);
   return savedTranscripts;
 }
 
+
+/**
+ * 로컬 파일에서 트랜스크립트 로드
+ */
+async function loadTranscriptFromLocal(
+  videoId: string,
+  language: string,
+  storagePath: string = '../data/transcripts'
+): Promise<TYouTubeTranscriptStandardFormat | null> {
+  try {
+    const expandedPath = storagePath.startsWith('~') 
+      ? storagePath.replace('~', process.env.HOME || '') 
+      : storagePath;
+    
+    const absolutePath = path.resolve(expandedPath);
+    const filename = `${videoId}_${language}.json`;
+    const filepath = path.join(absolutePath, filename);
+
+    console.log(`🔍 Checking local file: ${filepath}`);
+    
+    const fileContent = await fs.readFile(filepath, 'utf-8');
+    const data = JSON.parse(fileContent);
+    
+    console.log(`✓ Loaded from local: ${filename}`);
+    return data;
+  } catch (error) {
+    const err = error as Error;
+    console.log(`✗ ${language} 트랜스크립트 로드 실패: ${err.message}`);
+    // 파일이 없거나 읽기 실패
+    return null;
+  }
+}
 
 /**
  * fetchYoutubeVideoTranscript 결과를 DB insert 형식으로 변환

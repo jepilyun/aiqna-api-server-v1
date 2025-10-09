@@ -4,6 +4,8 @@ import { createContentYouTubeVideo } from "../../ctrl-process/ctrl-create-conten
 import { createContentInstagramPost } from "../../ctrl-process/ctrl-create-content/create-content-instagram-post.js";
 import { createContentBlogPost } from "../../ctrl-process/ctrl-create-content/create-content-blog-post.js";
 import { createContentText } from "../../ctrl-process/ctrl-create-content/create-content-text.js";
+import { ContentKeyManager } from "../../utils/content-key-manager.js";
+
 
 // 타입 정의 개선
 type ContentValidator<T> = (data: T) => { isValid: boolean; error?: string };
@@ -34,6 +36,7 @@ type BlogSuccessResponse = {
 type TextSuccessResponse = {
   success: true;
   text: string;
+  contentKey: string;
   message: string;
   statusUrl: string;
 };
@@ -234,9 +237,15 @@ const responseGenerators: {
     if (!data.text?.content) {
       throw new Error("Text content is missing");
     }
+    const contentKey = ContentKeyManager.createContentKey(
+      ERequestCreateContentType.Text,
+      data.text.content
+    );
+
     return {
       success: true,
       text: data.text.content,
+      contentKey,
       message: "Processing started",
       statusUrl: `/api/process-status/text`,
     };

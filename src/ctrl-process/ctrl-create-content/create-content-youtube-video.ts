@@ -24,13 +24,13 @@ export async function createContentYouTubeVideo(
   try {
     const log = await getProcessingLogYouTubeVideo(videoId);
 
-    // 1. API 데이터 처리
-    const videoData = await processYouTubeVideoApiData(videoId, log, retryCount);
+    // 1. API 데이터 처리 & Transcripts 처리
+    const [videoData, transcripts] = await Promise.all([
+      processYouTubeVideoApiData(videoId, log, retryCount),
+      processYouTubeVideoTranscripts(videoId, log, retryCount),
+    ]);
 
-    // 2. 트랜스크립트 처리
-    const transcripts = await processYouTubeVideoTranscripts(videoId, log, retryCount);
-
-    // 3. Pinecone 저장
+    // 2. Pinecone 저장
     await processYouTubeVideoToPinecone(videoId, videoData, transcripts, log, retryCount);
 
     return { success: true, videoId };
