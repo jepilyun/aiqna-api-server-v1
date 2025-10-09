@@ -192,8 +192,13 @@ async function loadTranscriptFromLocal(
     console.log(`✓ Loaded from local: ${filename}`);
     return data;
   } catch (error: unknown) {
-    console.log(`Can't load transcript from local ${videoId}_${language}.json`, error);
-    // 파일이 없는 경우는 정상 동작이므로 로그 최소화
+    const err = error as NodeJS.ErrnoException;
+    if (err.code === 'ENOENT') {
+      console.log(`📂 No cache for ${language}, fetching from YouTube...`);
+    } else {
+      console.warn(`⚠️ Error loading ${videoId}_${language}.json:`, err.message);
+    }
+    
     return null;
   }
 }

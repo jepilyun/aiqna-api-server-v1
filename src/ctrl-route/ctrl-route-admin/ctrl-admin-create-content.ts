@@ -269,6 +269,8 @@ export async function ctrlAdminCreateContent(req: Request, res: Response) {
   try {
     const { type, data } = req.body as TRequestCreateContent;
 
+    console.log(`📥 Received request - Type: ${type}`); // 👈 디버깅 로그 추가
+
     // 지원하지 않는 타입 체크
     if (!validators[type]) {
       return res.status(400).json({
@@ -277,17 +279,33 @@ export async function ctrlAdminCreateContent(req: Request, res: Response) {
       });
     }
 
-    // 공통 처리 함수 호출
-    await ContentProcessingUtils.processContent(
-      res,
-      data,
-      validators[type],
-      processors[type],
-      responseGenerators[type](data),
-    );
+    // 1. 먼저 검증
+    const validation = validators[type](data);
+    if (!validation.isValid) {
+      return res.status(400).json({
+        success: false,
+        error: validation.error || "Validation failed",
+      });
+    }
+
+    // 2. 검증 성공 후 응답 생성
+    const successResponse = responseGenerators[type](data);
+    
+    console.log(`✅ Validation passed, sending response`); // 👈 디버깅 로그
+    
+    // 3. 응답 전송
+    res.json(successResponse);
+
+    // 4. 백그라운드 처리 (응답 후)
+    console.log(`🔄 Starting background processing for ${type}`); // 👈 디버깅 로그
+    
+    processors[type](data).catch((err) => {
+      console.error(`❌ Background processing failed for ${type}:`, err);
+    });
+
   } catch (error: unknown) {
     const err = error as Error;
-    console.error("Content processing failed:", err);
+    console.error("❌ Content processing failed:", err);
 
     if (!res.headersSent) {
       return res.status(400).json({

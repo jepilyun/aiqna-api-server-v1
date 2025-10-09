@@ -15,16 +15,110 @@ import DBPinecone from "../../db-ctrl/db-ctrl-pinecone/db-pinecone.js";
 import { ContentKeyManager } from "../../utils/content-key-manager.js";
 
 /**
- * Pinecone 저장 함수 (Provider 기반) - 청크별 메타데이터 추출
+ * Tier 1: 비디오 전체 요약을 Pinecone에 저장
  */
-async function saveYouTubeTranscriptsToPinecone(
+async function saveVideoSummaryToPinecone(
+  videoMetadata: Partial<TPineconeVectorMetadataForContent>,
+  provider: IEmbeddingProvider,
+  modelName: string,
+  indexName: string,
+): Promise<void> {
+  // 요약 정보가 없으면 스킵
+  if (!videoMetadata.ai_summary || !videoMetadata.video_id) {
+    console.log('⚠️ No AI summary available, skipping Tier 1');
+    return;
+  }
+
+  console.log('📊 Tier 1: Saving video summary...');
+
+  // 요약 텍스트 생성 (검색에 최적화)
+  const summaryText = [
+    `Title: ${videoMetadata.title || ''}`,
+    `Summary: ${videoMetadata.ai_summary}`,
+    videoMetadata.main_topics?.length 
+      ? `Topics: ${videoMetadata.main_topics.join(', ')}` 
+      : '',
+    videoMetadata.key_points?.length 
+      ? `Key Points: ${videoMetadata.key_points.join('; ')}` 
+      : '',
+    videoMetadata.keywords?.length 
+      ? `Keywords: ${videoMetadata.keywords.join(', ')}` 
+      : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  // 임베딩 생성
+  const embedding = await provider.generateEmbedding(summaryText, modelName);
+
+  // Summary Vector 생성
+  const summaryId = `${videoMetadata.video_id}_summary`;
+  
+  const metadata: Record<string, string | number | boolean | string[]> = {
+    video_id: videoMetadata.video_id,
+    title: videoMetadata.title ?? "",
+    type: 'summary', // 🔥 검색 필터용
+    content_type: 'youtube_video_summary',
+    ai_summary: videoMetadata.ai_summary,
+    embedding_model: modelName,
+    embedding_dimensions: provider.getDimensions(modelName),
+    created_at: new Date().toISOString(),
+  };
+
+  // 배열 메타데이터 추가
+  if (videoMetadata.main_topics?.length) {
+    metadata.main_topics = videoMetadata.main_topics;
+  }
+  if (videoMetadata.key_points?.length) {
+    metadata.key_points = videoMetadata.key_points;
+  }
+  if (videoMetadata.keywords?.length) {
+    metadata.keywords = videoMetadata.keywords;
+  }
+
+  // 기존 비디오 메타데이터
+  if (videoMetadata.channel_title) {
+    metadata.channel_title = videoMetadata.channel_title;
+  }
+  if (videoMetadata.channel_id) {
+    metadata.channel_id = videoMetadata.channel_id;
+  }
+  if (videoMetadata.published_date) {
+    metadata.published_at = videoMetadata.published_date;
+  }
+  if (videoMetadata.thumbnail_url) {
+    metadata.thumbnail_url = videoMetadata.thumbnail_url;
+  }
+  if (videoMetadata.duration) {
+    metadata.duration = videoMetadata.duration;
+  }
+  if (videoMetadata.view_count) {
+    metadata.view_count = videoMetadata.view_count;
+  }
+  if (videoMetadata.like_count) {
+    metadata.like_count = videoMetadata.like_count;
+  }
+
+  const summaryVector: TPineconeVector = {
+    id: summaryId,
+    values: embedding,
+    metadata,
+  };
+
+  await DBPinecone.upsertBatch(indexName, [summaryVector], 1);
+  console.log('✓ Summary vector saved');
+}
+
+/**
+ * Tier 2 & 3: 트랜스크립트 청크 저장 (기존 로직)
+ */
+async function saveTranscriptChunksToPinecone(
   transcripts: TYouTubeTranscriptStandardFormat[],
   videoMetadata: Partial<TPineconeVectorMetadataForContent>,
   provider: IEmbeddingProvider,
-  modelName?: string,
-  indexName: string = PINECONE_INDEX_NAME.TRAVEL_SEOUL.OPENAI_SMALL,
+  modelName: string,
+  indexName: string,
 ): Promise<void> {
-  const embeddingModel = modelName || provider.getDefaultModel();
   const metadataExtractor = new YouTubeVideoMetadataAnalyzerByAI();
 
   if (!videoMetadata.video_id) {
@@ -32,6 +126,8 @@ async function saveYouTubeTranscriptsToPinecone(
   }
 
   for (const transcript of transcripts) {
+    console.log(`📝 Tier 2/3: Saving ${transcript.language} transcript chunks...`);
+    
     const contentKey = ContentKeyManager.createContentKey(
       ERequestCreateContentType.YoutubeVideo,
       videoMetadata.video_id,
@@ -58,7 +154,7 @@ async function saveYouTubeTranscriptsToPinecone(
         // 1. 임베딩 생성
         const embedding = await provider.generateEmbedding(
           chunk.text,
-          embeddingModel,
+          modelName,
         );
 
         // 2. 청크별 메타데이터 추출
@@ -93,6 +189,8 @@ async function saveYouTubeTranscriptsToPinecone(
         const metadata: Record<string, string | number | boolean | string[]> = {
           video_id: videoMetadata.video_id ?? "",
           title: videoMetadata.title ?? "",
+          type: 'transcript', // 🔥 검색 필터용
+          content_type: 'youtube_video_transcript',
           language: transcript.language,
           chunk_index: idx,
           chunk_id: chunkId,
@@ -100,8 +198,8 @@ async function saveYouTubeTranscriptsToPinecone(
           end_time: chunk.endTime,
           text: chunk.text,
           text_length: chunk.text.length,
-          embedding_model: embeddingModel,
-          embedding_dimensions: provider.getDimensions(embeddingModel),
+          embedding_model: modelName,
+          embedding_dimensions: provider.getDimensions(modelName),
           created_at: new Date().toISOString(),
         };
 
@@ -155,6 +253,38 @@ async function saveYouTubeTranscriptsToPinecone(
 }
 
 /**
+ * 🔥 수정된 메인 함수: 3-Tier 통합 저장
+ * Tier 1: Summary (비디오 전체 요약)
+ * Tier 2 & 3: Transcript Chunks (기존 방식)
+ */
+async function saveYouTubeTranscriptsToPinecone(
+  transcripts: TYouTubeTranscriptStandardFormat[],
+  videoMetadata: Partial<TPineconeVectorMetadataForContent>,
+  provider: IEmbeddingProvider,
+  modelName?: string,
+  indexName: string = PINECONE_INDEX_NAME.TRAVEL_SEOUL.OPENAI_SMALL,
+): Promise<void> {
+  const embeddingModel = modelName || provider.getDefaultModel();
+
+  // Tier 1: 비디오 요약 저장
+  await saveVideoSummaryToPinecone(
+    videoMetadata,
+    provider,
+    embeddingModel,
+    indexName,
+  );
+
+  // Tier 2 & 3: 트랜스크립트 청크 저장
+  await saveTranscriptChunksToPinecone(
+    transcripts,
+    videoMetadata,
+    provider,
+    embeddingModel,
+    indexName,
+  );
+}
+
+/**
  * Process with Different Providers
  * @param transcripts
  * @param vectorMetadata
@@ -171,6 +301,7 @@ export async function saveYouTubeTranscriptsToPineconeWithProviders(
         if (!vectorMetadata) {
           throw new Error("Metadata Needed");
         }
+        
         await saveYouTubeTranscriptsToPinecone(
           transcripts,
           vectorMetadata,

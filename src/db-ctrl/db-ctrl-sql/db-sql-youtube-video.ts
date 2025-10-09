@@ -193,6 +193,38 @@ export default class DBSqlYoutubeVideo {
   }
 
   /**
+   * AI 요약 업데이트
+   */
+  static async updateSummaryByVideoId(
+    videoId: string,
+    updates: {
+      ai_summary?: string;
+      main_topics?: string[];
+      key_points?: string[];
+      keywords?: string[];
+    }
+  ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
+    try {
+      const { data, error } = await supabaseClient
+        .from(SQL_DB_TABLE.youtube_videos)
+        .update(updates)
+        .eq(F_YOUTUBE_VIDEO.video_id.id, videoId)
+        .select();
+
+      if (error) {
+        throw new Error(`Failed to update video: ${error.message}`);
+      }
+
+      return { data: data || [] };
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error("Failed to update video");
+    }
+  }
+
+  /**
    * Youtube 비디오 삭제 기능
    * @param videoId 비디오 아이디
    * @returns 삭제된 Youtube 비디오 정보

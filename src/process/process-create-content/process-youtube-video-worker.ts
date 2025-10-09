@@ -1,4 +1,3 @@
-import { youtube_v3 } from "googleapis";
 import DBSqlProcessingLogYoutubeVideo from "../../db-ctrl/db-ctrl-sql/db-sql-processing-log-youtube-video.js";
 import DBSqlYoutubeVideo from "../../db-ctrl/db-ctrl-sql/db-sql-youtube-video.js";
 import {
@@ -7,6 +6,8 @@ import {
   ERequestCreateContentType,
   TYouTubeTranscriptStandardFormat,
   TPineconeVectorMetadataForContent,
+  TSqlYoutubeVideoDetail,
+  TYouTubeVideoSummary,
 } from "aiqna_common_v1";
 import { handleProcessingError } from "../../content/content-common/handle-processing-error.js";
 import { withRetry } from "../../utils/retry/retry-common.js";
@@ -14,6 +15,8 @@ import { saveYouTubeTranscriptsToPineconeWithProviders } from "../../content/con
 import { saveYouTubeTranscriptsToDb } from "../../content/content-youtube-video/save-youtube-transcripts-to-db.js";
 import { convertYouTubeTranscriptSegmentsToStandard } from "../../content/content-youtube-video/convert-youtube-transcript-segments-to-standard.js";
 import DBSqlYoutubeVideoTranscript from "../../db-ctrl/db-ctrl-sql/db-sql-youtube-video-transcript.js";
+import { summarizeYouTubeTranscript } from "../../content/content-youtube-video/summarize-youtube-transcript.js";
+import { sleep } from "../../utils/sleep.js";
 
 
 /**
@@ -154,6 +157,7 @@ async function processYouTubeVideoJob(
   job: TSqlYoutubeVideoProcessingLog
 ): Promise<void> {
   const { video_id } = job;
+  let aiSummary: TYouTubeVideoSummary | null = null;
 
   try {
     // 상태를 'processing'으로 변경
@@ -162,20 +166,66 @@ async function processYouTubeVideoJob(
       processing_started: new Date().toISOString(),
     });
 
-    // 1. Transcript 가져오기
+    // 1. Video Data 가져오기
+    const videoDataResult = await DBSqlYoutubeVideo.selectByVideoId(video_id);
+    const videoData = videoDataResult.data?.[0];
+    
+    if (!videoData) {
+      throw new Error(`Video data not found for ${video_id}`);
+    }
+
+    // 2. Transcript 가져오기
     const transcripts = await processYouTubeVideoTranscripts(video_id, job);
 
-    // 2. Pinecone 저장
+    // 3. 🆕 AI 요약 생성 (영어 자막 기준)
     if (transcripts.length > 0) {
-      const videoData = await DBSqlYoutubeVideo.selectByVideoId(video_id);
-      if (videoData.data?.[0]) {
-        await processYouTubeVideoToPinecone(
-          video_id,
-          videoData.data[0],
-          transcripts,
-          job,
+      const englishTranscript = transcripts.find(t => 
+        t.language === 'en' || t.language.startsWith('en-')
+      );
+      
+      if (englishTranscript) {
+        console.log('🤖 Generating AI summary with Groq...');
+        
+        const fullText = englishTranscript.segments
+          .map(s => s.text)
+          .join(' ');
+        
+        const videoTitle = videoData.title || '';
+        
+        aiSummary = await summarizeYouTubeTranscript(
+          fullText,
+          videoTitle,
+          englishTranscript.language
         );
+        
+        // 4. DB에 요약 저장
+        await DBSqlYoutubeVideo.updateSummaryByVideoId(video_id, {
+          ai_summary: aiSummary.summary,
+          main_topics: aiSummary.mainTopics,
+          key_points: aiSummary.keyPoints,
+          keywords: aiSummary.keywords,
+        });
+        
+        console.log('✅ AI summary saved to DB');
+      } else {
+        console.warn('⚠️ No English transcript available for summary');
       }
+    }
+
+    // 5. Pinecone 저장 (요약 포함)
+    if (transcripts.length > 0 && videoData) {
+      await processYouTubeVideoToPinecone(
+        video_id,
+        { 
+          ...videoData,
+          ai_summary: aiSummary?.summary || "",
+          main_topics: aiSummary?.mainTopics || [],
+          key_points: aiSummary?.keyPoints || [],
+          keywords: aiSummary?.keywords || [],
+        },
+        transcripts,
+        job,
+      );
     }
 
     console.log(`✅ Job completed: ${video_id}`);
@@ -190,11 +240,6 @@ async function processYouTubeVideoJob(
     );
   }
 }
-
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 
 /**
  * 트랜스크립트 처리
@@ -220,7 +265,7 @@ async function processYouTubeVideoTranscripts(
       const transcripts = await saveYouTubeTranscriptsToDb(
         videoId,
         ["en", "ko"],
-        './data/transcripts', // ✅ 로컬 캐시 경로 명시
+        '../data/transcripts', // ✅ 로컬 캐시 경로 명시
       );
       
       await DBSqlProcessingLogYoutubeVideo.updateByVideoId(videoId, {
@@ -299,7 +344,7 @@ async function loadExistingTranscripts(
  */
 async function processYouTubeVideoToPinecone(
   videoId: string,
-  videoData: youtube_v3.Schema$Video,
+  videoData: TSqlYoutubeVideoDetail,
   transcripts: TYouTubeTranscriptStandardFormat[],
   log?: TSqlYoutubeVideoProcessingLog,
 ): Promise<void> {
@@ -319,7 +364,7 @@ async function processYouTubeVideoToPinecone(
   await withRetry(
     async () => {
       const metadata = convertYouTubeApiDataToPineconeVideoMetadata(videoData);
-      
+
       await saveYouTubeTranscriptsToPineconeWithProviders(
         transcripts,
         metadata,
@@ -344,83 +389,21 @@ async function processYouTubeVideoToPinecone(
  * Convert YouTube API Data to Pinecone Metadata
  */
 function convertYouTubeApiDataToPineconeVideoMetadata(
-  videoData: youtube_v3.Schema$Video,
+  videoData: TSqlYoutubeVideoDetail,
 ): Partial<TPineconeVectorMetadataForContent> {
   return {
-    video_id: videoData.id || "",
-    title: videoData.snippet?.title || "",
-    channel_title: videoData.snippet?.channelTitle || "",
-    channel_id: videoData.snippet?.channelId || "",
-    published_date: videoData.snippet?.publishedAt || "",
-    thumbnail_url: videoData.snippet?.thumbnails?.high?.url || "",
-    duration: videoData.contentDetails?.duration || "",
-    view_count: parseInt(videoData.statistics?.viewCount || "0"),
-    like_count: parseInt(videoData.statistics?.likeCount || "0"),
+    video_id: videoData.video_id || "",
+    title: videoData.title || "",
+    channel_title: videoData.channel_name || "",
+    channel_id: videoData.channel_id || "",
+    published_date: videoData.published_date || "",
+    thumbnail_url: videoData.thumbnail_url || "",
+    duration: videoData.duration_seconds.toString(),
+    view_count: videoData.view_count,
+    like_count: videoData.like_count,
+    ai_summary: videoData.ai_summary || "",
+    main_topics: videoData.main_topics || [],
+    key_points: videoData.key_points || [],
+    keywords: videoData.keywords || [],
   };
 }
-
-
-
-
-
-
-
-
-
-
-
-
-// /**
-//  * Get Processing Log
-//  */
-// async function getProcessingLogYouTubeVideo(
-//   videoId: string
-// ): Promise<TSqlYoutubeVideoProcessingLog | undefined> {
-//   const result = await DBSqlProcessingLogYoutubeVideo.selectByVideoId(videoId);
-//   return result.data?.[0];
-// }
-
-// /**
-//  * 1. YouTube API 데이터 처리
-//  * YouTube API에서 비디오 메타데이터 가져오기 및 DB 저장
-//  */
-// async function processYouTubeVideoApiData(
-//   videoId: string,
-//   log?: TSqlYoutubeVideoProcessingLog,
-// ): Promise<youtube_v3.Schema$Video> {
-//   // 이미 처리된 경우 DB에서 조회
-//   if (log?.is_api_data_fetched) {
-//     console.log("✅ API data already fetched, loading from DB...");
-//     const existing = await DBSqlYoutubeVideo.selectByVideoId(videoId);
-//     if (existing.data?.[0]) {
-//       console.log("✅ API data loaded from DB");
-//       return existing.data[0];
-//     }
-//   }
-
-//   // API 데이터가 없으면 새로 가져오기
-//   console.log("📥 Fetching YouTube API data...");
-
-//   return await withRetry(
-//     async () => {
-//       const data = await fetchYoutubeVideoApiData(videoId);
-      
-//       console.log("💾 Saving API data to DB...");
-//       await DBSqlYoutubeVideo.upsert(data);
-      
-//       await DBSqlProcessingLogYoutubeVideo.upsert({
-//         video_id: videoId,
-//         processing_status: EProcessingStatusType.processing,
-//         is_api_data_fetched: true,
-//       });
-
-//       console.log("✅ YouTube API data saved");
-//       return data;
-//     },
-//     {
-//       maxRetries: 3,
-//       baseDelay: 2000,
-//       operationName: "Fetch YouTube API data",
-//     }
-//   );
-// }
