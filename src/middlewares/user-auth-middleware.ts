@@ -58,21 +58,21 @@ export const userAuthMiddleware = async (
       }
 
       try {
-        jwt.verify(
-          refreshToken,
-          JWT_SECRET,
-        ) as UserTokenPayload;
+        jwt.verify(refreshToken, JWT_SECRET) as UserTokenPayload;
 
         const expiredAccessPayload = jwt.verify(accessToken, JWT_SECRET, {
           ignoreExpiration: true,
         }) as UserTokenPayload;
 
-        const newAccessToken = signToken({
-          user_id: expiredAccessPayload.user_id,
-          email: expiredAccessPayload.email,
-          name: expiredAccessPayload.name,
-          is_active: expiredAccessPayload.is_active,
-        }, "1h");
+        const newAccessToken = signToken(
+          {
+            user_id: expiredAccessPayload.user_id,
+            email: expiredAccessPayload.email,
+            name: expiredAccessPayload.name,
+            is_active: expiredAccessPayload.is_active,
+          },
+          "1h",
+        );
 
         res.setHeader("Set-Cookie", [
           cookie.serialize(COOKIE_NAME.access_token_user, newAccessToken, {

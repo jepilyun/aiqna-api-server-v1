@@ -63,10 +63,7 @@ export const adminAuthMiddleware = async (
 
       try {
         // refresh token 검증
-        jwt.verify(
-          refreshToken,
-          JWT_SECRET,
-        ) as AdminTokenPayload;
+        jwt.verify(refreshToken, JWT_SECRET) as AdminTokenPayload;
 
         // 만료된 access token에서 페이로드 추출 (만료 무시)
         const expiredAccessPayload = jwt.verify(accessToken, JWT_SECRET, {

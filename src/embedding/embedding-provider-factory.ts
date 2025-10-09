@@ -5,7 +5,6 @@ import { JinaEmbeddingProvider } from "./jina-embedding.js";
 import { OpenAIEmbeddingProvider } from "./openai-embedding.js";
 import { VoyageEmbeddingProvider } from "./voyage-embedding.js";
 
-
 /**
  * Embedding Provider Factory
  */

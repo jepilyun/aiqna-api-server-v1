@@ -5,7 +5,6 @@ import { EMBEDDING_MODEL, PINECONE_INDEX_NAME } from "aiqna_common_v1";
  */
 export const MAX_RETRIES = 3;
 
-
 // Pinecone Embedding Provider 설정 파일
 export const PROVIDER_CONFIGS = [
   {

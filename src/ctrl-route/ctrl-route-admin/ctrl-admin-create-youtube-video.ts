@@ -1,16 +1,16 @@
 // ctrl-admin-create-youtube-video.ts
 import { Request, Response } from "express";
-import { YouTubeHelper } from "../../utils/youtube-helper.js";
-import DBSqlProcessingLogYoutubeVideo from "../../ctrl-db/ctrl-db-sql/db-sql-processing-log-youtube-video.js";
-import { createContentYouTubeVideo } from "../../ctrl-process/ctrl-create-content/create-content-youtube-video.js";
-import { ContentProcessingHelper } from "../../utils/content-processing-helper.js";
+import { YouTubeHelper } from "../../content/content-youtube-video/youtube-helper.js";
+import DBSqlProcessingLogYoutubeVideo from "../../db-ctrl/db-ctrl-sql/db-sql-processing-log-youtube-video.js";
+import { processCreateYouTubeVideo } from "../../process/process-create-content/process-create-youtube-video.js";
+import { HelperContentProcessing } from "../../content/content-common/helper-content-processing.js";
 
 export async function ctrlAdminCreateYouTubeVideo(req: Request, res: Response) {
   try {
     const videoUrlOrId = req.body.id;
 
     if (!videoUrlOrId) {
-      return ContentProcessingHelper.sendError(
+      return HelperContentProcessing.sendError(
         res,
         400,
         "Video ID or URL is required"
@@ -20,7 +20,7 @@ export async function ctrlAdminCreateYouTubeVideo(req: Request, res: Response) {
     const videoId = YouTubeHelper.extractVideoId(videoUrlOrId as string);
 
     if (!videoId) {
-      return ContentProcessingHelper.sendError(
+      return HelperContentProcessing.sendError(
         res,
         400,
         "Invalid YouTube Video ID or URL format"
@@ -28,7 +28,7 @@ export async function ctrlAdminCreateYouTubeVideo(req: Request, res: Response) {
     }
 
     // 공통 헬퍼 사용
-    await ContentProcessingHelper.processContent(res, { videoId }, {
+    await HelperContentProcessing.processContent(res, { videoId }, {
       extractKey: (data) => data.videoId,
       
       checkExisting: async (videoId) => {
@@ -40,7 +40,7 @@ export async function ctrlAdminCreateYouTubeVideo(req: Request, res: Response) {
       },
       
       processor: async (data) => {
-        await createContentYouTubeVideo(data.videoId);
+        await processCreateYouTubeVideo(data.videoId);
       },
       
       createResponse: (videoId, isAlreadyProcessing) => ({
@@ -55,7 +55,7 @@ export async function ctrlAdminCreateYouTubeVideo(req: Request, res: Response) {
     console.error("YouTube video processing failed:", err);
     
     if (!res.headersSent) {
-      ContentProcessingHelper.sendError(
+      HelperContentProcessing.sendError(
         res,
         500,
         "Failed to initiate video processing",

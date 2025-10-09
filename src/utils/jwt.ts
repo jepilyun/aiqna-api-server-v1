@@ -35,7 +35,10 @@ interface TokenCreatePayload {
  * @param expiresIn - 만료 시간 (기본 1일)
  * @returns JWT 토큰
  */
-export const signToken = (payload: TokenCreatePayload, expiresIn?: string): string => {
+export const signToken = (
+  payload: TokenCreatePayload,
+  expiresIn?: string,
+): string => {
   const expires = expiresIn || "1d";
 
   return jwt.sign(payload, JWT_SECRET, { expiresIn: expires } as SignOptions);
@@ -46,7 +49,9 @@ export const signToken = (payload: TokenCreatePayload, expiresIn?: string): stri
  * @param token
  * @returns TokenCreatePayload | null
  */
-export const verifyToken = (token: string | null | undefined): TokenCreatePayload | null => {
+export const verifyToken = (
+  token: string | null | undefined,
+): TokenCreatePayload | null => {
   if (!token) {
     return null;
   }

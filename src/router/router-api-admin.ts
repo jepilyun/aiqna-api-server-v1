@@ -23,74 +23,86 @@ const router = express.Router();
 // ============================================
 
 // 컨텐츠 추가 (자동 벡터화)
-router.post("/create/content", 
-  // adminAuthMiddleware, 
-  ctrlAdminCreateContent
+router.post(
+  "/create/content",
+  // adminAuthMiddleware,
+  ctrlAdminCreateContent,
 );
-router.post("/create/youtube-video", 
-  // adminAuthMiddleware, 
-  ctrlAdminCreateYouTubeVideo
+router.post(
+  "/create/youtube-video",
+  // adminAuthMiddleware,
+  ctrlAdminCreateYouTubeVideo,
 );
-router.post("/create/instagram-post", 
-  // adminAuthMiddleware, 
-  ctrlAdminCreateInstagramPost
+router.post(
+  "/create/instagram-post",
+  // adminAuthMiddleware,
+  ctrlAdminCreateInstagramPost,
 );
-router.post("/create/blog-post", 
-  // adminAuthMiddleware, 
-  ctrlAdminCreateBlogPost
+router.post(
+  "/create/blog-post",
+  // adminAuthMiddleware,
+  ctrlAdminCreateBlogPost,
 );
-router.post("/create/text", 
-  // adminAuthMiddleware, 
-  ctrlAdminCreateText
-
+router.post(
+  "/create/text",
+  // adminAuthMiddleware,
+  ctrlAdminCreateText,
 );
 
 // 처리 상태 확인
-router.post("/process-status", 
-  // adminAuthMiddleware, 
-  ctrlAdminProcessStatus
+router.post(
+  "/process-status",
+  // adminAuthMiddleware,
+  ctrlAdminProcessStatus,
 );
-router.get("/process-status/youtube-video/:videoId", 
-  // adminAuthMiddleware, 
-  ctrlAdminProcessStatusYouTubeVideo
+router.get(
+  "/process-status/youtube-video/:videoId",
+  // adminAuthMiddleware,
+  ctrlAdminProcessStatusYouTubeVideo,
 );
-router.get("/process-status/instagram-post", 
-  // adminAuthMiddleware, 
-  ctrlAdminProcessStatusInstagramPost
+router.get(
+  "/process-status/instagram-post",
+  // adminAuthMiddleware,
+  ctrlAdminProcessStatusInstagramPost,
 );
-router.get("/process-status/blog-post", 
-  // adminAuthMiddleware, 
-  ctrlAdminProcessStatusBlogPost
+router.get(
+  "/process-status/blog-post",
+  // adminAuthMiddleware,
+  ctrlAdminProcessStatusBlogPost,
 );
-router.get("/process-status/text/:id", 
-  // adminAuthMiddleware, 
-  ctrlAdminProcessStatusText
+router.get(
+  "/process-status/text/:id",
+  // adminAuthMiddleware,
+  ctrlAdminProcessStatusText,
 );
 
 // Pinecone Vector 관리
-router.get("/vectors/list/:vector", 
-  // adminAuthMiddleware, 
-  ctrlAdminVectorsGetList
+router.get(
+  "/vectors/list/:vector",
+  // adminAuthMiddleware,
+  ctrlAdminVectorsGetList,
 );
-router.post("/vector/create", 
-  // adminAuthMiddleware, 
-  ctrlAdminVectorCreate
+router.post(
+  "/vector/create",
+  // adminAuthMiddleware,
+  ctrlAdminVectorCreate,
 );
-router.get("/vector/get/:id", 
-  // adminAuthMiddleware, 
-  ctrlAdminVectorGet
+router.get(
+  "/vector/get/:id",
+  // adminAuthMiddleware,
+  ctrlAdminVectorGet,
 );
-router.delete("/vector/delete/:id", 
-  // adminAuthMiddleware, 
-  ctrlAdminVectorDelete
+router.delete(
+  "/vector/delete/:id",
+  // adminAuthMiddleware,
+  ctrlAdminVectorDelete,
 );
 
 // AI 질의 (관리자용 - 더 많은 권한)
-router.post("/ai/ask", 
-  // adminAuthMiddleware, 
-  ctrlAdminAiAsk
+router.post(
+  "/ai/ask",
+  // adminAuthMiddleware,
+  ctrlAdminAiAsk,
 );
-
-
 
 export default router;

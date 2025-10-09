@@ -1,11 +1,13 @@
 import { Request, Response } from "express";
-import { ERequestCreateContentType, TRequestCreateContent } from "aiqna_common_v1";
-import { createContentYouTubeVideo } from "../../ctrl-process/ctrl-create-content/create-content-youtube-video.js";
-import { createContentInstagramPost } from "../../ctrl-process/ctrl-create-content/create-content-instagram-post.js";
-import { createContentBlogPost } from "../../ctrl-process/ctrl-create-content/create-content-blog-post.js";
-import { createContentText } from "../../ctrl-process/ctrl-create-content/create-content-text.js";
+import {
+  ERequestCreateContentType,
+  TRequestCreateContent,
+} from "aiqna_common_v1";
+import { processCreateYouTubeVideo } from "../../process/process-create-content/process-create-youtube-video.js";
+import { processCreateInstagramPost } from "../../process/process-create-content/process-create-instagram-post.js";
+import { processContentBlogPost } from "../../process/process-create-content/process-create-blog-post.js";
+import { processCreateText } from "../../process/process-create-content/process-create-text.js";
 import { ContentKeyManager } from "../../utils/content-key-manager.js";
-
 
 // 타입 정의 개선
 type ContentValidator<T> = (data: T) => { isValid: boolean; error?: string };
@@ -55,7 +57,7 @@ class ContentProcessingUtils {
     data: T,
     validator: ContentValidator<T>,
     processor: ContentProcessor<T>,
-    successResponse: SuccessResponse
+    successResponse: SuccessResponse,
   ): Promise<void> {
     // 1. 먼저 검증
     const validation = validator(data);
@@ -80,31 +82,37 @@ class ContentProcessingUtils {
 // 각 타입별 검증 함수
 const validators = {
   [ERequestCreateContentType.YoutubeVideo]: (
-    data: TRequestCreateContent["data"]
+    data: TRequestCreateContent["data"],
   ): { isValid: boolean; error?: string } => {
     if (!data.youtubeVideo?.videoId) {
       return {
         isValid: false,
-        error: ContentProcessingUtils.getValidationError("YouTube Video", "videoId"),
+        error: ContentProcessingUtils.getValidationError(
+          "YouTube Video",
+          "videoId",
+        ),
       };
     }
     return { isValid: true };
   },
 
   [ERequestCreateContentType.Instagram]: (
-    data: TRequestCreateContent["data"]
+    data: TRequestCreateContent["data"],
   ): { isValid: boolean; error?: string } => {
     if (!data.instagram?.instagramPostUrl) {
       return {
         isValid: false,
-        error: ContentProcessingUtils.getValidationError("Instagram", "instagramPostUrl"),
+        error: ContentProcessingUtils.getValidationError(
+          "Instagram",
+          "instagramPostUrl",
+        ),
       };
     }
     return { isValid: true };
   },
 
   [ERequestCreateContentType.Blog]: (
-    data: TRequestCreateContent["data"]
+    data: TRequestCreateContent["data"],
   ): { isValid: boolean; error?: string } => {
     if (!data.blog?.blogPostUrl) {
       return {
@@ -116,7 +124,7 @@ const validators = {
   },
 
   [ERequestCreateContentType.Text]: (
-    data: TRequestCreateContent["data"]
+    data: TRequestCreateContent["data"],
   ): { isValid: boolean; error?: string } => {
     if (!data.text?.content) {
       return {
@@ -131,66 +139,68 @@ const validators = {
 // 각 타입별 프로세서 함수
 const processors = {
   [ERequestCreateContentType.YoutubeVideo]: async (
-    data: TRequestCreateContent["data"]
+    data: TRequestCreateContent["data"],
   ): Promise<void> => {
     if (!data.youtubeVideo?.videoId) {
       throw new Error("Video ID is missing");
     }
-    await createContentYouTubeVideo(data.youtubeVideo.videoId);
+    await processCreateYouTubeVideo(data.youtubeVideo.videoId);
   },
 
   [ERequestCreateContentType.Instagram]: async (
-    data: TRequestCreateContent["data"]
+    data: TRequestCreateContent["data"],
   ): Promise<void> => {
     if (!data.instagram) {
       throw new Error("Instagram data is missing");
     }
     const instagram = data.instagram;
-    await createContentInstagramPost(
+    await processCreateInstagramPost(
       instagram.instagramPostUrl,
       instagram.description,
       instagram.userId,
       instagram.userProfileUrl,
       instagram.postDate,
-      instagram.tags
+      instagram.tags,
     );
   },
 
   [ERequestCreateContentType.Blog]: async (
-    data: TRequestCreateContent["data"]
+    data: TRequestCreateContent["data"],
   ): Promise<void> => {
     if (!data.blog) {
       throw new Error("Blog data is missing");
     }
     const blog = data.blog;
-    await createContentBlogPost(
+    await processContentBlogPost(
       blog.blogPostUrl,
       blog.title || "",
       blog.content || "",
       blog.publishedDate,
       blog.tags,
       blog.platform,
-      blog.platformUrl
+      blog.platformUrl,
     );
   },
 
   [ERequestCreateContentType.Text]: async (
-    data: TRequestCreateContent["data"]
+    data: TRequestCreateContent["data"],
   ): Promise<void> => {
     if (!data.text) {
       throw new Error("Text data is missing");
     }
     const text = data.text;
-    await createContentText(text.content, text.title);
+    await processCreateText(text.content, text.title);
   },
 };
 
 // 각 타입별 성공 응답 생성 함수
 const responseGenerators: {
-  [K in ERequestCreateContentType]: (data: TRequestCreateContent["data"]) => SuccessResponse;
+  [K in ERequestCreateContentType]: (
+    data: TRequestCreateContent["data"],
+  ) => SuccessResponse;
 } = {
   [ERequestCreateContentType.YoutubeVideo]: (
-    data: TRequestCreateContent["data"]
+    data: TRequestCreateContent["data"],
   ): YouTubeSuccessResponse => {
     if (!data.youtubeVideo?.videoId) {
       throw new Error("Video ID is missing");
@@ -204,7 +214,7 @@ const responseGenerators: {
   },
 
   [ERequestCreateContentType.Instagram]: (
-    data: TRequestCreateContent["data"]
+    data: TRequestCreateContent["data"],
   ): InstagramSuccessResponse => {
     if (!data.instagram?.instagramPostUrl) {
       throw new Error("Instagram URL is missing");
@@ -218,7 +228,7 @@ const responseGenerators: {
   },
 
   [ERequestCreateContentType.Blog]: (
-    data: TRequestCreateContent["data"]
+    data: TRequestCreateContent["data"],
   ): BlogSuccessResponse => {
     if (!data.blog?.blogPostUrl) {
       throw new Error("Blog URL is missing");
@@ -232,14 +242,14 @@ const responseGenerators: {
   },
 
   [ERequestCreateContentType.Text]: (
-    data: TRequestCreateContent["data"]
+    data: TRequestCreateContent["data"],
   ): TextSuccessResponse => {
     if (!data.text?.content) {
       throw new Error("Text content is missing");
     }
     const contentKey = ContentKeyManager.createContentKey(
       ERequestCreateContentType.Text,
-      data.text.content
+      data.text.content,
     );
 
     return {
@@ -273,7 +283,7 @@ export async function ctrlAdminCreateContent(req: Request, res: Response) {
       data,
       validators[type],
       processors[type],
-      responseGenerators[type](data)
+      responseGenerators[type](data),
     );
   } catch (error: unknown) {
     const err = error as Error;

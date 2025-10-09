@@ -1,60 +1,67 @@
 // ctrl-admin-create-instagram-post.ts
 import { Request, Response } from "express";
 import { TRequestCreateContent } from "aiqna_common_v1";
-import DBSqlProcessingLogInstagramPost from "../../ctrl-db/ctrl-db-sql/db-sql-processing-log-instagram-post.js";
-import { createContentInstagramPost } from "../../ctrl-process/ctrl-create-content/create-content-instagram-post.js";
-import { ContentProcessingHelper } from "../../utils/content-processing-helper.js";
+import DBSqlProcessingLogInstagramPost from "../../db-ctrl/db-ctrl-sql/db-sql-processing-log-instagram-post.js";
+import { processCreateInstagramPost } from "../../process/process-create-content/process-create-instagram-post.js";
+import { HelperContentProcessing } from "../../content/content-common/helper-content-processing.js";
 
-export async function ctrlAdminCreateInstagramPost(req: Request, res: Response) {
+export async function ctrlAdminCreateInstagramPost(
+  req: Request,
+  res: Response,
+) {
   try {
     const { data } = req.body as TRequestCreateContent;
 
     if (!data.instagram?.instagramPostUrl) {
-      return ContentProcessingHelper.sendError(
+      return HelperContentProcessing.sendError(
         res,
         400,
-        "Instagram Post URL is required"
+        "Instagram Post URL is required",
       );
     }
 
-    await ContentProcessingHelper.processContent(res, data.instagram, {
+    await HelperContentProcessing.processContent(res, data.instagram, {
       extractKey: (instagram) => instagram.instagramPostUrl,
-      
+
       checkExisting: async (postUrl) => {
-        const existingLog = await DBSqlProcessingLogInstagramPost.selectByPostUrl(postUrl);
+        const existingLog =
+          await DBSqlProcessingLogInstagramPost.selectByPostUrl(postUrl);
         return {
-          isProcessing: existingLog.data?.[0]?.processing_status === "processing",
+          isProcessing:
+            existingLog.data?.[0]?.processing_status === "processing",
         };
       },
-      
+
       processor: async (instagram) => {
-        await createContentInstagramPost(
+        await processCreateInstagramPost(
           instagram.instagramPostUrl,
           instagram.description,
           instagram.userId,
           instagram.userProfileUrl,
           instagram.postDate,
-          instagram.tags
+          instagram.tags,
         );
       },
-      
+
       createResponse: (postUrl, isAlreadyProcessing) => ({
         success: true,
         instagramUrl: postUrl,
-        message: isAlreadyProcessing ? "Already processing" : "Processing started",
+        message: isAlreadyProcessing
+          ? "Already processing"
+          : "Processing started",
         statusUrl: `/api/process-status/instagram-post`,
       }),
     });
   } catch (error: unknown) {
     const err = error as Error;
     console.error("Instagram post processing failed:", err);
-    
+
     if (!res.headersSent) {
-      ContentProcessingHelper.sendError(
+      HelperContentProcessing.sendError(
         res,
         500,
         "Failed to initiate instagram processing",
-        err.message
+        err.message,
       );
     }
   }
