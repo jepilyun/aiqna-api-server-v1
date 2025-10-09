@@ -136,8 +136,8 @@ export default class DBSqlYoutubeVideo {
     try {
       const { data, error } = await supabaseClient
         .rpc("upsert_youtube_video_api_data", { p_video_data: json })
-        .select()
-        .overrideTypes<TSqlYoutubeVideoDetail[]>();
+        .single() // 👈 .single() 추가
+        .overrideTypes<TSqlYoutubeVideoDetail>(); // 👈 배열 제거
 
       if (error) {
         throw new Error(
@@ -145,7 +145,8 @@ export default class DBSqlYoutubeVideo {
         );
       }
 
-      return { data: data || [] };
+      // 👇 단일 객체를 배열로 변환하여 반환
+      return { data: data ? [data] : [] };
     } catch (error: unknown) {
       if (error instanceof Error) {
         throw error;

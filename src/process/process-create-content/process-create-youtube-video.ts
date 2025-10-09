@@ -145,6 +145,7 @@ async function processYouTubeVideoTranscripts(
       
       await DBSqlProcessingLogYoutubeVideo.updateByVideoId(videoId, {
         is_transcript_fetched: true,
+        is_transcript_exist: transcripts.length > 0, // 👈 추가
       });
 
       console.log(`✅ Saved ${transcripts.length} transcripts`);
