@@ -42,11 +42,11 @@ export async function withRetry<T>(
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const result = await fn();
-      
+
       if (attempt > 0) {
         console.log(`✓ ${operationName} succeeded after ${attempt} retries`);
       }
-      
+
       return result;
     } catch (error) {
       lastError = error as Error;
@@ -59,7 +59,7 @@ export async function withRetry<T>(
 
       const waitTime = Math.min(
         baseDelay * Math.pow(backoffMultiplier, attempt),
-        maxDelay
+        maxDelay,
       );
 
       console.log(

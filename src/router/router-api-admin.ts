@@ -1,20 +1,20 @@
 import express from "express";
 // import adminAuthMiddleware from "../middlewares/admin-auth-middleware.js";
-import { ctrlAdminCreateContent } from "../ctrl-route/ctrl-route-admin/ctrl-admin-create-content.js";
-import { ctrlAdminCreateYouTubeVideo } from "../ctrl-route/ctrl-route-admin/ctrl-admin-create-youtube-video.js";
-import { ctrlAdminCreateInstagramPost } from "../ctrl-route/ctrl-route-admin/ctrl-admin-create-instagram-post.js";
-import { ctrlAdminCreateBlogPost } from "../ctrl-route/ctrl-route-admin/ctrl-admin-create-blog-post.js";
-import { ctrlAdminCreateText } from "../ctrl-route/ctrl-route-admin/ctrl-admin-create-text.js";
-import { ctrlAdminProcessStatus } from "../ctrl-route/ctrl-route-admin/ctrl-admin-process-status.js";
-import { ctrlAdminProcessStatusYouTubeVideo } from "../ctrl-route/ctrl-route-admin/ctrl-admin-process-status-youtube-video.js";
-import { ctrlAdminProcessStatusInstagramPost } from "../ctrl-route/ctrl-route-admin/ctrl-admin-process-status-instagram-post.js";
-import { ctrlAdminProcessStatusBlogPost } from "../ctrl-route/ctrl-route-admin/ctrl-admin-process-status-blog-post.js";
-import { ctrlAdminProcessStatusText } from "../ctrl-route/ctrl-route-admin/ctrl-admin-process-status-text.js";
-import { ctrlAdminVectorsGetList } from "../ctrl-route/ctrl-route-admin/ctrl-admin-vectors-get-list.js";
-import { ctrlAdminVectorCreate } from "../ctrl-route/ctrl-route-admin/ctrl-admin-vector-create.js";
-import { ctrlAdminVectorGet } from "../ctrl-route/ctrl-route-admin/ctrl-admin-vector-get.js";
-import { ctrlAdminVectorDelete } from "../ctrl-route/ctrl-route-admin/ctrl-admin-vector-delete.js";
-import { ctrlAdminAiAsk } from "../ctrl-route/ctrl-route-admin/ctrl-admin-ai-ask.js";
+import { ctrlAdminCreateContent } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-create/route-ctrl-admin-create-content.js";
+import { ctrlAdminCreateYouTubeVideo } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-create/route-ctrl-admin-create-youtube-video.js";
+import { ctrlAdminCreateInstagramPost } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-create/route-ctrl-admin-create-instagram-post.js";
+import { ctrlAdminCreateBlogPost } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-create/route-ctrl-admin-create-blog-post.js";
+import { ctrlAdminCreateText } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-create/route-ctrl-admin-create-text.js";
+import { ctrlAdminProcessStatus } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-process-status/route-ctrl-admin-process-status.js";
+import { ctrlAdminProcessStatusYouTubeVideo } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-process-status/route-ctrl-admin-process-status-youtube-video.js";
+import { ctrlAdminProcessStatusInstagramPost } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-process-status/route-ctrl-admin-process-status-instagram-post.js";
+import { ctrlAdminProcessStatusBlogPost } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-process-status/route-ctrl-admin-process-status-blog-post.js";
+import { ctrlAdminProcessStatusText } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-process-status/route-ctrl-admin-process-status-text.js";
+import { ctrlAdminVectorsGetList } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-vectors-get-list.js";
+import { ctrlAdminVectorCreate } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-vector-create.js";
+import { ctrlAdminVectorGet } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-vector-get.js";
+import { ctrlAdminVectorDelete } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-vector-delete.js";
+import { ctrlAdminAiAsk } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-ask/route-ctrl-admin-ai-ask.js";
 
 const router = express.Router();
 

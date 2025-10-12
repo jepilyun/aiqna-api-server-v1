@@ -7,16 +7,16 @@ import {
 } from "aiqna_common_v1";
 import DBSqlProcessingLogBlogPost from "../../db-ctrl/db-ctrl-sql/db-sql-processing-log-blog-post.js";
 import { withRetry } from "../../utils/retry/retry-common.js";
-import { fetchBlogPostHTMLMetadata } from "../../content/content-blog-post/fetch-blog-post-html-metadata.js";
+import { fetchBlogPostHTMLMetadata } from "../../services/blog-post/fetch-blog-post-html-metadata.js";
 import DBSqlBlogPost from "../../db-ctrl/db-ctrl-sql/db-sql-blog-post.js";
-import { handleProcessingError } from "../../content/content-common/handle-processing-error.js";
-import { convertBlogDataToPineconeMetadata } from "../../content/content-blog-post/convert-blog-data-to-pinecone-metadata.js";
-import { saveBlogPostToPinecone } from "../../content/content-blog-post/save-blog-post-to-pinecone.js";
+import { handleProcessingError } from "../../services/handle-processing-error.js";
+import { generateVectorMetadataBlogPost } from "../../services/blog-post/generate-vector-metadata-blog-post.js";
+import { saveBlogPostToPinecone } from "../../services/blog-post/save-blog-post-to-pinecone.js";
 
 /**
  * processContentBlogPost
  * Blog Post 데이터 처리 (Fetch → Pinecone 저장)
- * 
+ *
  * @param blogUrl - 블로그 포스트 URL (필수)
  * @param blogTitle - 블로그 제목 (필수)
  * @param blogContent - 블로그 본문 (필수)
@@ -37,7 +37,7 @@ export async function processContentBlogPost(
 ): Promise<{ success: boolean; blogUrl: string }> {
   try {
     console.log(`\n🚀 Starting blog post processing: ${blogUrl}`);
-    
+
     const log = await getProcessingLogBlogPost(blogUrl);
 
     // 1. Blog Metadata 처리
@@ -59,14 +59,14 @@ export async function processContentBlogPost(
     return { success: true, blogUrl };
   } catch (error) {
     console.error(`❌ Blog post processing failed: ${blogUrl}`, error);
-    
+
     await handleProcessingError(
       ERequestCreateContentType.Blog,
       blogUrl,
       error,
       0, // retryCount는 더 이상 필요 없지만 handleProcessingError가 요구하므로 0 전달
     );
-    
+
     throw error;
   }
 }
@@ -75,7 +75,7 @@ export async function processContentBlogPost(
  * Get Processing Log
  */
 async function getProcessingLogBlogPost(
-  blogUrl: string
+  blogUrl: string,
 ): Promise<TSqlBlogPostProcessingLog | undefined> {
   const result = await DBSqlProcessingLogBlogPost.selectByPostUrl(blogUrl);
   return result.data?.[0];
@@ -149,7 +149,7 @@ async function processBlogPost(
 
       if (!created.data?.[0]) {
         throw new Error(
-          "Failed to create blog post data - data not found after insert"
+          "Failed to create blog post data - data not found after insert",
         );
       }
 
@@ -160,7 +160,7 @@ async function processBlogPost(
       maxRetries: 3,
       baseDelay: 1000,
       operationName: "Fetch blog post",
-    }
+    },
   );
 }
 
@@ -181,7 +181,7 @@ async function processBlogPostToPinecone(
 
   await withRetry(
     async () => {
-      const metadata = convertBlogDataToPineconeMetadata(blogPost);
+      const metadata = generateVectorMetadataBlogPost(blogPost);
       await saveBlogPostToPinecone(blogPost, metadata);
 
       // Processing Log 업데이트
@@ -196,6 +196,6 @@ async function processBlogPostToPinecone(
       maxRetries: 3,
       baseDelay: 1000,
       operationName: "Pinecone processing",
-    }
+    },
   );
 }

@@ -8,15 +8,15 @@ import {
 import DBSqlProcessingLogInstagramPost from "../../db-ctrl/db-ctrl-sql/db-sql-processing-log-instagram-post.js";
 import { withRetry } from "../../utils/retry/retry-common.js";
 import DBSqlInstagramPost from "../../db-ctrl/db-ctrl-sql/db-sql-instagram-post.js";
-import { handleProcessingError } from "../../content/content-common/handle-processing-error.js";
-import { fetchInstagramPostHTMLMetadata } from "../../content/content-instagram-post/fetch-instagram-post-html-metadata.js";
-import { convertInstagramDataToPineconeMetadata } from "../../content/content-instagram-post/convert-instagram-data-to-pinecone-metadata.js";
-import { saveInstagramPostToPinecone } from "../../content/content-instagram-post/save-instagram-post-to-pinecone.js";
+import { handleProcessingError } from "../../services/handle-processing-error.js";
+import { fetchInstagramPostHTMLMetadata } from "../../services/instagram-post/fetch-instagram-post-html-metadata.js";
+import { generateVectorMetadataInstagramPost } from "../../services/instagram-post/generate-vector-metadata-instagram-post.js";
+import { saveInstagramPostToPinecone } from "../../services/instagram-post/save-instagram-post-to-pinecone.js";
 
 /**
  * processCreateInstagramPost
  * Instagram Post 데이터 처리 (Fetch → Pinecone 저장)
- * 
+ *
  * @param instagramPostUrl - Instagram 포스트 URL (필수)
  * @param description - 포스트 설명
  * @param userId - 사용자 ID
@@ -35,7 +35,7 @@ export async function processCreateInstagramPost(
 ): Promise<{ success: boolean; instagramPostUrl: string }> {
   try {
     console.log(`\n🚀 Starting Instagram post processing: ${instagramPostUrl}`);
-    
+
     const log = await getProcessingLogInstagramPost(instagramPostUrl);
 
     // 1. Instagram Metadata 처리
@@ -52,18 +52,23 @@ export async function processCreateInstagramPost(
     // 2. Pinecone 저장
     await processInstagramPostToPinecone(instagramPost, log);
 
-    console.log(`✅ Instagram post processing completed: ${instagramPostUrl}\n`);
+    console.log(
+      `✅ Instagram post processing completed: ${instagramPostUrl}\n`,
+    );
     return { success: true, instagramPostUrl };
   } catch (error) {
-    console.error(`❌ Instagram post processing failed: ${instagramPostUrl}`, error);
-    
+    console.error(
+      `❌ Instagram post processing failed: ${instagramPostUrl}`,
+      error,
+    );
+
     await handleProcessingError(
       ERequestCreateContentType.Instagram,
       instagramPostUrl,
       error,
       0,
     );
-    
+
     throw error;
   }
 }
@@ -72,7 +77,7 @@ export async function processCreateInstagramPost(
  * Get Processing Log
  */
 async function getProcessingLogInstagramPost(
-  instagramPostUrl: string
+  instagramPostUrl: string,
 ): Promise<TSqlInstagramPostProcessingLog | undefined> {
   const result =
     await DBSqlProcessingLogInstagramPost.selectByPostUrl(instagramPostUrl);
@@ -150,7 +155,7 @@ async function processInstagramPost(
 
       if (!created.data?.[0]) {
         throw new Error(
-          "Failed to create Instagram post data - data not found after insert"
+          "Failed to create Instagram post data - data not found after insert",
         );
       }
 
@@ -161,7 +166,7 @@ async function processInstagramPost(
       maxRetries: 3,
       baseDelay: 1000,
       operationName: "Fetch Instagram post",
-    }
+    },
   );
 }
 
@@ -182,9 +187,9 @@ async function processInstagramPostToPinecone(
 
   await withRetry(
     async () => {
-      const metadata = convertInstagramDataToPineconeMetadata(instagramPost);
+      const metadata = generateVectorMetadataInstagramPost(instagramPost);
       await saveInstagramPostToPinecone(instagramPost, metadata);
-      
+
       await DBSqlProcessingLogInstagramPost.updateByPostUrl(
         instagramPost.instagram_post_url,
         {
@@ -199,6 +204,6 @@ async function processInstagramPostToPinecone(
       maxRetries: 3,
       baseDelay: 1000,
       operationName: "Pinecone processing",
-    }
+    },
   );
 }

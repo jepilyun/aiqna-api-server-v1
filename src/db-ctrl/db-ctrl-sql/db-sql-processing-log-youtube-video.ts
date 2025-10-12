@@ -93,16 +93,16 @@ export default class DBSqlProcessingLogYoutubeVideo {
    */
   static async selectPendingJobs(options: {
     limit?: number;
-    orderBy?: 'created_at' | 'priority';
+    orderBy?: "created_at" | "priority";
   }): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
-    const { limit = 1, orderBy = 'created_at' } = options;
+    const { limit = 1, orderBy = "created_at" } = options;
 
     const { data, error } = await supabaseClient
       .from(SQL_DB_TABLE.youtube_video_processing_logs)
-      .select('*')
+      .select("*")
       .eq(F_YOUTUBE_VIDEO_PROCESSING_LOG.is_transcript_exist.id, true)
       .eq(F_YOUTUBE_VIDEO_PROCESSING_LOG.is_transcript_fetched.id, false)
-      .neq(F_YOUTUBE_VIDEO_PROCESSING_LOG.processing_status.id, 'processing') // 처리 중인 것 제외
+      .neq(F_YOUTUBE_VIDEO_PROCESSING_LOG.processing_status.id, "processing") // 처리 중인 것 제외
       .order(orderBy, { ascending: true })
       .limit(limit);
 

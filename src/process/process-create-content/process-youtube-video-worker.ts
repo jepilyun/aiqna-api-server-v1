@@ -9,15 +9,14 @@ import {
   TSqlYoutubeVideoDetail,
   TYouTubeVideoSummary,
 } from "aiqna_common_v1";
-import { handleProcessingError } from "../../content/content-common/handle-processing-error.js";
+import { handleProcessingError } from "../../services/handle-processing-error.js";
 import { withRetry } from "../../utils/retry/retry-common.js";
-import { saveYouTubeTranscriptsToPineconeWithProviders } from "../../content/content-youtube-video/save-youtube-transcripts-to-pinecone.js";
-import { saveYouTubeTranscriptsToDb } from "../../content/content-youtube-video/save-youtube-transcripts-to-db.js";
-import { convertYouTubeTranscriptSegmentsToStandard } from "../../content/content-youtube-video/convert-youtube-transcript-segments-to-standard.js";
+import { saveYouTubeTranscriptsToPineconeWithProviders } from "../../services/youtube-video/save-youtube-transcripts-to-pinecone.js";
+import { saveYouTubeTranscriptsToDb } from "../../services/youtube-video/save-youtube-transcripts-to-db.js";
+import { convertYouTubeTranscriptSegmentsToStandard } from "../../services/youtube-video/convert-youtube-transcript-segments-to-standard.js";
 import DBSqlYoutubeVideoTranscript from "../../db-ctrl/db-ctrl-sql/db-sql-youtube-video-transcript.js";
-import { summarizeYouTubeTranscript } from "../../content/content-youtube-video/summarize-youtube-transcript.js";
+import { summarizeYouTubeTranscript } from "../../services/youtube-video/summarize-youtube-transcript.js";
 import { sleep } from "../../utils/sleep.js";
-
 
 /**
  * YouTubeRateLimiter
@@ -104,7 +103,9 @@ export async function startYouTubeVideoWorker() {
       // Rate Limiter 확인 (쉬는 시간이면 대기)
       if (rateLimiter.shouldRest()) {
         const restTime = rateLimiter.getRestTime();
-        console.log(`😴 Worker resting for ${restTime}ms (${(restTime / 60000).toFixed(1)} minutes)`);
+        console.log(
+          `😴 Worker resting for ${restTime}ms (${(restTime / 60000).toFixed(1)} minutes)`,
+        );
         await sleep(restTime);
         rateLimiter.resetBatch();
         continue;
@@ -112,10 +113,10 @@ export async function startYouTubeVideoWorker() {
 
       // 1. 처리할 작업 가져오기
       const job = await getNextPendingJob();
-      
+
       if (!job) {
-        console.log("⏳ No pending jobs, waiting...");
-        await sleep(600000); // 600초(10분) 대기
+        console.log("⏳ No pending jobs, waiting...", new Date().toISOString());
+        await sleep(1200000); // 1200초(20분) 대기
         continue;
       }
 
@@ -128,7 +129,6 @@ export async function startYouTubeVideoWorker() {
       const delay = rateLimiter.getNextDelay();
       console.log(`⏱️  Waiting ${delay}ms before next request...`);
       await sleep(delay);
-
     } catch (error) {
       console.error("❌ Worker error:", error);
       await sleep(30000); // 에러 시 30초 대기
@@ -144,7 +144,7 @@ export async function startYouTubeVideoWorker() {
 async function getNextPendingJob(): Promise<TSqlYoutubeVideoProcessingLog | null> {
   const result = await DBSqlProcessingLogYoutubeVideo.selectPendingJobs({
     limit: 1,
-    orderBy: 'created_at', // 가장 오래된 것부터
+    orderBy: "created_at", // 가장 오래된 것부터
   });
 
   return result.data?.[0] || null;
@@ -154,7 +154,7 @@ async function getNextPendingJob(): Promise<TSqlYoutubeVideoProcessingLog | null
  * 개별 작업 처리
  */
 async function processYouTubeVideoJob(
-  job: TSqlYoutubeVideoProcessingLog
+  job: TSqlYoutubeVideoProcessingLog,
 ): Promise<void> {
   const { video_id } = job;
   let aiSummary: TYouTubeVideoSummary | null = null;
@@ -169,7 +169,7 @@ async function processYouTubeVideoJob(
     // 1. Video Data 가져오기
     const videoDataResult = await DBSqlYoutubeVideo.selectByVideoId(video_id);
     const videoData = videoDataResult.data?.[0];
-    
+
     if (!videoData) {
       throw new Error(`Video data not found for ${video_id}`);
     }
@@ -179,25 +179,25 @@ async function processYouTubeVideoJob(
 
     // 3. 🆕 AI 요약 생성 (영어 자막 기준)
     if (transcripts.length > 0) {
-      const englishTranscript = transcripts.find(t => 
-        t.language === 'en' || t.language.startsWith('en-')
+      const englishTranscript = transcripts.find(
+        (t) => t.language === "en" || t.language.startsWith("en-"),
       );
-      
+
       if (englishTranscript) {
-        console.log('🤖 Generating AI summary with Groq...');
-        
+        console.log("🤖 Generating AI summary with Groq...");
+
         const fullText = englishTranscript.segments
-          .map(s => s.text)
-          .join(' ');
-        
-        const videoTitle = videoData.title || '';
-        
+          .map((s) => s.text)
+          .join(" ");
+
+        const videoTitle = videoData.title || "";
+
         aiSummary = await summarizeYouTubeTranscript(
           fullText,
           videoTitle,
-          englishTranscript.language
+          englishTranscript.language,
         );
-        
+
         // 4. DB에 요약 저장
         await DBSqlYoutubeVideo.updateSummaryByVideoId(video_id, {
           ai_summary: aiSummary.summary,
@@ -205,10 +205,10 @@ async function processYouTubeVideoJob(
           key_points: aiSummary.keyPoints,
           keywords: aiSummary.keywords,
         });
-        
-        console.log('✅ AI summary saved to DB');
+
+        console.log("✅ AI summary saved to DB");
       } else {
-        console.warn('⚠️ No English transcript available for summary');
+        console.warn("⚠️ No English transcript available for summary");
       }
     }
 
@@ -216,7 +216,7 @@ async function processYouTubeVideoJob(
     if (transcripts.length > 0 && videoData) {
       await processYouTubeVideoToPinecone(
         video_id,
-        { 
+        {
           ...videoData,
           ai_summary: aiSummary?.summary || "",
           main_topics: aiSummary?.mainTopics || [],
@@ -231,7 +231,7 @@ async function processYouTubeVideoJob(
     console.log(`✅ Job completed: ${video_id}`);
   } catch (error) {
     console.error(`❌ Job failed: ${video_id}`, error);
-    
+
     await handleProcessingError(
       ERequestCreateContentType.YoutubeVideo,
       video_id,
@@ -265,9 +265,9 @@ async function processYouTubeVideoTranscripts(
       const transcripts = await saveYouTubeTranscriptsToDb(
         videoId,
         ["en", "ko"],
-        '../data/transcripts', // ✅ 로컬 캐시 경로 명시
+        "../data/transcripts", // ✅ 로컬 캐시 경로 명시
       );
-      
+
       await DBSqlProcessingLogYoutubeVideo.updateByVideoId(videoId, {
         is_transcript_fetched: true,
         is_transcript_exist: transcripts.length > 0, // 👈 추가
@@ -280,7 +280,7 @@ async function processYouTubeVideoTranscripts(
       maxRetries: 3,
       baseDelay: 100000, // 100초 자막은 더 보수적으로
       operationName: "Fetch YouTube transcripts",
-    }
+    },
   );
 }
 
@@ -298,45 +298,43 @@ async function loadExistingTranscripts(
     return [];
   }
 
-  const transcripts =
-    existingTranscripts.data
-      .map((t) => {
-        if (!t.segments_json) {
-          console.warn(`⚠️ No segments_json for ${t.language}`);
+  const transcripts = existingTranscripts.data
+    .map((t) => {
+      if (!t.segments_json) {
+        console.warn(`⚠️ No segments_json for ${t.language}`);
+        return null;
+      }
+
+      // 타입 체크 후 처리
+      let parsedSegments;
+
+      if (typeof t.segments_json === "string") {
+        try {
+          parsedSegments = JSON.parse(t.segments_json);
+        } catch (error) {
+          console.error(
+            `❌ Failed to parse segments_json for ${t.language}:`,
+            error,
+          );
           return null;
         }
+      } else {
+        parsedSegments = t.segments_json;
+      }
 
-        // 타입 체크 후 처리
-        let parsedSegments;
+      const segments =
+        convertYouTubeTranscriptSegmentsToStandard(parsedSegments);
 
-        if (typeof t.segments_json === "string") {
-          try {
-            parsedSegments = JSON.parse(t.segments_json);
-          } catch (error) {
-            console.error(
-              `❌ Failed to parse segments_json for ${t.language}:`,
-              error,
-            );
-            return null;
-          }
-        } else {
-          parsedSegments = t.segments_json;
-        }
-
-        const segments =
-          convertYouTubeTranscriptSegmentsToStandard(parsedSegments);
-
-        return {
-          videoId,
-          language: t.language,
-          segments,
-        };
-      })
-      .filter((t): t is TYouTubeTranscriptStandardFormat => t !== null);
+      return {
+        videoId,
+        language: t.language,
+        segments,
+      };
+    })
+    .filter((t): t is TYouTubeTranscriptStandardFormat => t !== null);
 
   return transcripts;
 }
-
 
 /**
  * 3. Pinecone 처리
@@ -369,7 +367,7 @@ async function processYouTubeVideoToPinecone(
         transcripts,
         metadata,
       );
-      
+
       await DBSqlProcessingLogYoutubeVideo.updateByVideoId(videoId, {
         is_pinecone_processed: true,
         processing_status: EProcessingStatusType.completed, // ✅ enum 사용
@@ -381,7 +379,7 @@ async function processYouTubeVideoToPinecone(
       maxRetries: 3,
       baseDelay: 1000,
       operationName: "Pinecone processing",
-    }
+    },
   );
 }
 

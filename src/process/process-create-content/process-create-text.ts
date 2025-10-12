@@ -6,17 +6,17 @@ import {
   TSqlTextDetailInsert,
 } from "aiqna_common_v1";
 import { withRetry } from "../../utils/retry/retry-common.js";
-import { handleProcessingError } from "../../content/content-common/handle-processing-error.js";
+import { handleProcessingError } from "../../services/handle-processing-error.js";
 import DBSqlProcessingLogText from "../../db-ctrl/db-ctrl-sql/db-sql-processing-log-text.js";
 import { ContentKeyManager } from "../../utils/content-key-manager.js";
 import DBSqlText from "../../db-ctrl/db-ctrl-sql/db-sql-text.js";
-import { convertTextDataToPineconeMetadata } from "../../content/content-text/convert-text-data-to-pinecone-metadata.js";
-import { saveTextToPinecone } from "../../content/content-text/save-text-to-pinecone.js";
+import { generateVectorMetadataText } from "../../services/text/generate-vector-metadata-text.js";
+import { saveTextToPinecone } from "../../services/text/save-text-to-pinecone.js";
 
 /**
  * processCreateText
  * Text 데이터 처리 (생성 → Pinecone 저장)
- * 
+ *
  * @param content - 텍스트 본문 (필수)
  * @param title - 텍스트 제목
  * @returns 처리 결과
@@ -33,7 +33,7 @@ export async function processCreateText(
 
   try {
     console.log(`\n🚀 Starting text processing: ${hashKey.slice(0, 16)}...`);
-    
+
     // 로그와 기존 데이터를 동시에 확인
     const [log, existingText] = await Promise.all([
       getProcessingLogText(hashKey),
@@ -51,15 +51,18 @@ export async function processCreateText(
     console.log(`✅ Text processing completed: ${hashKey.slice(0, 16)}...\n`);
     return { success: true, content, hashKey };
   } catch (error) {
-    console.error(`❌ Text processing failed: ${hashKey.slice(0, 16)}...`, error);
-    
+    console.error(
+      `❌ Text processing failed: ${hashKey.slice(0, 16)}...`,
+      error,
+    );
+
     await handleProcessingError(
       ERequestCreateContentType.Text,
       hashKey, // ✅ content 대신 hashKey 전달 (고유 식별자)
       error,
       0,
     );
-    
+
     throw error;
   }
 }
@@ -68,7 +71,7 @@ export async function processCreateText(
  * Get Processing Log
  */
 async function getProcessingLogText(
-  hashKey: string
+  hashKey: string,
 ): Promise<TSqlTextProcessingLog | undefined> {
   const result = await DBSqlProcessingLogText.selectByHashKey(hashKey);
   return result.data?.[0];
@@ -78,7 +81,7 @@ async function getProcessingLogText(
  * Get Existing Text
  */
 async function getExistingText(
-  hashKey: string
+  hashKey: string,
 ): Promise<TSqlTextDetail | undefined> {
   const result = await DBSqlText.selectByHashKey(hashKey);
   return result.data?.[0];
@@ -117,7 +120,7 @@ async function createNewText(
 
       if (!created.data?.[0]) {
         throw new Error(
-          "Failed to create text data - data not found after insert"
+          "Failed to create text data - data not found after insert",
         );
       }
 
@@ -128,7 +131,7 @@ async function createNewText(
       maxRetries: 3,
       baseDelay: 1000,
       operationName: "Create text",
-    }
+    },
   );
 }
 
@@ -149,7 +152,7 @@ async function processTextToPinecone(
 
   await withRetry(
     async () => {
-      const metadata = convertTextDataToPineconeMetadata(textData);
+      const metadata = generateVectorMetadataText(textData);
       await saveTextToPinecone(textData, metadata);
 
       await DBSqlProcessingLogText.updateByHashKey(textData.hash_key, {
@@ -163,6 +166,6 @@ async function processTextToPinecone(
       maxRetries: 3,
       baseDelay: 1000,
       operationName: "Pinecone processing",
-    }
+    },
   );
 }

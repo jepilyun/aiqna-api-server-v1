@@ -141,8 +141,8 @@ export async function fetchYouTubeTranscriptWithRetry(
   return fetchWithRetry(
     url,
     options,
-    3,     // 3회 재시도
-    3000,  // 3초 기본 대기
+    3, // 3회 재시도
+    3000, // 3초 기본 대기
     60000, // 최대 60초
   );
 }

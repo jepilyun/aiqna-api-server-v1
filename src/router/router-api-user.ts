@@ -1,6 +1,6 @@
 import express from "express";
 // import userAuthMiddleware from "../middlewares/user-auth-middleware.js";
-import { ctrlUserAiAsk } from "../ctrl-route/ctrl-route-user/ctrl-user-ai-ask.js";
+import { ctrlUserAiAsk } from "../route-ctrl/route-ctrl-user/route-ctrl-user-ai-ask.js";
 
 const router = express.Router();
 

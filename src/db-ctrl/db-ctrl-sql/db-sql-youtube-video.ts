@@ -202,7 +202,7 @@ export default class DBSqlYoutubeVideo {
       main_topics?: string[];
       key_points?: string[];
       keywords?: string[];
-    }
+    },
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
     try {
       const { data, error } = await supabaseClient

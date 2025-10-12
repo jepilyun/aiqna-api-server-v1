@@ -29,13 +29,13 @@ app.use("/api/admin", routesApiAdmin);
 app.use("/api/user", routesApiUser);
 
 // Worker 시작
-startYouTubeVideoWorker().catch(error => {
+startYouTubeVideoWorker().catch((error) => {
   console.error("💥 Worker crashed:", error);
   process.exit(1);
 });
 
 // Graceful shutdown
-process.on('SIGINT', () => {
+process.on("SIGINT", () => {
   console.log("\n👋 Worker shutting down...");
   process.exit(0);
 });

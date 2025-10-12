@@ -3,7 +3,7 @@ import { COOKIE_NAME } from "aiqna_common_v1";
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 
-import { MSG_MIDDLEWARE } from "../msg/msg-middleware.js";
+import { MSG_MIDDLEWARE } from "../consts/msg/msg-middleware.js";
 import { clearAuthCookies } from "../utils/clear-cookies.js";
 import { AdminTokenPayload, signToken } from "../utils/jwt.js";
 import { resBadRequest } from "../utils/response.js";
