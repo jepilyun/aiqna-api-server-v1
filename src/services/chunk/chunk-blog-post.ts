@@ -1,5 +1,3 @@
-// blog-post/chunk-blog-post-content.ts
-
 type TChunkBlogPostContent = {
   text: string;
   index: number;
@@ -27,9 +25,9 @@ type TChunkBlogPostContentOptions = {
 export function chunkBlogPostContent(
   content: string,
   {
-    maxChars = 800, // ✅ 800자로 줄임
-    overlapChars = 100, // ✅ 100자로 줄임
-    minChars = 200, // ✅ 200자로 줄임
+    maxChars = 800, 
+    overlapChars = 100,
+    minChars = 200,
     cleanText = true,
 
     maxTokens,

@@ -3,16 +3,22 @@ import openaiClient from "../../../config/openai-client.js";
 import {
   PINECONE_INDEX_NAME,
   SQL_DB_TABLE,
-  TPineconeVectorMetadataForContent,
+  IPineconeVectorMetadataBase,
   TSqlYoutubeVideoDetail,
+  IPineconeVectorMetadataForVideo,
+  IPineconeVectorMetadataForInstagramPost,
+  IPineconeVectorMetadataForBlogPost,
 } from "aiqna_common_v1";
 import supabaseClient from "../../../config/supabase-client.js";
 import pineconeClient from "../../../config/pinecone-client.js";
 import { HelperYouTube } from "../../../utils/helper-youtube.js";
 
-/* =========================
+
+/* 
+ * =========================
  * Types
- * =======================*/
+ * =========================
+ */
 type TPrimitive = string | number | boolean | null;
 
 type TComparator = {
@@ -28,23 +34,10 @@ type TComparator = {
   $contains?: TPrimitive | TPrimitive[];
 };
 
-export type TPineconeFilter = {
+type TPineconeFilter = {
   $and?: TPineconeFilter[];
   $or?: TPineconeFilter[];
 } & Record<string, TPrimitive | TComparator>;
-
-type TPineconeChunkMetadataText = TPineconeVectorMetadataForContent &
-  Partial<{
-    text: string;
-    transcript: string;
-  }>;
-
-type TPineconeHit<M extends TPineconeVectorMetadataForContent> = {
-  id: string;
-  score?: number;
-  metadata?: M;
-};
-
 interface IAiAskBody {
   q?: string;
   topK?: number;
@@ -52,12 +45,45 @@ interface IAiAskBody {
   filters?: TPineconeFilter;
 }
 
-/** =========================
+type TPineconeHit<M extends IPineconeVectorMetadataBase> = {
+  id: string;
+  score?: number;
+  metadata?: M;
+};
+
+/**
+ * =========================
+ *  Type Guards
+ * ========================= 
+ */
+function isVideoMetadata(
+  metadata: IPineconeVectorMetadataBase
+): metadata is IPineconeVectorMetadataForVideo {
+  return metadata.type === 'video' || 'video_id' in metadata;
+}
+
+function isInstagramMetadata(
+  metadata: IPineconeVectorMetadataBase
+): metadata is IPineconeVectorMetadataForInstagramPost {
+  return metadata.type === 'instagram' || 'instagram_post_url' in metadata;
+}
+
+function isBlogMetadata(
+  metadata: IPineconeVectorMetadataBase
+): metadata is IPineconeVectorMetadataForBlogPost {
+  return metadata.type === 'blog' || 'blog_post_url' in metadata;
+}
+
+
+/** 
+ * =========================
  *  Helpers
- *  ========================= */
+ * ========================= 
+ */
 const EMBED_MODEL = process.env.EMBEDDING_MODEL ?? "text-embedding-3-small";
 const EMBED_DIM = Number(process.env.EMBEDDING_DIM ?? "512");
 const MODEL_SUPPORTS_DIM = /^text-embedding-3-/.test(EMBED_MODEL);
+
 
 /**
  * embed
@@ -80,8 +106,10 @@ async function embed(text: string): Promise<number[]> {
       `Embedding dimension mismatch: got ${vec.length}, expected ${EMBED_DIM}`,
     );
   }
+
   return vec;
 }
+
 
 /**
  * buildRagPrompt
@@ -136,17 +164,12 @@ async function generateAnswer(
   return r.choices[0]?.message?.content?.trim() ?? "";
 }
 
-/** =========================
+/** 
+ * =========================
  *  Controller
- *  ========================= */
-/**
- * Ctrl For AI Ask
- * YouTube 자막 기반 RAG 검색
- * @param req
- * @param res
- * @returns
+ * ========================= 
  */
-export async function ctrlAdminAiAsk(req: Request, res: Response) {
+export async function routeCtrlAdminAiAsk(req: Request, res: Response) {
   try {
     const {
       q,
@@ -192,12 +215,12 @@ export async function ctrlAdminAiAsk(req: Request, res: Response) {
         filter: pineconeFilter,
       });
 
-    const matches: TPineconeHit<TPineconeChunkMetadataText>[] = (
+    const matches: TPineconeHit<IPineconeVectorMetadataBase>[] = (
       pc.matches || []
     ).map((m) => ({
       id: m.id,
       score: m.score,
-      metadata: (m.metadata || {}) as TPineconeChunkMetadataText,
+      metadata: m.metadata as unknown as IPineconeVectorMetadataBase,
     }));
 
     console.log(`[AI Ask] Found ${matches.length} vector matches`);
@@ -207,20 +230,24 @@ export async function ctrlAdminAiAsk(req: Request, res: Response) {
       return res.status(200).json({
         query: q,
         answer:
-          "I couldn't find any relevant information in the video transcripts for your query. Please try rephrasing your question or use different keywords.",
+          "I couldn't find any relevant information for your query. Please try rephrasing your question or use different keywords.",
         sources: [],
         videos: [],
         note: "No results from vector search.",
       });
     }
 
-    // 6) 관련 비디오 메타데이터 조회
+    // 6) 비디오 메타데이터만 필터링하여 조회
+    const videoMatches = matches.filter((m) => 
+      m.metadata && isVideoMetadata(m.metadata)
+    );
+
     const videoIds = Array.from(
       new Set(
-        matches
-          .map((m) => m.metadata?.video_id)
-          .filter((v): v is string => typeof v === "string" && v.length > 0),
-      ),
+        videoMatches
+          .map((m) => (m.metadata as IPineconeVectorMetadataForVideo).video_id)
+          .filter((v): v is string => typeof v === "string" && v.length > 0)
+      )
     );
 
     let videos: TSqlYoutubeVideoDetail[] = [];
@@ -239,33 +266,60 @@ export async function ctrlAdminAiAsk(req: Request, res: Response) {
       }
     }
 
-    // 7) RAG 컨텍스트 구성
+    // 7) RAG 컨텍스트 구성 - 모든 타입 지원
     const topContexts = matches
       .slice(0, Math.min(matches.length, 12))
       .map((m) => {
-        const vId = m.metadata?.video_id ?? "unknown";
-        const s = m.metadata?.video_start_time;
-        const url = HelperYouTube.buildWatchUrl(vId, s);
-        const text = m.metadata?.text ?? "";
+        if (!m.metadata) return null;
+
+        const text = m.metadata.text ?? "";
+        let source = "";
+
+        if (isVideoMetadata(m.metadata)) {
+          const vId = m.metadata.video_id ?? "unknown";
+          const s = m.metadata.video_start_time;
+          const url = HelperYouTube.buildWatchUrl(vId, s);
+          source = `Video ${vId} ${m.metadata.language ? `[${m.metadata.language}]` : ""} @${s ?? 0}s - ${url}`;
+        } else if (isInstagramMetadata(m.metadata)) {
+          const url = m.metadata.instagram_post_url ?? "unknown";
+          source = `Instagram ${m.metadata.language ? `[${m.metadata.language}]` : ""} - ${url}`;
+        } else if (isBlogMetadata(m.metadata)) {
+          const url = m.metadata.blog_post_url ?? "unknown";
+          source = `Blog ${m.metadata.language ? `[${m.metadata.language}]` : ""} - ${url}`;
+        } else {
+          source = `Source ${m.metadata.language ? `[${m.metadata.language}]` : ""}`;
+        }
+
         return {
           text: String(text).slice(0, 1800),
-          source: `Video ${vId} ${m.metadata?.language ? `[${m.metadata.language}]` : ""} @${s ?? 0}s - ${url}`,
+          source,
         };
       })
-      .filter((c) => c.text);
+      .filter((c): c is { text: string; source: string } => 
+        c !== null && c.text.length > 0
+      );
 
     if (!topContexts.length) {
       return res.status(200).json({
         query: q,
         answer:
-          "Found relevant videos but couldn't extract text content. Please check the source videos directly.",
-        sources: matches.map((m) => ({
-          id: m.id,
-          score: m.score,
-          videoId: m.metadata?.video_id,
-          start: m.metadata?.video_start_time,
-          end: m.metadata?.video_end_time,
-        })),
+          "Found relevant content but couldn't extract text. Please check the sources directly.",
+        sources: matches.map((m) => {
+          if (!m.metadata) return { id: m.id, score: m.score };
+          
+          if (isVideoMetadata(m.metadata)) {
+            return {
+              id: m.id,
+              score: m.score,
+              type: 'video',
+              videoId: m.metadata.video_id,
+              start: m.metadata.video_start_time,
+              end: m.metadata.video_end_time,
+            };
+          }
+          
+          return { id: m.id, score: m.score, type: m.metadata.type };
+        }),
         videos,
         note: "No textual chunks found in metadata.",
       });
@@ -282,19 +336,54 @@ export async function ctrlAdminAiAsk(req: Request, res: Response) {
       query: q,
       answer,
       sources: matches.map((m) => {
-        const vId = m.metadata?.video_id ?? null;
-        const url = vId
-          ? HelperYouTube.buildWatchUrl(vId, m.metadata?.video_start_time)
-          : null;
-        return {
+        if (!m.metadata) {
+          return {
+            id: m.id,
+            score: m.score,
+            type: 'unknown',
+          };
+        }
+
+        const baseSource = {
           id: m.id,
           score: m.score,
-          videoId: vId,
-          language: m.metadata?.language ?? null,
-          start: m.metadata?.video_start_time ?? null,
-          end: m.metadata?.video_end_time ?? null,
-          url,
-          text: m.metadata?.text?.slice(0, 200) ?? null, // 미리보기용
+          language: m.metadata.language ?? null,
+          text: m.metadata.text?.slice(0, 200) ?? null,
+        };
+
+        if (isVideoMetadata(m.metadata)) {
+          const vId = m.metadata.video_id ?? null;
+          const url = vId
+            ? HelperYouTube.buildWatchUrl(vId, m.metadata.video_start_time)
+            : null;
+          
+          return {
+            ...baseSource,
+            type: 'video',
+            videoId: vId,
+            start: m.metadata.video_start_time ?? null,
+            end: m.metadata.video_end_time ?? null,
+            url,
+          };
+        } else if (isInstagramMetadata(m.metadata)) {
+          return {
+            ...baseSource,
+            type: 'instagram',
+            url: m.metadata.instagram_post_url ?? null,
+            imageUrl: m.metadata.local_image_url ?? null,
+          };
+        } else if (isBlogMetadata(m.metadata)) {
+          return {
+            ...baseSource,
+            type: 'blog',
+            url: m.metadata.blog_post_url ?? null,
+            platform: m.metadata.blog_platform ?? null,
+          };
+        }
+
+        return {
+          ...baseSource,
+          type: m.metadata.type ?? 'unknown',
         };
       }),
       videos: videos.map((v) => ({
@@ -318,5 +407,9 @@ export async function ctrlAdminAiAsk(req: Request, res: Response) {
     });
   }
 }
+
+
+
+
 
 

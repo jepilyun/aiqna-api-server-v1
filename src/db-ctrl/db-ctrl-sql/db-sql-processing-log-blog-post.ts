@@ -1,11 +1,11 @@
 import {
-  F_BLOG_POST_PROCESSING_LOG,
+  F_PROCESSING_LOG_BLOG_POST,
   LIST_LIMIT,
   ResponseDBSelect,
   SQL_DB_TABLE,
-  TSqlBlogPostProcessingLog,
-  TSqlBlogPostProcessingLogInsert,
-  TSqlBlogPostProcessingLogUpdate,
+  TSqlProcessingLogBlogPost,
+  TSqlProcessingLogBlogPostInsert,
+  TSqlProcessingLogBlogPostUpdate,
 } from "aiqna_common_v1";
 import supabaseClient from "../../config/supabase-client.js";
 import { ErrorBlogPostProcessingLogDuplicate } from "../../errors/error-processing-log-blog-post.js";
@@ -25,16 +25,16 @@ export default class DBSqlProcessingLogBlogPost {
   static async selectList(
     start: number = LIST_LIMIT.start,
     limit: number = LIST_LIMIT.default,
-  ): Promise<ResponseDBSelect<TSqlBlogPostProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlProcessingLogBlogPost[]>> {
     try {
       const { data, error, count } = await supabaseClient
         .from(SQL_DB_TABLE.blog_post_processing_logs)
         .select("*", { count: "exact" })
-        .order(F_BLOG_POST_PROCESSING_LOG.created_at.id, {
+        .order(F_PROCESSING_LOG_BLOG_POST.created_at.id, {
           ascending: false,
         })
         .range(start, start + limit - 1)
-        .overrideTypes<TSqlBlogPostProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogBlogPost[]>();
 
       if (error) {
         throw new Error(
@@ -60,16 +60,16 @@ export default class DBSqlProcessingLogBlogPost {
    */
   static async selectByPostUrl(
     postUrl: string,
-  ): Promise<ResponseDBSelect<TSqlBlogPostProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlProcessingLogBlogPost[]>> {
     try {
       const { data, error, count } = await supabaseClient
         .from(SQL_DB_TABLE.blog_post_processing_logs)
         .select("*", { count: "exact" })
-        .order(F_BLOG_POST_PROCESSING_LOG.created_at.id, {
+        .order(F_PROCESSING_LOG_BLOG_POST.created_at.id, {
           ascending: true,
         })
-        .eq(F_BLOG_POST_PROCESSING_LOG.blog_post_url.id, postUrl)
-        .overrideTypes<TSqlBlogPostProcessingLog[]>();
+        .eq(F_PROCESSING_LOG_BLOG_POST.blog_post_url.id, postUrl)
+        .overrideTypes<TSqlProcessingLogBlogPost[]>();
 
       if (error) {
         throw new Error(
@@ -99,17 +99,17 @@ export default class DBSqlProcessingLogBlogPost {
     status: string,
     start: number = LIST_LIMIT.start,
     limit: number = LIST_LIMIT.default,
-  ): Promise<ResponseDBSelect<TSqlBlogPostProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlProcessingLogBlogPost[]>> {
     try {
       const { data, error, count } = await supabaseClient
         .from(SQL_DB_TABLE.blog_post_processing_logs)
         .select("*", { count: "exact" })
-        .eq(F_BLOG_POST_PROCESSING_LOG.processing_status.id, status)
-        .order(F_BLOG_POST_PROCESSING_LOG.created_at.id, {
+        .eq(F_PROCESSING_LOG_BLOG_POST.processing_status.id, status)
+        .order(F_PROCESSING_LOG_BLOG_POST.created_at.id, {
           ascending: false,
         })
         .range(start, start + limit - 1)
-        .overrideTypes<TSqlBlogPostProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogBlogPost[]>();
 
       if (error) {
         throw new Error(
@@ -134,14 +134,14 @@ export default class DBSqlProcessingLogBlogPost {
    * @returns 블로그 포스트 처리 로그 정보
    */
   static async insert(
-    logData: TSqlBlogPostProcessingLogInsert,
-  ): Promise<ResponseDBSelect<TSqlBlogPostProcessingLog[]>> {
+    logData: TSqlProcessingLogBlogPostInsert,
+  ): Promise<ResponseDBSelect<TSqlProcessingLogBlogPost[]>> {
     try {
       const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.blog_post_processing_logs)
         .insert(logData)
         .select()
-        .overrideTypes<TSqlBlogPostProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogBlogPost[]>();
 
       if (error) {
         if (error.code === "23505") {
@@ -172,8 +172,8 @@ export default class DBSqlProcessingLogBlogPost {
    * @returns 블로그 포스트 처리 로그 정보
    */
   static async upsert(
-    logData: TSqlBlogPostProcessingLogInsert,
-  ): Promise<ResponseDBSelect<TSqlBlogPostProcessingLog[]>> {
+    logData: TSqlProcessingLogBlogPostInsert,
+  ): Promise<ResponseDBSelect<TSqlProcessingLogBlogPost[]>> {
     try {
       const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.blog_post_processing_logs)
@@ -182,7 +182,7 @@ export default class DBSqlProcessingLogBlogPost {
           ignoreDuplicates: false,
         })
         .select()
-        .overrideTypes<TSqlBlogPostProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogBlogPost[]>();
 
       if (error) {
         throw new Error(
@@ -209,15 +209,15 @@ export default class DBSqlProcessingLogBlogPost {
    */
   static async updateByPostUrl(
     postUrl: string,
-    updateData: TSqlBlogPostProcessingLogUpdate,
-  ): Promise<ResponseDBSelect<TSqlBlogPostProcessingLog[]>> {
+    updateData: TSqlProcessingLogBlogPostUpdate,
+  ): Promise<ResponseDBSelect<TSqlProcessingLogBlogPost[]>> {
     try {
       const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.blog_post_processing_logs)
         .update(updateData)
-        .eq(F_BLOG_POST_PROCESSING_LOG.blog_post_url.id, postUrl)
+        .eq(F_PROCESSING_LOG_BLOG_POST.blog_post_url.id, postUrl)
         .select()
-        .overrideTypes<TSqlBlogPostProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogBlogPost[]>();
 
       if (error) {
         throw new Error(
@@ -243,14 +243,14 @@ export default class DBSqlProcessingLogBlogPost {
    */
   static async deleteByPostUrl(
     postUrl: string,
-  ): Promise<ResponseDBSelect<TSqlBlogPostProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlProcessingLogBlogPost[]>> {
     try {
       const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.blog_post_processing_logs)
         .delete()
-        .eq(F_BLOG_POST_PROCESSING_LOG.blog_post_url.id, postUrl)
+        .eq(F_PROCESSING_LOG_BLOG_POST.blog_post_url.id, postUrl)
         .select()
-        .overrideTypes<TSqlBlogPostProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogBlogPost[]>();
 
       if (error) {
         throw new Error(
@@ -276,7 +276,7 @@ export default class DBSqlProcessingLogBlogPost {
    */
   static async incrementRetryCount(
     postUrl: string,
-  ): Promise<ResponseDBSelect<TSqlBlogPostProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlProcessingLogBlogPost[]>> {
     try {
       // 현재 retry_count 조회
       const { data: currentData } = await this.selectByPostUrl(postUrl);
@@ -294,9 +294,9 @@ export default class DBSqlProcessingLogBlogPost {
           retry_count: currentRetryCount + 1,
           updated_at: new Date().toISOString(),
         })
-        .eq(F_BLOG_POST_PROCESSING_LOG.blog_post_url.id, postUrl)
+        .eq(F_PROCESSING_LOG_BLOG_POST.blog_post_url.id, postUrl)
         .select()
-        .overrideTypes<TSqlBlogPostProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogBlogPost[]>();
 
       if (error) {
         throw new Error(

@@ -180,7 +180,7 @@ export default class DBSqlPineconeVector {
       if (error) {
         if (error.code === "23505") {
           // UNIQUE 제약 위반
-          throw new ErrorPineconeVectorDuplicate(vector.vector_id);
+          throw new ErrorPineconeVectorDuplicate(vector.vector_id ?? "");
         } else {
           throw new Error(
             `#1 Pinecone 벡터 등록(INSERT) 중 오류 발생 >>> ${error.message}`,

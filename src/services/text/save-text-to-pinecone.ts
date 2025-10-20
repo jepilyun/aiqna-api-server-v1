@@ -1,28 +1,29 @@
 import {
   PINECONE_INDEX_NAME,
   TPineconeMetadata,
-  TPineconeVectorMetadataForContent,
+  IPineconeVectorMetadataForText,
   TPineconeVector,
   TSqlTextDetail,
-  ERequestCreateContentType,
 } from "aiqna_common_v1";
 import { TAnalyzedContentMetadata } from "../../types/shared.js";
 import { MetadataGeneratorText } from "../metadata-generator/metadata-generator-text.js";
 import DBPinecone from "../../db-ctrl/db-ctrl-pinecone/db-pinecone.js";
-import { EmbeddingProviderFactory } from "../embedding/embedding-provider-factory.js";
+import { OpenAIEmbeddingProvider } from "../embedding/openai-embedding.js";
 import { chunkTextContent } from "../chunk/chunk-text.js";
 import { ContentKeyManager } from "../../utils/content-key-manager.js";
+import { ERequestCreateContentType } from "../../consts/const.js";
 
 /**
  * Pinecone 저장 함수 (Provider 기반) - 청크별 메타데이터 추출
  */
 export async function saveTextToPinecone(
   textData: TSqlTextDetail,
-  textDataMetadata: Partial<TPineconeVectorMetadataForContent>,
+  textDataMetadata: Partial<IPineconeVectorMetadataForText>,
   modelName?: string,
   indexName: string = PINECONE_INDEX_NAME.TRAVEL_SEOUL.OPENAI_SMALL,
 ): Promise<void> {
-  const provider = EmbeddingProviderFactory.createProvider("openai");
+  // const provider = EmbeddingProviderFactory.createProvider("openai");
+  const provider = new OpenAIEmbeddingProvider();
   const embeddingModel = modelName || provider.getDefaultModel();
   const metadataExtractor = new MetadataGeneratorText();
 
@@ -63,8 +64,8 @@ export async function saveTextToPinecone(
       // 로그 (첫 2개만)
       if (idx < 2) {
         console.log(`\n📄 Chunk ${idx}:`);
-        console.log(`   Length: ${chunk.text.length} chars`);
-        console.log(`   Preview: ${chunk.text.substring(0, 80)}...`);
+        console.log(`Length: ${chunk.text.length} chars`);
+        console.log(`Preview: ${chunk.text.substring(0, 80)}...`);
       }
 
       // 1. 임베딩 생성 (청크 텍스트 사용)

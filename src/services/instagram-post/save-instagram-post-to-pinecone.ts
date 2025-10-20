@@ -1,27 +1,28 @@
 import {
   PINECONE_INDEX_NAME,
   TPineconeMetadata,
-  TPineconeVectorMetadataForContent,
+  IPineconeVectorMetadataForInstagramPost,
   TPineconeVector,
   TSqlInstagramPostDetail,
-  ERequestCreateContentType,
 } from "aiqna_common_v1";
 import { TAnalyzedContentMetadata } from "../../types/shared.js";
 import { MetadataGeneratorInstagramPost } from "../metadata-generator/metadata-generator-instagram-post.js";
 import DBPinecone from "../../db-ctrl/db-ctrl-pinecone/db-pinecone.js";
-import { EmbeddingProviderFactory } from "../embedding/embedding-provider-factory.js";
+import { OpenAIEmbeddingProvider } from "../embedding/openai-embedding.js";
 import { ContentKeyManager } from "../../utils/content-key-manager.js";
+import { ERequestCreateContentType } from "../../consts/const.js";
 
 /**
  * Pinecone 저장 함수 (Provider 기반) - 청크별 메타데이터 추출
  */
 export async function saveInstagramPostToPinecone(
   instagramPost: TSqlInstagramPostDetail,
-  instagramPostMetadata: Partial<TPineconeVectorMetadataForContent>,
+  instagramPostMetadata: Partial<IPineconeVectorMetadataForInstagramPost>,
   modelName?: string,
   indexName: string = PINECONE_INDEX_NAME.TRAVEL_SEOUL.OPENAI_SMALL,
 ): Promise<void> {
-  const provider = EmbeddingProviderFactory.createProvider("openai");
+  // const provider = EmbeddingProviderFactory.createProvider("openai");
+  const provider = new OpenAIEmbeddingProvider();
   const embeddingModel = modelName || provider.getDefaultModel();
   const metadataExtractor = new MetadataGeneratorInstagramPost();
 

@@ -86,44 +86,6 @@ export default class DBSqlBlogPost {
   }
 
   /**
-   * platform으로 블로그 포스트 목록 조회
-   * @param platform 플랫폼 (naver, tistory, medium, twitter, facebook, newsweek 등)
-   * @param start 시작 인덱스
-   * @param limit 조회할 개수
-   * @returns 블로그 포스트 목록과 총 개수
-   */
-  static async selectByPlatform(
-    platform: string,
-    start: number = LIST_LIMIT.start,
-    limit: number = LIST_LIMIT.default,
-  ): Promise<ResponseDBSelect<TSqlBlogPostList[]>> {
-    try {
-      const { data, error, count } = await supabaseClient
-        .from(SQL_DB_TABLE.blog_posts)
-        .select(SQL_DB_COLUMNS_BLOG_POST_LIST.join(", "), { count: "exact" })
-        .eq(F_BLOG_POST.platform.id, platform)
-        .order(F_BLOG_POST.published_date.id, { ascending: false })
-        .range(start, start + limit - 1)
-        .overrideTypes<TSqlBlogPostList[]>();
-
-      if (error) {
-        throw new Error(
-          `#1 블로그 포스트 조회(SELECT By Platform) 중 오류 발생 >>> ${error.message}`,
-        );
-      }
-
-      return { data: data || [], count: count || 0 };
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error(
-        "#3 블로그 포스트 조회(SELECT By Platform) 중 알 수 없는 오류가 발생했습니다.",
-      );
-    }
-  }
-
-  /**
    * 블로그 포스트 등록 기능
    * @param post 블로그 포스트 정보
    * @returns 블로그 포스트 정보

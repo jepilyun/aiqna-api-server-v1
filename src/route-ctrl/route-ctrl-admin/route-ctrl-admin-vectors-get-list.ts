@@ -6,7 +6,7 @@ import { Request, Response } from "express";
  * @param res
  * @returns
  */
-export async function ctrlAdminVectorsGetList(req: Request, res: Response) {
+export async function routeCtrlAdminVectorsGetList(req: Request, res: Response) {
   console.log("ctrlAdminVectorsGetList");
   console.log("req", req);
   console.log("res", res);

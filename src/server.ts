@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import express from "express";
 import routesApiAdmin from "./router/router-api-admin.js";
 import routesApiUser from "./router/router-api-user.js";
-import { startYouTubeVideoWorker } from "./process/process-create-content/process-youtube-video-worker.js";
+import { workerStartYouTubeVideo } from "./worker/worker-start-youtube-video.js";
 
 dotenv.config();
 
@@ -28,8 +28,8 @@ app.use(express.json());
 app.use("/api/admin", routesApiAdmin);
 app.use("/api/user", routesApiUser);
 
-// Worker 시작
-startYouTubeVideoWorker().catch((error) => {
+// Worker 시작 YouTube Video Worker
+workerStartYouTubeVideo().catch((error) => {
   console.error("💥 Worker crashed:", error);
   process.exit(1);
 });

@@ -1,11 +1,11 @@
 import {
-  F_INSTAGRAM_POST_PROCESSING_LOG,
+  F_PROCESSING_LOG_INSTAGRAM_POST,
   LIST_LIMIT,
   ResponseDBSelect,
   SQL_DB_TABLE,
-  TSqlInstagramPostProcessingLog,
-  TSqlInstagramPostProcessingLogInsert,
-  TSqlInstagramPostProcessingLogUpdate,
+  TSqlProcessingLogInstagramPost,
+  TSqlProcessingLogInstagramPostInsert,
+  TSqlProcessingLogInstagramPostUpdate,
 } from "aiqna_common_v1";
 import supabaseClient from "../../config/supabase-client.js";
 import { ErrorInstagramPostProcessingLogDuplicate } from "../../errors/error-processing-log-instagram-post.js";
@@ -25,16 +25,16 @@ export default class DBSqlProcessingLogInstagramPost {
   static async selectList(
     start: number = LIST_LIMIT.start,
     limit: number = LIST_LIMIT.default,
-  ): Promise<ResponseDBSelect<TSqlInstagramPostProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlProcessingLogInstagramPost[]>> {
     try {
       const { data, error, count } = await supabaseClient
         .from(SQL_DB_TABLE.instagram_post_processing_logs)
         .select("*", { count: "exact" })
-        .order(F_INSTAGRAM_POST_PROCESSING_LOG.created_at.id, {
+        .order(F_PROCESSING_LOG_INSTAGRAM_POST.created_at.id, {
           ascending: false,
         })
         .range(start, start + limit - 1)
-        .overrideTypes<TSqlInstagramPostProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogInstagramPost[]>();
 
       if (error) {
         throw new Error(
@@ -60,16 +60,16 @@ export default class DBSqlProcessingLogInstagramPost {
    */
   static async selectByPostUrl(
     postUrl: string,
-  ): Promise<ResponseDBSelect<TSqlInstagramPostProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlProcessingLogInstagramPost[]>> {
     try {
       const { data, error, count } = await supabaseClient
         .from(SQL_DB_TABLE.instagram_post_processing_logs)
         .select("*", { count: "exact" })
-        .order(F_INSTAGRAM_POST_PROCESSING_LOG.created_at.id, {
+        .order(F_PROCESSING_LOG_INSTAGRAM_POST.created_at.id, {
           ascending: true,
         })
-        .eq(F_INSTAGRAM_POST_PROCESSING_LOG.instagram_post_url.id, postUrl)
-        .overrideTypes<TSqlInstagramPostProcessingLog[]>();
+        .eq(F_PROCESSING_LOG_INSTAGRAM_POST.instagram_post_url.id, postUrl)
+        .overrideTypes<TSqlProcessingLogInstagramPost[]>();
 
       if (error) {
         throw new Error(
@@ -99,17 +99,17 @@ export default class DBSqlProcessingLogInstagramPost {
     status: string,
     start: number = LIST_LIMIT.start,
     limit: number = LIST_LIMIT.default,
-  ): Promise<ResponseDBSelect<TSqlInstagramPostProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlProcessingLogInstagramPost[]>> {
     try {
       const { data, error, count } = await supabaseClient
         .from(SQL_DB_TABLE.instagram_post_processing_logs)
         .select("*", { count: "exact" })
-        .eq(F_INSTAGRAM_POST_PROCESSING_LOG.processing_status.id, status)
-        .order(F_INSTAGRAM_POST_PROCESSING_LOG.created_at.id, {
+        .eq(F_PROCESSING_LOG_INSTAGRAM_POST.processing_status.id, status)
+        .order(F_PROCESSING_LOG_INSTAGRAM_POST.created_at.id, {
           ascending: false,
         })
         .range(start, start + limit - 1)
-        .overrideTypes<TSqlInstagramPostProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogInstagramPost[]>();
 
       if (error) {
         throw new Error(
@@ -134,14 +134,14 @@ export default class DBSqlProcessingLogInstagramPost {
    * @returns Instagram 포스트 처리 로그 정보
    */
   static async insert(
-    logData: TSqlInstagramPostProcessingLogInsert,
-  ): Promise<ResponseDBSelect<TSqlInstagramPostProcessingLog[]>> {
+    logData: TSqlProcessingLogInstagramPostInsert,
+  ): Promise<ResponseDBSelect<TSqlProcessingLogInstagramPost[]>> {
     try {
       const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.instagram_post_processing_logs)
         .insert(logData)
         .select()
-        .overrideTypes<TSqlInstagramPostProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogInstagramPost[]>();
 
       if (error) {
         if (error.code === "23505") {
@@ -174,8 +174,8 @@ export default class DBSqlProcessingLogInstagramPost {
    * @returns Instagram 포스트 처리 로그 정보
    */
   static async upsert(
-    logData: TSqlInstagramPostProcessingLogInsert,
-  ): Promise<ResponseDBSelect<TSqlInstagramPostProcessingLog[]>> {
+    logData: TSqlProcessingLogInstagramPostInsert,
+  ): Promise<ResponseDBSelect<TSqlProcessingLogInstagramPost[]>> {
     try {
       const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.instagram_post_processing_logs)
@@ -184,7 +184,7 @@ export default class DBSqlProcessingLogInstagramPost {
           ignoreDuplicates: false,
         })
         .select()
-        .overrideTypes<TSqlInstagramPostProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogInstagramPost[]>();
 
       if (error) {
         throw new Error(
@@ -211,15 +211,15 @@ export default class DBSqlProcessingLogInstagramPost {
    */
   static async updateByPostUrl(
     postUrl: string,
-    updateData: TSqlInstagramPostProcessingLogUpdate,
-  ): Promise<ResponseDBSelect<TSqlInstagramPostProcessingLog[]>> {
+    updateData: TSqlProcessingLogInstagramPostUpdate,
+  ): Promise<ResponseDBSelect<TSqlProcessingLogInstagramPost[]>> {
     try {
       const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.instagram_post_processing_logs)
         .update(updateData)
-        .eq(F_INSTAGRAM_POST_PROCESSING_LOG.instagram_post_url.id, postUrl)
+        .eq(F_PROCESSING_LOG_INSTAGRAM_POST.instagram_post_url.id, postUrl)
         .select()
-        .overrideTypes<TSqlInstagramPostProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogInstagramPost[]>();
 
       if (error) {
         throw new Error(
@@ -245,14 +245,14 @@ export default class DBSqlProcessingLogInstagramPost {
    */
   static async deleteByPostUrl(
     postUrl: string,
-  ): Promise<ResponseDBSelect<TSqlInstagramPostProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlProcessingLogInstagramPost[]>> {
     try {
       const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.instagram_post_processing_logs)
         .delete()
-        .eq(F_INSTAGRAM_POST_PROCESSING_LOG.instagram_post_url.id, postUrl)
+        .eq(F_PROCESSING_LOG_INSTAGRAM_POST.instagram_post_url.id, postUrl)
         .select()
-        .overrideTypes<TSqlInstagramPostProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogInstagramPost[]>();
 
       if (error) {
         throw new Error(
@@ -278,7 +278,7 @@ export default class DBSqlProcessingLogInstagramPost {
    */
   static async incrementRetryCount(
     postUrl: string,
-  ): Promise<ResponseDBSelect<TSqlInstagramPostProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlProcessingLogInstagramPost[]>> {
     try {
       // 현재 retry_count 조회
       const { data: currentData } = await this.selectByPostUrl(postUrl);
@@ -296,9 +296,9 @@ export default class DBSqlProcessingLogInstagramPost {
           retry_count: currentRetryCount + 1,
           updated_at: new Date().toISOString(),
         })
-        .eq(F_INSTAGRAM_POST_PROCESSING_LOG.instagram_post_url.id, postUrl)
+        .eq(F_PROCESSING_LOG_INSTAGRAM_POST.instagram_post_url.id, postUrl)
         .select()
-        .overrideTypes<TSqlInstagramPostProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogInstagramPost[]>();
 
       if (error) {
         throw new Error(

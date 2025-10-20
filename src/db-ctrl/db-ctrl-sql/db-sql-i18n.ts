@@ -1,9 +1,9 @@
 import {
   SQL_DB_TABLE,
   ResponseDBSelect,
-  TCountry,
-  TCountryLanguage,
-  TLanguage,
+  TSqlCountry,
+  TSqlMapCountryLanguage,
+  TSqlLanguage,
 } from "aiqna_common_v1";
 
 import supabaseClient from "../../config/supabase-client.js";
@@ -18,7 +18,7 @@ export default class DBSqlI18n {
    * @returns 언어 정보 목록
    * @throws {Error} 조회 중 오류가 발생한 경우 오류 객체 반환
    */
-  static async selectAllLanguages(): Promise<ResponseDBSelect<TLanguage[]>> {
+  static async selectAllLanguages(): Promise<ResponseDBSelect<TSqlLanguage[]>> {
     try {
       const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.languages)
@@ -45,10 +45,10 @@ export default class DBSqlI18n {
 
   /**
    * 모든 국가 정보를 조회하는 기능
-   * @returns {Promise<{ data: Country[] }>} 도시 정보 목록과 총 개수
+   * @returns {Promise<{ data: TSqlCountry[] }>} 도시 정보 목록과 총 개수
    * @throws {Error} 조회 중 오류가 발생한 경우 오류 객체 반환
    */
-  static async selectAllCountries(): Promise<ResponseDBSelect<TCountry[]>> {
+  static async selectAllCountries(): Promise<ResponseDBSelect<TSqlCountry[]>> {
     try {
       const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.countries)
@@ -79,7 +79,7 @@ export default class DBSqlI18n {
    * @throws {Error} 조회 중 오류가 발생한 경우 오류 객체 반환
    */
   static async selectAllCountryLanguages(): Promise<
-    ResponseDBSelect<TCountryLanguage[]>
+    ResponseDBSelect<TSqlMapCountryLanguage[]>
   > {
     try {
       const { data, error } = await supabaseClient

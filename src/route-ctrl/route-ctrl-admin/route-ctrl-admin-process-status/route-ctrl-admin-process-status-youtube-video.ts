@@ -6,7 +6,7 @@ import { Request, Response } from "express";
  * @param res
  * @returns
  */
-export async function ctrlAdminProcessStatusYouTubeVideo(
+export async function routeCtrlAdminProcessStatusYouTubeVideo(
   req: Request,
   res: Response,
 ) {

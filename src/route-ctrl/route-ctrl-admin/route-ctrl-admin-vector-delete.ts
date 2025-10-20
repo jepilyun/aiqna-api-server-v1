@@ -6,7 +6,7 @@ import { Request, Response } from "express";
  * @param res
  * @returns
  */
-export async function ctrlAdminVectorDelete(req: Request, res: Response) {
+export async function routeCtrlAdminVectorDelete(req: Request, res: Response) {
   console.log("ctrlAdminVectorDelete");
   console.log("req", req);
   console.log("res", res);

@@ -4,10 +4,11 @@ import { ctrlUserAiAsk } from "../route-ctrl/route-ctrl-user/route-ctrl-user-ai-
 
 const router = express.Router();
 
-// ============================================
-// USER APIs (requires user authentication)
-// ============================================
-
+/*
+ * ============================================
+ * USER APIs (requires user authentication)
+ * ============================================
+ */
 // AI 질의 (일반 사용자용)
 router.post(
   "/ai/ask",

@@ -6,7 +6,7 @@ import { Request, Response } from "express";
  * @param res
  * @returns
  */
-export async function ctrlAdminProcessStatusInstagramPost(
+export async function routeCtrlAdminProcessStatusInstagramPost(
   req: Request,
   res: Response,
 ) {

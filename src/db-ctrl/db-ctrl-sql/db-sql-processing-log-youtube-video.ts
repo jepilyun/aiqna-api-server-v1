@@ -1,11 +1,11 @@
 import {
-  F_YOUTUBE_VIDEO_PROCESSING_LOG,
+  F_PROCESSING_LOG_YOUTUBE_VIDEO,
   LIST_LIMIT,
   ResponseDBSelect,
   SQL_DB_TABLE,
-  TSqlYoutubeVideoProcessingLog,
-  TSqlYoutubeVideoProcessingLogInsert,
-  TSqlYoutubeVideoProcessingLogUpdate,
+  TSqlProcessingLogYoutubeVideo,
+  TSqlProcessingLogYoutubeVideoInsert,
+  TSqlProcessingLogYoutubeVideoUpdate,
 } from "aiqna_common_v1";
 import supabaseClient from "../../config/supabase-client.js";
 import { ErrorYoutubeVideoProcessingLogDuplicate } from "../../errors/error-processing-log-youtube-video.js";
@@ -25,16 +25,16 @@ export default class DBSqlProcessingLogYoutubeVideo {
   static async selectList(
     start: number = LIST_LIMIT.start,
     limit: number = LIST_LIMIT.default,
-  ): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlProcessingLogYoutubeVideo[]>> {
     try {
       const { data, error, count } = await supabaseClient
         .from(SQL_DB_TABLE.youtube_video_processing_logs)
         .select("*", { count: "exact" })
-        .order(F_YOUTUBE_VIDEO_PROCESSING_LOG.created_at.id, {
+        .order(F_PROCESSING_LOG_YOUTUBE_VIDEO.created_at.id, {
           ascending: false,
         })
         .range(start, start + limit - 1)
-        .overrideTypes<TSqlYoutubeVideoProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogYoutubeVideo[]>();
 
       if (error) {
         throw new Error(
@@ -60,16 +60,16 @@ export default class DBSqlProcessingLogYoutubeVideo {
    */
   static async selectByVideoId(
     videoId: string,
-  ): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlProcessingLogYoutubeVideo[]>> {
     try {
       const { data, error, count } = await supabaseClient
         .from(SQL_DB_TABLE.youtube_video_processing_logs)
         .select("*", { count: "exact" })
-        .order(F_YOUTUBE_VIDEO_PROCESSING_LOG.created_at.id, {
+        .order(F_PROCESSING_LOG_YOUTUBE_VIDEO.created_at.id, {
           ascending: true,
         })
-        .eq(F_YOUTUBE_VIDEO_PROCESSING_LOG.video_id.id, videoId)
-        .overrideTypes<TSqlYoutubeVideoProcessingLog[]>();
+        .eq(F_PROCESSING_LOG_YOUTUBE_VIDEO.video_id.id, videoId)
+        .overrideTypes<TSqlProcessingLogYoutubeVideo[]>();
 
       if (error) {
         throw new Error(
@@ -94,15 +94,16 @@ export default class DBSqlProcessingLogYoutubeVideo {
   static async selectPendingJobs(options: {
     limit?: number;
     orderBy?: "created_at" | "priority";
-  }): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
+  }): Promise<ResponseDBSelect<TSqlProcessingLogYoutubeVideo[]>> {
     const { limit = 1, orderBy = "created_at" } = options;
 
     const { data, error } = await supabaseClient
       .from(SQL_DB_TABLE.youtube_video_processing_logs)
       .select("*")
-      .eq(F_YOUTUBE_VIDEO_PROCESSING_LOG.is_transcript_exist.id, true)
-      .eq(F_YOUTUBE_VIDEO_PROCESSING_LOG.is_transcript_fetched.id, false)
-      .neq(F_YOUTUBE_VIDEO_PROCESSING_LOG.processing_status.id, "processing") // 처리 중인 것 제외
+        // is_transcript_exist ∈ { NULL, true }
+      .or(`${F_PROCESSING_LOG_YOUTUBE_VIDEO.is_transcript_exist.id}.is.null,${F_PROCESSING_LOG_YOUTUBE_VIDEO.is_transcript_exist.id}.eq.true`)
+      .eq(F_PROCESSING_LOG_YOUTUBE_VIDEO.is_transcript_fetched.id, false)
+      .neq(F_PROCESSING_LOG_YOUTUBE_VIDEO.processing_status.id, "processing") // 처리 중인 것 제외
       .order(orderBy, { ascending: true })
       .limit(limit);
 
@@ -119,15 +120,15 @@ export default class DBSqlProcessingLogYoutubeVideo {
    * @returns Youtube 비디오 처리 로그 정보
    */
   static async insert(
-    logData: TSqlYoutubeVideoProcessingLogInsert,
-  ): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
+    logData: TSqlProcessingLogYoutubeVideoInsert,
+  ): Promise<ResponseDBSelect<TSqlProcessingLogYoutubeVideo[]>> {
     console.log("DEV DBSqlProcessingLogYoutubeVideo: ", logData);
     try {
       const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.youtube_video_processing_logs)
         .insert(logData)
         .select()
-        .overrideTypes<TSqlYoutubeVideoProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogYoutubeVideo[]>();
 
       if (error) {
         if (error.code === "23505") {
@@ -158,8 +159,8 @@ export default class DBSqlProcessingLogYoutubeVideo {
    * @returns Youtube 비디오 처리 로그 정보
    */
   static async upsert(
-    logData: TSqlYoutubeVideoProcessingLogInsert,
-  ): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
+    logData: TSqlProcessingLogYoutubeVideoInsert,
+  ): Promise<ResponseDBSelect<TSqlProcessingLogYoutubeVideo[]>> {
     try {
       const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.youtube_video_processing_logs)
@@ -168,7 +169,7 @@ export default class DBSqlProcessingLogYoutubeVideo {
           ignoreDuplicates: false,
         })
         .select()
-        .overrideTypes<TSqlYoutubeVideoProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogYoutubeVideo[]>();
 
       if (error) {
         throw new Error(
@@ -195,15 +196,15 @@ export default class DBSqlProcessingLogYoutubeVideo {
    */
   static async updateByVideoId(
     videoId: string,
-    updateData: TSqlYoutubeVideoProcessingLogUpdate,
-  ): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
+    updateData: TSqlProcessingLogYoutubeVideoUpdate,
+  ): Promise<ResponseDBSelect<TSqlProcessingLogYoutubeVideo[]>> {
     try {
       const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.youtube_video_processing_logs)
         .update(updateData)
-        .eq(F_YOUTUBE_VIDEO_PROCESSING_LOG.video_id.id, videoId)
+        .eq(F_PROCESSING_LOG_YOUTUBE_VIDEO.video_id.id, videoId)
         .select()
-        .overrideTypes<TSqlYoutubeVideoProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogYoutubeVideo[]>();
 
       if (error) {
         throw new Error(
@@ -229,14 +230,14 @@ export default class DBSqlProcessingLogYoutubeVideo {
    */
   static async deleteByVideoId(
     videoId: string,
-  ): Promise<ResponseDBSelect<TSqlYoutubeVideoProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlProcessingLogYoutubeVideo[]>> {
     try {
       const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.youtube_video_processing_logs)
         .delete()
-        .eq(F_YOUTUBE_VIDEO_PROCESSING_LOG.video_id.id, videoId)
+        .eq(F_PROCESSING_LOG_YOUTUBE_VIDEO.video_id.id, videoId)
         .select()
-        .overrideTypes<TSqlYoutubeVideoProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogYoutubeVideo[]>();
 
       if (error) {
         throw new Error(

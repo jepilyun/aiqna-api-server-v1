@@ -1,5 +1,5 @@
 import {
-  TPineconeVectorMetadataForContent,
+  IPineconeVectorMetadataForText,
   TSqlTextDetail,
 } from "aiqna_common_v1";
 
@@ -11,9 +11,9 @@ import {
  */
 export function generateVectorMetadataText(
   textData: TSqlTextDetail,
-): Partial<TPineconeVectorMetadataForContent> {
+): Partial<IPineconeVectorMetadataForText> {
   return {
     title: textData.title ?? undefined, // Title
-    content: textData.content, // Content
+    text: textData.content, // Content
   };
 }

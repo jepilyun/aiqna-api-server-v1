@@ -1,4 +1,7 @@
 import Innertube from "youtubei.js";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 /**
  * Innertube 클라이언트 생성

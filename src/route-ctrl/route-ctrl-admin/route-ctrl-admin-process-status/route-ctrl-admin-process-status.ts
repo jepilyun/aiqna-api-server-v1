@@ -6,7 +6,7 @@ import { Request, Response } from "express";
  * @param res
  * @returns
  */
-export async function ctrlAdminProcessStatus(req: Request, res: Response) {
+export async function routeCtrlAdminProcessStatus(req: Request, res: Response) {
   console.log("ctrlAdminProcessStatus");
   console.log("req", req);
   console.log("res", res);

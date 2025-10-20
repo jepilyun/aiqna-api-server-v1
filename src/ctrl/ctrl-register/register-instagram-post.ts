@@ -1,7 +1,5 @@
 import {
-  TSqlInstagramPostProcessingLog,
-  ERequestCreateContentType,
-  EProcessingStatusType,
+  TSqlProcessingLogInstagramPost,
   TSqlInstagramPostDetail,
   TSqlInstagramPostDetailInsert,
 } from "aiqna_common_v1";
@@ -12,6 +10,8 @@ import { handleProcessingError } from "../../services/handle-processing-error.js
 import { fetchInstagramPostHTMLMetadata } from "../../services/instagram-post/fetch-instagram-post-html-metadata.js";
 import { generateVectorMetadataInstagramPost } from "../../services/instagram-post/generate-vector-metadata-instagram-post.js";
 import { saveInstagramPostToPinecone } from "../../services/instagram-post/save-instagram-post-to-pinecone.js";
+import { ERequestCreateContentType } from "../../consts/const.js";
+import { EProcessingStatusType } from "../../consts/const.js";
 
 /**
  * processCreateInstagramPost
@@ -25,7 +25,7 @@ import { saveInstagramPostToPinecone } from "../../services/instagram-post/save-
  * @param tags - 태그 배열
  * @returns 처리 결과
  */
-export async function processCreateInstagramPost(
+export async function registerInstagramPost(
   instagramPostUrl: string,
   description: string | null = null,
   userId: string | null = null,
@@ -36,7 +36,8 @@ export async function processCreateInstagramPost(
   try {
     console.log(`\n🚀 Starting Instagram post processing: ${instagramPostUrl}`);
 
-    const log = await getProcessingLogInstagramPost(instagramPostUrl);
+    const logResult = await DBSqlProcessingLogInstagramPost.selectByPostUrl(instagramPostUrl);
+    const log = logResult.data?.[0];
 
     // 1. Instagram Metadata 처리
     const instagramPost = await processInstagramPost(
@@ -74,17 +75,6 @@ export async function processCreateInstagramPost(
 }
 
 /**
- * Get Processing Log
- */
-async function getProcessingLogInstagramPost(
-  instagramPostUrl: string,
-): Promise<TSqlInstagramPostProcessingLog | undefined> {
-  const result =
-    await DBSqlProcessingLogInstagramPost.selectByPostUrl(instagramPostUrl);
-  return result.data?.[0];
-}
-
-/**
  * 1. Fetch Instagram Content
  * Instagram 메타데이터 가져오기 및 DB 저장
  */
@@ -95,7 +85,7 @@ async function processInstagramPost(
   userProfileUrl: string | null = null,
   postDate: string | null = null,
   tags: string[] | null = null,
-  log?: TSqlInstagramPostProcessingLog,
+  log?: TSqlProcessingLogInstagramPost,
 ): Promise<TSqlInstagramPostDetail> {
   // 이미 처리된 경우 스킵
   if (log?.is_data_fetched) {
@@ -176,7 +166,7 @@ async function processInstagramPost(
  */
 async function processInstagramPostToPinecone(
   instagramPost: TSqlInstagramPostDetail,
-  log?: TSqlInstagramPostProcessingLog,
+  log?: TSqlProcessingLogInstagramPost,
 ): Promise<void> {
   if (log?.is_pinecone_processed) {
     console.log("✅ Already processed to Pinecone");
@@ -193,6 +183,7 @@ async function processInstagramPostToPinecone(
       await DBSqlProcessingLogInstagramPost.updateByPostUrl(
         instagramPost.instagram_post_url,
         {
+          instagram_post_url: instagramPost.instagram_post_url,
           is_pinecone_processed: true,
           processing_status: EProcessingStatusType.completed, // ✅ enum 사용
         },

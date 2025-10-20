@@ -1,5 +1,6 @@
 import crypto from "crypto";
-import { ERequestCreateContentType } from "aiqna_common_v1";
+import { ERequestCreateContentType } from "../consts/const.js";
+
 
 /**
  * ContentKeyManager

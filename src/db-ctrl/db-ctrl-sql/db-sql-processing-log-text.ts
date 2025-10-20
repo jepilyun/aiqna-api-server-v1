@@ -1,11 +1,11 @@
 import {
-  F_TEXT_PROCESSING_LOG,
+  F_PROCESSING_LOG_TEXT,
   LIST_LIMIT,
   ResponseDBSelect,
   SQL_DB_TABLE,
-  TSqlTextProcessingLog,
-  TSqlTextProcessingLogInsert,
-  TSqlTextProcessingLogUpdate,
+  TSqlProcessingLogText,
+  TSqlProcessingLogTextInsert,
+  TSqlProcessingLogTextUpdate,
 } from "aiqna_common_v1";
 import supabaseClient from "../../config/supabase-client.js";
 import { ErrorTextProcessingLogDuplicate } from "../../errors/error-processing-log-text.js";
@@ -25,16 +25,16 @@ export default class DBSqlProcessingLogText {
   static async selectList(
     start: number = LIST_LIMIT.start,
     limit: number = LIST_LIMIT.default,
-  ): Promise<ResponseDBSelect<TSqlTextProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlProcessingLogText[]>> {
     try {
       const { data, error, count } = await supabaseClient
         .from(SQL_DB_TABLE.text_processing_logs)
         .select("*", { count: "exact" })
-        .order(F_TEXT_PROCESSING_LOG.created_at.id, {
+        .order(F_PROCESSING_LOG_TEXT.created_at.id, {
           ascending: false,
         })
         .range(start, start + limit - 1)
-        .overrideTypes<TSqlTextProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogText[]>();
 
       if (error) {
         throw new Error(
@@ -60,16 +60,16 @@ export default class DBSqlProcessingLogText {
    */
   static async selectByHashKey(
     hashKey: string,
-  ): Promise<ResponseDBSelect<TSqlTextProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlProcessingLogText[]>> {
     try {
       const { data, error, count } = await supabaseClient
         .from(SQL_DB_TABLE.text_processing_logs)
         .select("*", { count: "exact" })
-        .order(F_TEXT_PROCESSING_LOG.created_at.id, {
+        .order(F_PROCESSING_LOG_TEXT.created_at.id, {
           ascending: true,
         })
-        .eq(F_TEXT_PROCESSING_LOG.hash_key.id, hashKey)
-        .overrideTypes<TSqlTextProcessingLog[]>();
+        .eq(F_PROCESSING_LOG_TEXT.hash_key.id, hashKey)
+        .overrideTypes<TSqlProcessingLogText[]>();
 
       if (error) {
         throw new Error(
@@ -99,17 +99,17 @@ export default class DBSqlProcessingLogText {
     status: string,
     start: number = LIST_LIMIT.start,
     limit: number = LIST_LIMIT.default,
-  ): Promise<ResponseDBSelect<TSqlTextProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlProcessingLogText[]>> {
     try {
       const { data, error, count } = await supabaseClient
         .from(SQL_DB_TABLE.text_processing_logs)
         .select("*", { count: "exact" })
-        .eq(F_TEXT_PROCESSING_LOG.processing_status.id, status)
-        .order(F_TEXT_PROCESSING_LOG.created_at.id, {
+        .eq(F_PROCESSING_LOG_TEXT.processing_status.id, status)
+        .order(F_PROCESSING_LOG_TEXT.created_at.id, {
           ascending: false,
         })
         .range(start, start + limit - 1)
-        .overrideTypes<TSqlTextProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogText[]>();
 
       if (error) {
         throw new Error(
@@ -134,14 +134,14 @@ export default class DBSqlProcessingLogText {
    * @returns 텍스트 처리 로그 정보
    */
   static async insert(
-    logData: TSqlTextProcessingLogInsert,
-  ): Promise<ResponseDBSelect<TSqlTextProcessingLog[]>> {
+    logData: TSqlProcessingLogTextInsert,
+  ): Promise<ResponseDBSelect<TSqlProcessingLogText[]>> {
     try {
       const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.text_processing_logs)
         .insert(logData)
         .select()
-        .overrideTypes<TSqlTextProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogText[]>();
 
       if (error) {
         if (error.code === "23505") {
@@ -172,8 +172,8 @@ export default class DBSqlProcessingLogText {
    * @returns 텍스트 처리 로그 정보
    */
   static async upsert(
-    logData: TSqlTextProcessingLogInsert,
-  ): Promise<ResponseDBSelect<TSqlTextProcessingLog[]>> {
+    logData: TSqlProcessingLogTextInsert,
+  ): Promise<ResponseDBSelect<TSqlProcessingLogText[]>> {
     try {
       const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.text_processing_logs)
@@ -182,7 +182,7 @@ export default class DBSqlProcessingLogText {
           ignoreDuplicates: false,
         })
         .select()
-        .overrideTypes<TSqlTextProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogText[]>();
 
       if (error) {
         throw new Error(
@@ -209,15 +209,15 @@ export default class DBSqlProcessingLogText {
    */
   static async updateByHashKey(
     hashKey: string,
-    updateData: TSqlTextProcessingLogUpdate,
-  ): Promise<ResponseDBSelect<TSqlTextProcessingLog[]>> {
+    updateData: TSqlProcessingLogTextUpdate,
+  ): Promise<ResponseDBSelect<TSqlProcessingLogText[]>> {
     try {
       const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.text_processing_logs)
         .update(updateData)
-        .eq(F_TEXT_PROCESSING_LOG.hash_key.id, hashKey)
+        .eq(F_PROCESSING_LOG_TEXT.hash_key.id, hashKey)
         .select()
-        .overrideTypes<TSqlTextProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogText[]>();
 
       if (error) {
         throw new Error(
@@ -243,14 +243,14 @@ export default class DBSqlProcessingLogText {
    */
   static async deleteByHashKey(
     hashKey: string,
-  ): Promise<ResponseDBSelect<TSqlTextProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlProcessingLogText[]>> {
     try {
       const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.text_processing_logs)
         .delete()
-        .eq(F_TEXT_PROCESSING_LOG.hash_key.id, hashKey)
+        .eq(F_PROCESSING_LOG_TEXT.hash_key.id, hashKey)
         .select()
-        .overrideTypes<TSqlTextProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogText[]>();
 
       if (error) {
         throw new Error(
@@ -276,7 +276,7 @@ export default class DBSqlProcessingLogText {
    */
   static async incrementRetryCount(
     hashKey: string,
-  ): Promise<ResponseDBSelect<TSqlTextProcessingLog[]>> {
+  ): Promise<ResponseDBSelect<TSqlProcessingLogText[]>> {
     try {
       // 현재 retry_count 조회
       const { data: currentData } = await this.selectByHashKey(hashKey);
@@ -294,9 +294,9 @@ export default class DBSqlProcessingLogText {
           retry_count: currentRetryCount + 1,
           updated_at: new Date().toISOString(),
         })
-        .eq(F_TEXT_PROCESSING_LOG.hash_key.id, hashKey)
+        .eq(F_PROCESSING_LOG_TEXT.hash_key.id, hashKey)
         .select()
-        .overrideTypes<TSqlTextProcessingLog[]>();
+        .overrideTypes<TSqlProcessingLogText[]>();
 
       if (error) {
         throw new Error(

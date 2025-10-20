@@ -1,25 +1,6 @@
 import { TYouTubeTranscriptSegment } from "aiqna_common_v1";
 
 /**
- * Embedding Provider 인터페이스
- */
-export interface IEmbeddingProvider {
-  generateEmbedding(text: string, model?: string): Promise<number[]>;
-  getDefaultModel(): string;
-  getDimensions(model?: string): number;
-}
-
-/**
- * Embedding Provider Factory
- */
-export type TEmbeddingProviderType =
-  | "openai"
-  | "cohere"
-  | "voyage"
-  | "huggingface"
-  | "jina";
-
-/**
  * YouTube 자막 트랙 정보를 나타내는 인터페이스
  * YouTube API에서 제공하는 자막 메타데이터
  *
@@ -98,3 +79,90 @@ export type TBlogPostHTMLMetadata = {
   og_url?: string | null;
   local_image_url?: string | null;
 };
+
+
+
+// Provider 타입 정의
+export type EmbeddingProviderType = 'openai' | 'cohere' | 'voyage' | 'huggingface' | 'gemini';
+
+// 타입 추출 (개선된 버전)
+export type PineconeIndexName = string; // 또는 리터럴 유니온으로 제한
+
+
+/**
+ * YouTube Video Request
+ */
+export type TRegisterRequestYouTubeVideoData = {
+  videoId: string;
+  isShorts: boolean;
+};
+
+/**
+ * Instagram Post Request
+ */
+export type TRegisterRequestInstagramPostData = {
+  instagramPostUrl: string;
+  description: string | null;
+  tags: string[];
+  userId: string | null;
+  userProfileUrl: string | null;
+  postDate: string | null;
+};
+
+/**
+ * Blog Post Request
+ */
+export type TRegisterRequestBlogPostData = {
+  blogPostUrl: string;
+  title: string | null;
+  content: string | null;
+  tags: string[];
+  platform: string | null;
+  platformUrl: string | null;
+  publishedDate: string | null;
+};
+
+/**
+ * Text Request
+ */
+export type TRegisterRequestTextData = {
+  content: string;
+  title: string | null;
+};
+
+/**
+ * Request Register Content
+ */
+export type TRequestRegisterYouTubeVideo = {
+  type: string;
+  data: TRegisterRequestYouTubeVideoData[];
+};
+
+
+/**
+ * Request Register Content
+ */
+export type TRequestRegisterInstagramPost = {
+  type: string;
+  data: TRegisterRequestInstagramPostData[],
+};
+
+
+/**
+ * Request Register Content
+ */
+export type TRequestRegisterBlogPost = {
+  type: string;
+  data: TRegisterRequestBlogPostData[],
+};
+
+
+/**
+ * Request Register Content
+ */
+export type TRequestRegisterText = {
+  type: string;
+  data: TRegisterRequestTextData[],
+};
+
+

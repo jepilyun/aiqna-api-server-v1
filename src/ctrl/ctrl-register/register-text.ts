@@ -1,7 +1,5 @@
 import {
-  TSqlTextProcessingLog,
-  ERequestCreateContentType,
-  EProcessingStatusType,
+  TSqlProcessingLogText,
   TSqlTextDetail,
   TSqlTextDetailInsert,
 } from "aiqna_common_v1";
@@ -12,6 +10,8 @@ import { ContentKeyManager } from "../../utils/content-key-manager.js";
 import DBSqlText from "../../db-ctrl/db-ctrl-sql/db-sql-text.js";
 import { generateVectorMetadataText } from "../../services/text/generate-vector-metadata-text.js";
 import { saveTextToPinecone } from "../../services/text/save-text-to-pinecone.js";
+import { ERequestCreateContentType } from "../../consts/const.js";
+import { EProcessingStatusType } from "../../consts/const.js";
 
 /**
  * processCreateText
@@ -21,10 +21,10 @@ import { saveTextToPinecone } from "../../services/text/save-text-to-pinecone.js
  * @param title - 텍스트 제목
  * @returns 처리 결과
  */
-export async function processCreateText(
+export async function registerText(
   content: string,
   title?: string | null,
-): Promise<{ success: boolean; content: string; hashKey: string }> {
+): Promise<{ success: boolean; content: string; uniqueKey: string }> {
   // hash_key를 한 번만 생성
   const hashKey = ContentKeyManager.createContentKey(
     ERequestCreateContentType.Text,
@@ -35,10 +35,13 @@ export async function processCreateText(
     console.log(`\n🚀 Starting text processing: ${hashKey.slice(0, 16)}...`);
 
     // 로그와 기존 데이터를 동시에 확인
-    const [log, existingText] = await Promise.all([
-      getProcessingLogText(hashKey),
-      getExistingText(hashKey),
+    const [logResult, existingTextResult] = await Promise.all([
+      DBSqlProcessingLogText.selectByHashKey(hashKey),
+      DBSqlText.selectByHashKey(hashKey),
     ]);
+
+    const log = logResult.data?.[0];
+    const existingText = existingTextResult.data?.[0];
 
     // 1. Text 처리 (없으면 생성, 있으면 반환)
     const textData = existingText
@@ -49,7 +52,7 @@ export async function processCreateText(
     await processTextToPinecone(textData, log);
 
     console.log(`✅ Text processing completed: ${hashKey.slice(0, 16)}...\n`);
-    return { success: true, content, hashKey };
+    return { success: true, content, uniqueKey: hashKey };
   } catch (error) {
     console.error(
       `❌ Text processing failed: ${hashKey.slice(0, 16)}...`,
@@ -67,25 +70,6 @@ export async function processCreateText(
   }
 }
 
-/**
- * Get Processing Log
- */
-async function getProcessingLogText(
-  hashKey: string,
-): Promise<TSqlTextProcessingLog | undefined> {
-  const result = await DBSqlProcessingLogText.selectByHashKey(hashKey);
-  return result.data?.[0];
-}
-
-/**
- * Get Existing Text
- */
-async function getExistingText(
-  hashKey: string,
-): Promise<TSqlTextDetail | undefined> {
-  const result = await DBSqlText.selectByHashKey(hashKey);
-  return result.data?.[0];
-}
 
 /**
  * Create New Text
@@ -141,7 +125,7 @@ async function createNewText(
  */
 async function processTextToPinecone(
   textData: TSqlTextDetail,
-  log?: TSqlTextProcessingLog,
+  log?: TSqlProcessingLogText,
 ): Promise<void> {
   if (log?.is_pinecone_processed) {
     console.log("✅ Already processed to Pinecone");
@@ -156,6 +140,7 @@ async function processTextToPinecone(
       await saveTextToPinecone(textData, metadata);
 
       await DBSqlProcessingLogText.updateByHashKey(textData.hash_key, {
+        hash_key: textData.hash_key,
         is_pinecone_processed: true,
         processing_status: EProcessingStatusType.completed,
       });

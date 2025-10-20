@@ -1,9 +1,7 @@
-import { IEmbeddingProvider } from "../../types/shared.js";
-
 /**
  * OpenAI Embedding Provider
  */
-export class OpenAIEmbeddingProvider implements IEmbeddingProvider {
+export class OpenAIEmbeddingProvider {
   private apiKey: string;
 
   constructor(apiKey?: string) {

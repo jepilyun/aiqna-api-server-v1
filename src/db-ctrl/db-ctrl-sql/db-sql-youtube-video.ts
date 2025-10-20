@@ -128,14 +128,16 @@ export default class DBSqlYoutubeVideo {
    * YouTube API 데이터를 사용한 비디오 등록/수정 (upsert)
    * YouTube API v3 Schema를 받아 DB 저장용 함수(RPC)를 통해 처리
    * @param json YouTube API v3 Schema$Video 객체
+   * @param isShorts 비디오 종류 (true: 쇼츠, false: 비디오)
    * @returns Youtube 비디오 정보
    */
   static async upsert(
     json: youtube_v3.Schema$Video,
+    isShorts: boolean,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
     try {
       const { data, error } = await supabaseClient
-        .rpc("upsert_youtube_video_api_data", { p_video_data: json })
+        .rpc("upsert_youtube_video_api_data", { p_video_data: json, p_is_shorts: isShorts })
         .single() // 👈 .single() 추가
         .overrideTypes<TSqlYoutubeVideoDetail>(); // 👈 배열 제거
 

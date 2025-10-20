@@ -1,11 +1,9 @@
-import {
-  EProcessingStatusType,
-  ERequestCreateContentType,
-} from "aiqna_common_v1";
 import DBSqlProcessingLogYoutubeVideo from "../db-ctrl/db-ctrl-sql/db-sql-processing-log-youtube-video.js";
 import DBSqlProcessingLogInstagramPost from "../db-ctrl/db-ctrl-sql/db-sql-processing-log-instagram-post.js";
 import DBSqlProcessingLogBlogPost from "../db-ctrl/db-ctrl-sql/db-sql-processing-log-blog-post.js";
 import DBSqlProcessingLogText from "../db-ctrl/db-ctrl-sql/db-sql-processing-log-text.js";
+import { EProcessingStatusType } from "../consts/const.js";
+import { ERequestCreateContentType } from "../consts/const.js";
 
 /**
  * 처리 에러 핸들링 및 로그 업데이트
@@ -33,13 +31,13 @@ export async function handleProcessingError(
       await DBSqlProcessingLogYoutubeVideo.updateByVideoId(key, data);
       break;
     case ERequestCreateContentType.Instagram:
-      await DBSqlProcessingLogInstagramPost.updateByPostUrl(key, data);
+      await DBSqlProcessingLogInstagramPost.updateByPostUrl(key, { ...data, instagram_post_url: key });
       break;
     case ERequestCreateContentType.Blog:
-      await DBSqlProcessingLogBlogPost.updateByPostUrl(key, data);
+      await DBSqlProcessingLogBlogPost.updateByPostUrl(key, { ...data, blog_post_url: key });
       break;
     case ERequestCreateContentType.Text:
-      await DBSqlProcessingLogText.updateByHashKey(key, data);
+      await DBSqlProcessingLogText.updateByHashKey(key, { ...data, hash_key: key });
       break;
     default:
       console.warn(`Unknown content type: ${type}`);

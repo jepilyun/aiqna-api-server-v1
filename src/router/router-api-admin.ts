@@ -1,108 +1,105 @@
 import express from "express";
 // import adminAuthMiddleware from "../middlewares/admin-auth-middleware.js";
-import { ctrlAdminCreateContent } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-create/route-ctrl-admin-create-content.js";
-import { ctrlAdminCreateYouTubeVideo } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-create/route-ctrl-admin-create-youtube-video.js";
-import { ctrlAdminCreateInstagramPost } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-create/route-ctrl-admin-create-instagram-post.js";
-import { ctrlAdminCreateBlogPost } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-create/route-ctrl-admin-create-blog-post.js";
-import { ctrlAdminCreateText } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-create/route-ctrl-admin-create-text.js";
-import { ctrlAdminProcessStatus } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-process-status/route-ctrl-admin-process-status.js";
-import { ctrlAdminProcessStatusYouTubeVideo } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-process-status/route-ctrl-admin-process-status-youtube-video.js";
-import { ctrlAdminProcessStatusInstagramPost } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-process-status/route-ctrl-admin-process-status-instagram-post.js";
-import { ctrlAdminProcessStatusBlogPost } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-process-status/route-ctrl-admin-process-status-blog-post.js";
-import { ctrlAdminProcessStatusText } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-process-status/route-ctrl-admin-process-status-text.js";
-import { ctrlAdminVectorsGetList } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-vectors-get-list.js";
-import { ctrlAdminVectorCreate } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-vector-create.js";
-import { ctrlAdminVectorGet } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-vector-get.js";
-import { ctrlAdminVectorDelete } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-vector-delete.js";
-import { ctrlAdminAiAsk } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-ask/route-ctrl-admin-ai-ask.js";
+import { routeCtrlAdminRegisterYouTubeVideo } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-register-content/route-ctrl-admin-register-youtube-video.js";
+import { routeCtrlAdminRegisterInstagramPost } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-register-content/route-ctrl-admin-register-instagram-post.js";
+import { routeCtrlAdminRegisterBlogPost } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-register-content/route-ctrl-admin-register-blog-post.js";
+import { routeCtrlAdminRegisterText } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-register-content/route-ctrl-admin-register-text.js";
+import { routeCtrlAdminProcessStatus } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-process-status/route-ctrl-admin-process-status.js";
+import { routeCtrlAdminProcessStatusYouTubeVideo } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-process-status/route-ctrl-admin-process-status-youtube-video.js";
+import { routeCtrlAdminProcessStatusInstagramPost } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-process-status/route-ctrl-admin-process-status-instagram-post.js";
+import { routeCtrlAdminProcessStatusBlogPost } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-process-status/route-ctrl-admin-process-status-blog-post.js";
+import { routeCtrlAdminProcessStatusText } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-process-status/route-ctrl-admin-process-status-text.js";
+import { routeCtrlAdminVectorsGetList } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-vectors-get-list.js";
+import { routeCtrlAdminVectorCreate } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-vector-create.js";
+import { routeCtrlAdminVectorGet } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-vector-get.js";
+import { routeCtrlAdminVectorDelete } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-vector-delete.js";
+import { routeCtrlAdminAiAsk } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-ask/route-ctrl-admin-ai-ask.js";
 
 const router = express.Router();
 
-// ============================================
-// ADMIN APIs (requires admin authentication)
-// ============================================
-
-// 컨텐츠 추가 (자동 벡터화)
-router.post(
-  "/create/content",
-  // adminAuthMiddleware,
-  ctrlAdminCreateContent,
-);
+/** 
+ * ============================================
+ * ADMIN APIs (requires admin authentication)
+ * ============================================
+ */
 router.post(
   "/create/youtube-video",
   // adminAuthMiddleware,
-  ctrlAdminCreateYouTubeVideo,
+  routeCtrlAdminRegisterYouTubeVideo,
 );
+
 router.post(
   "/create/instagram-post",
   // adminAuthMiddleware,
-  ctrlAdminCreateInstagramPost,
+  routeCtrlAdminRegisterInstagramPost,
 );
+
 router.post(
   "/create/blog-post",
   // adminAuthMiddleware,
-  ctrlAdminCreateBlogPost,
+  routeCtrlAdminRegisterBlogPost,
 );
+
 router.post(
   "/create/text",
   // adminAuthMiddleware,
-  ctrlAdminCreateText,
+  routeCtrlAdminRegisterText,
 );
 
 // 처리 상태 확인
 router.post(
   "/process-status",
   // adminAuthMiddleware,
-  ctrlAdminProcessStatus,
+  routeCtrlAdminProcessStatus,
 );
 router.get(
   "/process-status/youtube-video/:videoId",
   // adminAuthMiddleware,
-  ctrlAdminProcessStatusYouTubeVideo,
+  routeCtrlAdminProcessStatusYouTubeVideo,
 );
 router.get(
   "/process-status/instagram-post",
   // adminAuthMiddleware,
-  ctrlAdminProcessStatusInstagramPost,
+  routeCtrlAdminProcessStatusInstagramPost,
 );
 router.get(
   "/process-status/blog-post",
   // adminAuthMiddleware,
-  ctrlAdminProcessStatusBlogPost,
+  routeCtrlAdminProcessStatusBlogPost,
 );
 router.get(
   "/process-status/text/:id",
   // adminAuthMiddleware,
-  ctrlAdminProcessStatusText,
+  routeCtrlAdminProcessStatusText,
 );
 
 // Pinecone Vector 관리
 router.get(
   "/vectors/list/:vector",
   // adminAuthMiddleware,
-  ctrlAdminVectorsGetList,
+  routeCtrlAdminVectorsGetList,
 );
 router.post(
   "/vector/create",
   // adminAuthMiddleware,
-  ctrlAdminVectorCreate,
+  routeCtrlAdminVectorCreate,
 );
 router.get(
   "/vector/get/:id",
   // adminAuthMiddleware,
-  ctrlAdminVectorGet,
+  routeCtrlAdminVectorGet,
 );
 router.delete(
   "/vector/delete/:id",
   // adminAuthMiddleware,
-  ctrlAdminVectorDelete,
+  routeCtrlAdminVectorDelete,
 );
 
 // AI 질의 (관리자용 - 더 많은 권한)
 router.post(
   "/ai/ask",
   // adminAuthMiddleware,
-  ctrlAdminAiAsk,
+  routeCtrlAdminAiAsk,
 );
 
 export default router;

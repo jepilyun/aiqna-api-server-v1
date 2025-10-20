@@ -6,7 +6,7 @@ import { Request, Response } from "express";
  * @param res
  * @returns
  */
-export async function ctrlAdminProcessStatusBlogPost(
+export async function routeCtrlAdminProcessStatusBlogPost(
   req: Request,
   res: Response,
 ) {

@@ -1,7 +1,5 @@
 import {
-  TSqlBlogPostProcessingLog,
-  ERequestCreateContentType,
-  EProcessingStatusType,
+  TSqlProcessingLogBlogPost,
   TSqlBlogPostDetail,
   TSqlBlogPostDetailInsert,
 } from "aiqna_common_v1";
@@ -12,73 +10,65 @@ import DBSqlBlogPost from "../../db-ctrl/db-ctrl-sql/db-sql-blog-post.js";
 import { handleProcessingError } from "../../services/handle-processing-error.js";
 import { generateVectorMetadataBlogPost } from "../../services/blog-post/generate-vector-metadata-blog-post.js";
 import { saveBlogPostToPinecone } from "../../services/blog-post/save-blog-post-to-pinecone.js";
+import { ERequestCreateContentType } from "../../consts/const.js";
+import { EProcessingStatusType } from "../../consts/const.js";
+
 
 /**
- * processContentBlogPost
  * Blog Post 데이터 처리 (Fetch → Pinecone 저장)
- *
- * @param blogUrl - 블로그 포스트 URL (필수)
- * @param blogTitle - 블로그 제목 (필수)
- * @param blogContent - 블로그 본문 (필수)
- * @param blogPublishedDate - 발행 날짜
- * @param blogTags - 태그 배열
- * @param blogPlatform - 플랫폼명 (예: "Medium", "Notion")
- * @param blogPlatformUrl - 플랫폼 URL
+ * @param bUrl - 블로그 포스트 URL (필수)
+ * @param bTitle - 블로그 제목 (필수)
+ * @param bContent - 블로그 본문 (필수)
+ * @param bPublishedDate - 발행 날짜
+ * @param bTags - 태그 배열
+ * @param bPlatform - 플랫폼명 (예: "Medium", "Notion")
+ * @param bPlatformUrl - 플랫폼 URL
  * @returns 처리 결과
  */
-export async function processContentBlogPost(
-  blogUrl: string,
-  blogTitle: string,
-  blogContent: string,
-  blogPublishedDate: string | null = null,
-  blogTags: string[] | null = null,
-  blogPlatform: string | null = null,
-  blogPlatformUrl: string | null = null,
+export async function registerBlogPost(
+  bUrl: string,
+  bTitle: string,
+  bContent: string,
+  bPublishedDate: string | null = null,
+  bTags: string[] | null = null,
+  bPlatform: string | null = null,
+  bPlatformUrl: string | null = null,
 ): Promise<{ success: boolean; blogUrl: string }> {
   try {
-    console.log(`\n🚀 Starting blog post processing: ${blogUrl}`);
+    console.log(`\n🚀 Starting blog post processing: ${bUrl}`);
 
-    const log = await getProcessingLogBlogPost(blogUrl);
+    const logResult = await DBSqlProcessingLogBlogPost.selectByPostUrl(bUrl);
+    const log = logResult.data?.[0];
 
     // 1. Blog Metadata 처리
     const blogPost = await processBlogPost(
-      blogUrl,
-      blogTitle,
-      blogContent,
-      blogPublishedDate,
-      blogTags,
-      blogPlatform,
-      blogPlatformUrl,
+      bUrl,
+      bTitle,
+      bContent,
+      bPublishedDate,
+      bTags,
+      bPlatform,
+      bPlatformUrl,
       log,
     );
 
     // 2. Pinecone 저장
     await processBlogPostToPinecone(blogPost, log);
 
-    console.log(`✅ Blog post processing completed: ${blogUrl}\n`);
-    return { success: true, blogUrl };
+    console.log(`✅ Blog post processing completed: ${bUrl}\n`);
+    return { success: true, blogUrl: bUrl };
   } catch (error) {
-    console.error(`❌ Blog post processing failed: ${blogUrl}`, error);
+    console.error(`❌ Blog post processing failed: ${bUrl}`, error);
 
     await handleProcessingError(
       ERequestCreateContentType.Blog,
-      blogUrl,
+      bUrl,
       error,
       0, // retryCount는 더 이상 필요 없지만 handleProcessingError가 요구하므로 0 전달
     );
 
     throw error;
   }
-}
-
-/**
- * Get Processing Log
- */
-async function getProcessingLogBlogPost(
-  blogUrl: string,
-): Promise<TSqlBlogPostProcessingLog | undefined> {
-  const result = await DBSqlProcessingLogBlogPost.selectByPostUrl(blogUrl);
-  return result.data?.[0];
 }
 
 /**
@@ -93,7 +83,7 @@ async function processBlogPost(
   blogTags: string[] | null = null,
   blogPlatform: string | null = null,
   blogPlatformUrl: string | null = null,
-  log?: TSqlBlogPostProcessingLog,
+  log?: TSqlProcessingLogBlogPost,
 ): Promise<TSqlBlogPostDetail> {
   // 이미 처리된 경우 스킵
   if (log?.is_data_fetched) {
@@ -170,7 +160,7 @@ async function processBlogPost(
  */
 async function processBlogPostToPinecone(
   blogPost: TSqlBlogPostDetail,
-  log?: TSqlBlogPostProcessingLog,
+  log?: TSqlProcessingLogBlogPost,
 ): Promise<void> {
   if (log?.is_pinecone_processed) {
     console.log("✅ Already processed to Pinecone");
@@ -186,6 +176,7 @@ async function processBlogPostToPinecone(
 
       // Processing Log 업데이트
       await DBSqlProcessingLogBlogPost.updateByPostUrl(blogPost.blog_post_url, {
+        blog_post_url: blogPost.blog_post_url,
         is_pinecone_processed: true,
         processing_status: EProcessingStatusType.completed,
       });

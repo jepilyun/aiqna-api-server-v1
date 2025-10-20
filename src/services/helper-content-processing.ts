@@ -1,7 +1,3 @@
-// utils/content-processing-helper.ts
-import { Response } from "express";
-
-
 /**
  * ProcessingCheckResult
  * 처리 중복 체크 결과
@@ -16,16 +12,9 @@ export type TProcessingCheckResult = {
  * 처리 설정
  */
 export type TProcessingConfig<T> = {
-  // 데이터 추출
   extractKey: (data: T) => string;
-
-  // 중복 체크
   checkExisting: (key: string) => Promise<TProcessingCheckResult>;
-
-  // 백그라운드 프로세서
   processor: (data: T) => Promise<void>;
-
-  // 성공 응답 생성
   createResponse: (
     key: string,
     isAlreadyProcessing: boolean,
@@ -37,58 +26,75 @@ export type TProcessingConfig<T> = {
   };
 };
 
+
+export type TProcessResult = {
+  success: boolean;
+  uniqueKey: string;
+  status: "queued" | "already_processing";
+  message?: string;
+  statusUrl?: string;
+  // 필요 시 확장 필드 추가 가능
+};
+
 /**
  * HelperContentProcessing
  * 콘텐츠 처리 유틸리티
  */
 export class HelperContentProcessing {
   /**
-   * 공통 처리 파이프라인
-   * 1. 키 추출
-   * 2. 중복 처리 확인
-   * 3. 응답 전송
-   * 4. 백그라운드 처리
+   * 공통 처리 파이프라인 (응답 전송 금지)
+   * 1) 키 추출 -> 2) 중복 확인 -> 3) 결과 payload 구성 -> 4) 백그라운드 큐잉
+   * 컨트롤러에서 결과 배열을 모아 한 번만 res.json(...) 하세요.
    */
   static async processContent<T>(
-    res: Response,
     data: T,
     config: TProcessingConfig<T>,
-  ): Promise<void> {
-    // 1. 키 추출
+  ): Promise<TProcessResult> {
     const key = config.extractKey(data);
 
-    // 2. 이미 처리 중인지 확인
     const existing = await config.checkExisting(key);
     const isAlreadyProcessing = existing.isProcessing;
 
-    // 3. 응답 전송
-    const response = config.createResponse(key, isAlreadyProcessing);
-    res.json(response);
+    const resp = config.createResponse(key, isAlreadyProcessing);
 
-    // 4. 이미 처리 중이면 백그라운드 작업 스킵
     if (isAlreadyProcessing) {
-      return;
+      // 이미 처리 중이면 큐잉 생략
+      return {
+        success: true,
+        uniqueKey: key,
+        status: "already_processing",
+        message: typeof resp.message === "string" ? resp.message : undefined,
+        statusUrl: typeof resp.statusUrl === "string" ? resp.statusUrl : undefined,
+      };
     }
 
-    // 5. 백그라운드 처리
-    config.processor(data).catch((err) => {
-      console.error(`Background processing failed for ${key}:`, err);
-    });
+    // 백그라운드 처리 (비동기 fire-and-forget)
+    Promise.resolve()
+      .then(() => config.processor(data))
+      .catch((err) => {
+        console.error(`Background processing failed for ${key}:`, err);
+      });
+
+    return {
+      success: true,
+      uniqueKey: key,
+      status: "queued",
+      message: typeof resp.message === "string" ? resp.message : undefined,
+      statusUrl: typeof resp.statusUrl === "string" ? resp.statusUrl : undefined,
+    };
   }
 
   /**
-   * 표준 에러 응답
+   * ❗ 컨트롤러에서만 사용: 헬퍼 내부에서는 호출하지 마세요.
    */
-  static sendError(
-    res: Response,
-    statusCode: number,
-    error: string,
-    message?: string,
-  ): void {
-    res.status(statusCode).json({
-      success: false,
-      error,
-      ...(message && { message }),
-    });
+  static buildError(statusCode: number, error: string, message?: string) {
+    return {
+      statusCode,
+      body: {
+        success: false,
+        error,
+        ...(message && { message }),
+      },
+    };
   }
 }
