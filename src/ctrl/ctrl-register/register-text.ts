@@ -8,7 +8,6 @@ import { handleProcessingError } from "../../services/handle-processing-error.js
 import DBSqlProcessingLogText from "../../db-ctrl/db-ctrl-sql/db-sql-processing-log-text.js";
 import { ContentKeyManager } from "../../utils/content-key-manager.js";
 import DBSqlText from "../../db-ctrl/db-ctrl-sql/db-sql-text.js";
-import { generateVectorMetadataText } from "../../services/text/generate-vector-metadata-text.js";
 import { saveTextToPinecone } from "../../services/text/save-text-to-pinecone.js";
 import { ERequestCreateContentType } from "../../consts/const.js";
 import { EProcessingStatusType } from "../../consts/const.js";
@@ -136,7 +135,10 @@ async function processTextToPinecone(
 
   await withRetry(
     async () => {
-      const metadata = generateVectorMetadataText(textData);
+      const metadata = {
+        title: textData.title ?? undefined, // Title
+      };
+
       await saveTextToPinecone(textData, metadata);
 
       await DBSqlProcessingLogText.updateByHashKey(textData.hash_key, {

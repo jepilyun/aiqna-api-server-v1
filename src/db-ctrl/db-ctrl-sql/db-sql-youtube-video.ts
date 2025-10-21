@@ -134,21 +134,21 @@ export default class DBSqlYoutubeVideo {
   static async upsert(
     json: youtube_v3.Schema$Video,
     isShorts: boolean,
-  ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
+  ): Promise<ResponseDBSelect<{ video_id: string }[]>> {
     try {
       const { data, error } = await supabaseClient
-        .rpc("upsert_youtube_video_api_data", { p_video_data: json, p_is_shorts: isShorts })
-        .single() // 👈 .single() 추가
-        .overrideTypes<TSqlYoutubeVideoDetail>(); // 👈 배열 제거
+        .rpc("upsert_youtube_video_api_data", {
+          p_video_data: json,
+          p_is_shorts: isShorts,
+        })
+        .single<string>(); // ✅ 문자열로 받기
 
       if (error) {
-        throw new Error(
-          `#1 Youtube 비디오 Upsert 중 오류 발생 >>> ${error.message}`,
-        );
+        throw new Error(`#1 Youtube 비디오 Upsert 중 오류 발생 >>> ${error.message}`);
       }
 
-      // 👇 단일 객체를 배열로 변환하여 반환
-      return { data: data ? [data] : [] };
+      // video_id를 문자열로 반환받음
+      return { data: data ? [{ video_id: data }] : [] };
     } catch (error: unknown) {
       if (error instanceof Error) {
         throw error;
@@ -167,12 +167,12 @@ export default class DBSqlYoutubeVideo {
    */
   static async updateByVideoId(
     videoId: string,
-    logUpdate: TSqlYoutubeVideoDetailUpdate,
+    updateData: TSqlYoutubeVideoDetailUpdate,
   ): Promise<ResponseDBSelect<TSqlYoutubeVideoDetail[]>> {
     try {
       const { data, error } = await supabaseClient
         .from(SQL_DB_TABLE.youtube_videos)
-        .update(logUpdate)
+        .update(updateData)
         .eq(F_YOUTUBE_VIDEO.video_id.id, videoId)
         .select()
         .overrideTypes<TSqlYoutubeVideoDetail[]>();

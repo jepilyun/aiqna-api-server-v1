@@ -1,5 +1,5 @@
 import DBSqlProcessingLogYoutubeVideo from "../../db-ctrl/db-ctrl-sql/db-sql-processing-log-youtube-video.js";
-import { fetchYoutubeVideoApi } from "../../services/youtube-video/fetch-youtube-video-api.js";
+import { fetchYoutubeVideoAPI } from "../../services/youtube-video/fetch-youtube-video-api.js";
 import DBSqlYoutubeVideo from "../../db-ctrl/db-ctrl-sql/db-sql-youtube-video.js";
 import { EProcessingStatusType } from "../../consts/const.js";
 import { TRegisterRequestYouTubeVideoData } from "../../types/shared.js";
@@ -22,7 +22,7 @@ export async function registerYouTubeVideo(
     console.log(`📝 Registering YouTube video for processing log: ${videoId}`);
 
     // 1. API 데이터 즉시 가져오기
-    const videoData = await fetchYoutubeVideoApi(videoId);
+    const videoData = await fetchYoutubeVideoAPI(videoId);
     await DBSqlYoutubeVideo.upsert(videoData, isShorts);
 
     // 2. Processing Log 등록

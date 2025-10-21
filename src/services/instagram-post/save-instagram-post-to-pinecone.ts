@@ -21,7 +21,6 @@ export async function saveInstagramPostToPinecone(
   modelName?: string,
   indexName: string = PINECONE_INDEX_NAME.TRAVEL_SEOUL.OPENAI_SMALL,
 ): Promise<void> {
-  // const provider = EmbeddingProviderFactory.createProvider("openai");
   const provider = new OpenAIEmbeddingProvider();
   const embeddingModel = modelName || provider.getDefaultModel();
   const metadataExtractor = new MetadataGeneratorInstagramPost();

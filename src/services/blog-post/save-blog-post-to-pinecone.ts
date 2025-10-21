@@ -22,7 +22,6 @@ export async function saveBlogPostToPinecone(
   modelName?: string,
   indexName: string = PINECONE_INDEX_NAME.TRAVEL_SEOUL.OPENAI_SMALL,
 ): Promise<void> {
-  // const provider = EmbeddingProviderFactory.createProvider("openai");
   const provider = new OpenAIEmbeddingProvider();
   const embeddingModel = modelName || provider.getDefaultModel();
   const metadataExtractor = new MetadataGeneratorBlogPost();
@@ -51,9 +50,8 @@ export async function saveBlogPostToPinecone(
   const chunks = chunkBlogPostContent(content, {
     maxChars: 800, // ✅ 800자로 줄임
     overlapChars: 100, // ✅ 100자로 줄임
-    minChars: 200, // ✅ 200자로 줄임
   });
-
+console.log(`chunks:>>>>>>>>>>`, chunks);
   console.log(
     `📦 Created ${chunks.length} chunks for ${blogPost.blog_post_url}`,
   );
@@ -109,6 +107,12 @@ export async function saveBlogPostToPinecone(
       const chunkId = ContentKeyManager.createChunkId(contentKey, idx);
 
       const metadata: TPineconeMetadata = {
+        // ✅ content 제외하고 나머지만 포함
+        ...Object.fromEntries(
+          Object.entries(blogPostMetadata).filter(
+            ([key]) => key !== "blog_content",
+          ),
+        ),
         blog_post_url: blogPost.blog_post_url,
         chunk_index: idx,
         chunk_id: chunkId,
@@ -117,12 +121,6 @@ export async function saveBlogPostToPinecone(
         embedding_model: embeddingModel,
         embedding_dimensions: provider.getDimensions(embeddingModel),
         created_at: new Date().toISOString(),
-        // ✅ content 제외하고 나머지만 포함
-        ...Object.fromEntries(
-          Object.entries(blogPostMetadata).filter(
-            ([key]) => key !== "blog_content",
-          ),
-        ),
       };
 
       // 청크별 추출된 메타데이터 추가

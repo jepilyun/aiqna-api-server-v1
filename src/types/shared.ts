@@ -93,7 +93,7 @@ export type PineconeIndexName = string; // 또는 리터럴 유니온으로 제�
  * YouTube Video Request
  */
 export type TRegisterRequestYouTubeVideoData = {
-  videoId: string;
+  videoId  : string;
   isShorts: boolean;
 };
 
@@ -128,14 +128,6 @@ export type TRegisterRequestBlogPostData = {
 export type TRegisterRequestTextData = {
   content: string;
   title: string | null;
-};
-
-/**
- * Request Register Content
- */
-export type TRequestRegisterYouTubeVideo = {
-  type: string;
-  data: TRegisterRequestYouTubeVideoData[];
 };
 
 

@@ -1,6 +1,6 @@
 import express from "express";
 // import adminAuthMiddleware from "../middlewares/admin-auth-middleware.js";
-import { routeCtrlAdminRegisterYouTubeVideo } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-register-content/route-ctrl-admin-register-youtube-video.js";
+import { routeCtrlAdminYouTubeVideoRegister } from "../route-ctrl/route-ctrl-admin/youtube-video/route-ctrl-admin-youtube-video-register.js";
 import { routeCtrlAdminRegisterInstagramPost } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-register-content/route-ctrl-admin-register-instagram-post.js";
 import { routeCtrlAdminRegisterBlogPost } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-register-content/route-ctrl-admin-register-blog-post.js";
 import { routeCtrlAdminRegisterText } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-register-content/route-ctrl-admin-register-text.js";
@@ -14,19 +14,41 @@ import { routeCtrlAdminVectorCreate } from "../route-ctrl/route-ctrl-admin/route
 import { routeCtrlAdminVectorGet } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-vector-get.js";
 import { routeCtrlAdminVectorDelete } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-vector-delete.js";
 import { routeCtrlAdminAiAsk } from "../route-ctrl/route-ctrl-admin/route-ctrl-admin-ask/route-ctrl-admin-ai-ask.js";
+import { routeCtrlAdminYouTubeVideoList } from "../route-ctrl/route-ctrl-admin/youtube-video/route-ctrl-admin-youtube-video-list.js";
+import { routeCtrlAdminYouTubeVideoDetail } from "../route-ctrl/route-ctrl-admin/youtube-video/route-ctrl-admin-youtube-video-detail.js";
+import { routeCtrlAdminYouTubeVideoUpdate } from "../route-ctrl/route-ctrl-admin/youtube-video/route-ctrl-admin-youtube-video-update.js";
 
 const router = express.Router();
 
-/** 
- * ============================================
- * ADMIN APIs (requires admin authentication)
- * ============================================
- */
-router.post(
-  "/create/youtube-video",
+// YouTube Video List
+router.get(
+  "/youtube-video/list/:start",
   // adminAuthMiddleware,
-  routeCtrlAdminRegisterYouTubeVideo,
+  routeCtrlAdminYouTubeVideoList,
 );
+
+// YouTube Video Register
+router.post(
+  "/youtube-video/register",
+  // adminAuthMiddleware,
+  routeCtrlAdminYouTubeVideoRegister,
+);
+
+// YouTube Video Detail
+router.get(
+  "/youtube-video/detail/:videoId",
+  // adminAuthMiddleware,
+  routeCtrlAdminYouTubeVideoDetail,
+);
+
+// YouTube Video Update
+router.put(
+  "/youtube-video/update/:videoId",
+  // adminAuthMiddleware,
+  routeCtrlAdminYouTubeVideoUpdate,
+);
+
+
 
 router.post(
   "/create/instagram-post",
@@ -101,5 +123,12 @@ router.post(
   // adminAuthMiddleware,
   routeCtrlAdminAiAsk,
 );
+
+
+// router.get(
+//   "/administrator/list/:start"
+//   // adminAuthMiddleware,
+//   routeCtrlAdminAdministratorList,
+// );
 
 export default router;

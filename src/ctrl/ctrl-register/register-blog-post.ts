@@ -8,7 +8,6 @@ import { withRetry } from "../../utils/retry/retry-common.js";
 import { fetchBlogPostHTMLMetadata } from "../../services/blog-post/fetch-blog-post-html-metadata.js";
 import DBSqlBlogPost from "../../db-ctrl/db-ctrl-sql/db-sql-blog-post.js";
 import { handleProcessingError } from "../../services/handle-processing-error.js";
-import { generateVectorMetadataBlogPost } from "../../services/blog-post/generate-vector-metadata-blog-post.js";
 import { saveBlogPostToPinecone } from "../../services/blog-post/save-blog-post-to-pinecone.js";
 import { ERequestCreateContentType } from "../../consts/const.js";
 import { EProcessingStatusType } from "../../consts/const.js";
@@ -171,7 +170,17 @@ async function processBlogPostToPinecone(
 
   await withRetry(
     async () => {
-      const metadata = generateVectorMetadataBlogPost(blogPost);
+      const metadata = {
+        blog_post_url: blogPost.blog_post_url, // Instagram 게시물 URL
+        title: blogPost.title, // Blog 제목
+        image: blogPost.og_image ?? undefined, // Blog 이미지
+        published_date: blogPost.published_date ?? undefined, // Blog 게시 날짜 (ISO 8601 형식)
+        local_image_url: blogPost.local_image_url ?? undefined, // Blog 로컬 이미지 URL
+        tags: blogPost.tags, // Blog 태그
+        blog_platform: blogPost.platform, // Blog 플랫폼
+        blog_platform_url: blogPost.platform_url, // Blog 플랫폼 URL
+      };
+
       await saveBlogPostToPinecone(blogPost, metadata);
 
       // Processing Log 업데이트

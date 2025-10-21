@@ -12,12 +12,12 @@ const app = express();
 app.use(
   cors({
     origin: [
-      "http://localhost:3100",
-      "http://localhost:3101",
-      "http://localhost:3102",
-      "http://localhost:3103",
-      "http://localhost:3104",
-      "http://localhost:3105",
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "http://localhost:3002",
+      "http://localhost:3003",
+      "http://localhost:3004",
+      "http://localhost:3005",
     ], // 프론트엔드 주소
     credentials: true, // 🔥 쿠키 허용
   }),
