@@ -3,7 +3,7 @@ import { Request, Response } from "express";
 import DBSqlProcessingLogInstagramPost from "../../../db-ctrl/db-ctrl-sql/db-sql-processing-log-instagram-post.js";
 import { registerInstagramPost } from "../../../ctrl/ctrl-register/register-instagram-post.js";
 import { HelperContentProcessing } from "../../../services/helper-content-processing.js";
-import { TRegisterRequestInstagramPostData, TRequestRegisterInstagramPost } from "../../../types/shared.js";
+import { TRegisterRequestInstagramPostData } from "../../../types/shared.js";
 
 /**
  * Ctrl For Register Instagram Post
@@ -11,12 +11,12 @@ import { TRegisterRequestInstagramPostData, TRequestRegisterInstagramPost } from
  * @param res
  * @returns
  */
-export async function routeCtrlAdminRegisterInstagramPost(
+export async function routeCtrlAdminInstagramPostRegister(
   req: Request,
   res: Response,
 ) {
   try {
-    const { data } = req.body as TRequestRegisterInstagramPost;
+    const { instagramPostUrl, description, tags, userId, userProfileUrl, publishedDate } = req.body as TRegisterRequestInstagramPostData;
 
     // data: {
     //   instagram?: {
@@ -29,56 +29,47 @@ export async function routeCtrlAdminRegisterInstagramPost(
     //   },
     // }
 
-    if (data.length === 0 || !data[0]?.instagramPostUrl) {
-      return res.status(400).json({
-        success: false,
-        message: "Instagram Post URL is required",
-      });
-    }
+    const result = await HelperContentProcessing.processContent<TRegisterRequestInstagramPostData>(
+      { instagramPostUrl, description, tags, userId, userProfileUrl, publishedDate }, 
+      {
+        extractKey: (data) => data.instagramPostUrl,
 
-    const response = Array<{ success: boolean; uniqueKey: string; status: string }>();
-
-    for (const item of data) {
-      const result = await HelperContentProcessing.processContent<TRegisterRequestInstagramPostData>(item, {
-        extractKey: (item) => item.instagramPostUrl,
-
-        checkExisting: async (postUrl) => {
+        checkExisting: async (instagramPostUrl) => {
           const existingLog =
-            await DBSqlProcessingLogInstagramPost.selectByPostUrl(postUrl);
+            await DBSqlProcessingLogInstagramPost.selectByPostUrl(instagramPostUrl);
           return {
             isProcessing:
               existingLog.data?.[0]?.processing_status === "processing",
           };
         },
 
-        processor: async (item) => {
+        processor: async (data) => {
           await registerInstagramPost(
-            item.instagramPostUrl,
-            item.description,
-            item.userId,
-            item.userProfileUrl,
-            item.postDate,
-            item.tags,
+            data.instagramPostUrl,
+            data.description,
+            data.userId,
+            data.userProfileUrl,
+            data.publishedDate,
+            data.tags,
           );
         },
 
-        createResponse: (postUrl, isAlreadyProcessing) => ({
+        createResponse: (instagramPostUrl, isAlreadyProcessing) => ({
           success: true,
-          instagramUrl: postUrl,
+          instagramUrl: instagramPostUrl,
           message: isAlreadyProcessing
             ? "Already processing"
             : "Processing started",
           statusUrl: `/api/process-status/instagram-post`,
         }),
-      });
+      }
+    );
 
-      response.push({
-        success: result.success,
-        uniqueKey: result.uniqueKey,
-        status: result.status,
-      });
-    }
-    res.json(response);
+    res.json({
+      success: result.success,
+      uniqueKey: result.uniqueKey,
+      status: result.status,
+    });
   } catch (error: unknown) {
     const err = error as Error;
     console.error("Instagram post processing failed:", err);

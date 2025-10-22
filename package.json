@@ -31,7 +31,7 @@
     "@supabase/supabase-js": "^2.57.4",
     "@types/formidable": "^3.4.5",
     "@types/mime-types": "^3.0.1",
-    "aiqna_common_v1": "0.1.53",
+    "aiqna_common_v1": "0.1.60",
     "bcrypt": "^6.0.0",
     "cookie": "^1.0.2",
     "cookie-parser": "^1.4.7",

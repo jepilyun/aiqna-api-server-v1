@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import DBSqlProcessingLogBlogPost from "../../../db-ctrl/db-ctrl-sql/db-sql-processing-log-blog-post.js";
 import { registerBlogPost } from "../../../ctrl/ctrl-register/register-blog-post.js";
 import { HelperContentProcessing } from "../../../services/helper-content-processing.js";
-import { TRegisterRequestBlogPostData, TRequestRegisterBlogPost } from "../../../types/shared.js";
+import { TRegisterRequestBlogPostData } from "../../../types/shared.js";
 
 /**
  * Ctrl For Register Blog Post
@@ -10,9 +10,9 @@ import { TRegisterRequestBlogPostData, TRequestRegisterBlogPost } from "../../..
  * @param res
  * @returns
  */
-export async function routeCtrlAdminRegisterBlogPost(req: Request, res: Response) {
+export async function routeCtrlAdminBlogPostRegister(req: Request, res: Response) {
   try {
-    const { data } = req.body as TRequestRegisterBlogPost;
+    const { blogPostUrl, title, content, publishedDate, tags, platform, platformUrl } = req.body as TRegisterRequestBlogPostData;
 
     // data: {
     //   blog?: {
@@ -26,18 +26,10 @@ export async function routeCtrlAdminRegisterBlogPost(req: Request, res: Response
     //   },
     // }
 
-    if (data.length === 0 || !data[0]?.blogPostUrl) {
-      return res.status(400).json({
-        success: false,
-        message: "Blog Post URL is required",
-      });
-    }
-
-    const response = Array<{ success: boolean; uniqueKey: string; status: string }>();
-
-    for (const item of data) {
-      const result = await HelperContentProcessing.processContent<TRegisterRequestBlogPostData>(item, {
-        extractKey: (item) => item.blogPostUrl,
+    const result = await HelperContentProcessing.processContent<TRegisterRequestBlogPostData>(
+      { blogPostUrl, title, content, publishedDate, tags, platform, platformUrl }, 
+      {
+        extractKey: (data) => data.blogPostUrl,
 
         checkExisting: async (postUrl) => {
           const existingLog =
@@ -48,15 +40,15 @@ export async function routeCtrlAdminRegisterBlogPost(req: Request, res: Response
           };
         },
 
-        processor: async (item) => {
+        processor: async (data) => {
           await registerBlogPost(
-            item.blogPostUrl,
-            item.title || "",
-            item.content || "",
-            item.publishedDate,
-            item.tags,
-            item.platform,
-            item.platformUrl,
+            data.blogPostUrl,
+            data.title || "",
+            data.content || "",
+            data.publishedDate,
+            data.tags,
+            data.platform,
+            data.platformUrl,
           );
         },
 
@@ -68,15 +60,14 @@ export async function routeCtrlAdminRegisterBlogPost(req: Request, res: Response
             : "Processing started",
           statusUrl: `/api/process-status/blog-post`,
         }),
-      });
+      }
+    );
 
-      response.push({
-        success: result.success,
-        uniqueKey: result.uniqueKey,
-        status: result.status,
-      });
-    }
-    res.json(response);
+    res.json({
+      success: result.success,
+      uniqueKey: result.uniqueKey,
+      status: result.status,
+    });
   } catch (error: unknown) {
     const err = error as Error;
     console.error("Blog post processing failed:", err);

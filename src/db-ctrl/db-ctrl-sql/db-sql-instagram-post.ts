@@ -90,6 +90,43 @@ export default class DBSqlInstagramPost {
     }
   }
 
+
+  /**
+   * instagram_post_url로 Instagram 포스트 조회
+   * @param uuid36 Instagram 포스트 URL
+   * @returns Instagram 포스트 상세 정보
+   */
+  static async selectByUuid36(
+    uuid36: string,
+  ): Promise<ResponseDBSelect<TSqlInstagramPostDetail[]>> {
+    try {
+      const { data, error, count } = await supabaseClient
+        .from(SQL_DB_TABLE.instagram_posts)
+        .select("*", { count: "exact" })
+        .eq(F_INSTAGRAM_POST.uuid_36.id, uuid36)
+        .overrideTypes<TSqlInstagramPostDetail[]>();
+
+      if (error) {
+        throw new Error(
+          `#1 Instagram 포스트 조회(SELECT By Uuid36) 중 오류 발생 >>> ${error.message}`,
+        );
+      }
+
+      return {
+        data: (data || []) as TSqlInstagramPostDetail[],
+        count: count || 0,
+      };
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(
+        "#3 Instagram 포스트 조회(SELECT By Uuid36) 중 알 수 없는 오류가 발생했습니다.",
+      );
+    }
+  }
+
+
   /**
    * user_id로 Instagram 포스트 목록 조회
    * @param userId 사용자 아이디
@@ -286,6 +323,45 @@ export default class DBSqlInstagramPost {
       );
     }
   }
+
+  /**
+   * Instagram 포스트 정보 수정 기능
+   * @param uuid36 Instagram 포스트 UUID36
+   * @param postUpdate Instagram 포스트 수정 정보
+   * @returns Instagram 포스트 정보
+   */
+  static async updateByUuid36(
+    uuid36: string,
+    postUpdate: TSqlInstagramPostDetailUpdate,
+  ): Promise<ResponseDBSelect<TSqlInstagramPostDetail[]>> {
+    try {
+      const { data, error, count } = await supabaseClient
+        .from(SQL_DB_TABLE.instagram_posts)
+        .update(postUpdate)
+        .eq(F_INSTAGRAM_POST.uuid_36.id, uuid36)
+        .select()
+        .overrideTypes<TSqlInstagramPostDetail[]>();
+
+      if (error) {
+        throw new Error(
+          `#1 Instagram 포스트 정보 수정(UPDATE By Uuid36) 중 오류 발생 >>> ${error.message}`,
+        );
+      }
+
+      return {
+        data: (data || []) as TSqlInstagramPostDetail[],
+        count: count || 0,
+      };
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(
+        "#3 Instagram 포스트 정보 수정(UPDATE By Uuid36) 중 알 수 없는 오류가 발생했습니다.",
+      );
+    }
+  }
+
 
   /**
    * Instagram 포스트 삭제 기능

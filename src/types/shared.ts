@@ -106,7 +106,7 @@ export type TRegisterRequestInstagramPostData = {
   tags: string[];
   userId: string | null;
   userProfileUrl: string | null;
-  postDate: string | null;
+  publishedDate: string | null;
 };
 
 /**
@@ -130,31 +130,5 @@ export type TRegisterRequestTextData = {
   title: string | null;
 };
 
-
-/**
- * Request Register Content
- */
-export type TRequestRegisterInstagramPost = {
-  type: string;
-  data: TRegisterRequestInstagramPostData[],
-};
-
-
-/**
- * Request Register Content
- */
-export type TRequestRegisterBlogPost = {
-  type: string;
-  data: TRegisterRequestBlogPostData[],
-};
-
-
-/**
- * Request Register Content
- */
-export type TRequestRegisterText = {
-  type: string;
-  data: TRegisterRequestTextData[],
-};
 
 

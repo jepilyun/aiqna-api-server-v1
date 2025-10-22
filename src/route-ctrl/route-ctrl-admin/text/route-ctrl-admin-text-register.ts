@@ -4,7 +4,7 @@ import DBSqlProcessingLogText from "../../../db-ctrl/db-ctrl-sql/db-sql-processi
 import { ContentKeyManager } from "../../../utils/content-key-manager.js";
 import { registerText } from "../../../ctrl/ctrl-register/register-text.js";
 import { HelperContentProcessing } from "../../../services/helper-content-processing.js";
-import { TRegisterRequestTextData, TRequestRegisterText } from "../../../types/shared.js";
+import { TRegisterRequestTextData } from "../../../types/shared.js";
 import { ERequestCreateContentType } from "../../../consts/const.js";
 
 /**
@@ -13,9 +13,9 @@ import { ERequestCreateContentType } from "../../../consts/const.js";
  * @param res
  * @returns
  */
-export async function routeCtrlAdminRegisterText(req: Request, res: Response) {
+export async function routeCtrlAdminTextRegister(req: Request, res: Response) {
   try {
-    const { data } = req.body as TRequestRegisterText;
+    const { content, title } = req.body as TRegisterRequestTextData;
 
     // data: {
     //   text?: {
@@ -24,21 +24,13 @@ export async function routeCtrlAdminRegisterText(req: Request, res: Response) {
     //   },
     // }
 
-    if (data.length === 0 || !data[0]?.content) {
-      return res.status(400).json({
-        success: false,
-        message: "Text Content is required",
-      });
-    }
-
-    const response = Array<{ success: boolean; uniqueKey: string; status: string }>();
-
-    for (const item of data) {
-      const result = await HelperContentProcessing.processContent<TRegisterRequestTextData>(item, {
-        extractKey: (item) =>
+    const result = await HelperContentProcessing.processContent<TRegisterRequestTextData>(
+      { content, title }, 
+      {
+        extractKey: (data) =>
           ContentKeyManager.createContentKey(
             ERequestCreateContentType.Text,
-            item.content,
+            data.content,
           ),
 
         checkExisting: async (hashKey) => {
@@ -50,8 +42,8 @@ export async function routeCtrlAdminRegisterText(req: Request, res: Response) {
           };
         },
 
-        processor: async (item) => {
-          await registerText(item.content, item.title || "");
+        processor: async (data) => {
+          await registerText(data.content, data.title || "");
         },
 
         createResponse: (hashKey, isAlreadyProcessing) => ({
@@ -62,15 +54,14 @@ export async function routeCtrlAdminRegisterText(req: Request, res: Response) {
             : "Processing started",
           statusUrl: `/api/process-status/text`,
         }),
-      });
+      }
+    );
 
-      response.push({
-        success: result.success,
-        uniqueKey: result.uniqueKey,
-        status: result.status,
-      });
-    }
-    res.json(response);
+    res.json({
+      success: result.success,
+      uniqueKey: result.uniqueKey,
+      status: result.status,
+    });
   } catch (error: unknown) {
     const err = error as Error;
     console.error("Text processing failed:", err);

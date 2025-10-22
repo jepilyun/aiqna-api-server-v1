@@ -86,6 +86,38 @@ export default class DBSqlBlogPost {
   }
 
   /**
+   * uuid36로 블로그 포스트 조회
+   * @param uuid36 블로그 포스트 UUID36
+   * @returns 블로그 포스트 상세 정보
+   */
+  static async selectByUuid36(
+    uuid36: string,
+  ): Promise<ResponseDBSelect<TSqlBlogPostDetail[]>> {
+    try {
+      const { data, error, count } = await supabaseClient
+        .from(SQL_DB_TABLE.blog_posts)
+        .select("*", { count: "exact" })
+        .eq(F_BLOG_POST.uuid_36.id, uuid36)
+        .overrideTypes<TSqlBlogPostDetail[]>();
+
+      if (error) {
+        throw new Error(
+          `#1 블로그 포스트 조회(SELECT By Uuid36) 중 오류 발생 >>> ${error.message}`,
+        );
+      }
+
+      return { data: (data || []) as TSqlBlogPostDetail[], count: count || 0 };
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(
+        "#3 블로그 포스트 조회(SELECT By PostUrl) 중 알 수 없는 오류가 발생했습니다.",
+      );
+    }
+  }
+
+  /**
    * 블로그 포스트 등록 기능
    * @param post 블로그 포스트 정보
    * @returns 블로그 포스트 정보
@@ -189,6 +221,41 @@ export default class DBSqlBlogPost {
       }
       throw new Error(
         "#3 블로그 포스트 정보 수정(UPDATE) 중 알 수 없는 오류가 발생했습니다.",
+      );
+    }
+  }
+
+  /**
+   * 블로그 포스트 정보 수정 기능
+   * @param uuid36 블로그 포스트 UUID36
+   * @param postUpdate 블로그 포스트 수정 정보
+   * @returns 블로그 포스트 정보
+   */
+  static async updateByUuid36(
+    uuid36: string,
+    postUpdate: TSqlBlogPostDetailUpdate,
+  ): Promise<ResponseDBSelect<TSqlBlogPostDetail[]>> {
+    try {
+      const { data, error, count } = await supabaseClient
+        .from(SQL_DB_TABLE.blog_posts)
+        .update(postUpdate)
+        .eq(F_BLOG_POST.uuid_36.id, uuid36)
+        .select()
+        .overrideTypes<TSqlBlogPostDetail[]>();
+
+      if (error) {
+        throw new Error(
+          `#1 블로그 포스트 정보 수정(UPDATE By Uuid36) 중 오류 발생 >>> ${error.message}`,
+        );
+      }
+
+      return { data: (data || []) as TSqlBlogPostDetail[], count: count || 0 };
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(
+        "#3 블로그 포스트 정보 수정(UPDATE By Uuid36) 중 알 수 없는 오류가 발생했습니다.",
       );
     }
   }
