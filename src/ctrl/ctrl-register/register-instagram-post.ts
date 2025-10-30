@@ -182,7 +182,6 @@ async function processInstagramPostToPinecone(
       await DBSqlProcessingLogInstagramPost.updateByPostUrl(
         instagramPost.instagram_post_url,
         {
-          instagram_post_url: instagramPost.instagram_post_url,
           is_pinecone_processed: true,
           processing_status: EProcessingStatusType.completed, // ✅ enum 사용
         },

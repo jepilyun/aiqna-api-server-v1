@@ -1,7 +1,13 @@
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
-import routesApiAdmin from "./router/router-api-admin.js";
+// import routesApiAdmin from "./router/router-api-admin-vector.js";
+import routesApiAdminAiAsk from "./router/router-api-admin-ai-ask.js";
+import routesApiAdminYouTubeVideo from "./router/router-api-admin-youtube-video.js";
+import routesApiAdminInstagramPost from "./router/router-api-admin-instagram-post.js";
+import routesApiAdminBlogPost from "./router/router-api-admin-blog-post.js";
+import routesApiAdminText from "./router/router-api-admin-text.js";
+import routesApiAdminVector from "./router/router-api-admin-vector.js";
 import routesApiUser from "./router/router-api-user.js";
 import { workerStartYouTubeVideo } from "./worker/worker-start-youtube-video.js";
 
@@ -25,7 +31,21 @@ app.use(
 
 app.use(express.json());
 
-app.use("/api/admin", routesApiAdmin);
+app.use("/api/admin/youtube-video", routesApiAdminYouTubeVideo);
+// app.use("/api/admin/processing-status/youtube-video", routesApiAdminProcessingStatusYouTubeVideo);
+
+app.use("/api/admin/instagram", routesApiAdminInstagramPost);
+// app.use("/api/admin/processing-status/instagram", routesApiAdminProcessingStatusInstagramPost);
+
+app.use("/api/admin/blog", routesApiAdminBlogPost);
+// app.use("/api/admin/processing-status/blog", routesApiAdminProcessingStatusBlogPost);
+
+app.use("/api/admin/text", routesApiAdminText);
+// app.use("/api/admin/processing-status/text", routesApiAdminProcessingStatusText);
+
+app.use("/api/admin/ask", routesApiAdminAiAsk);
+app.use("/api/admin/vector", routesApiAdminVector);
+
 app.use("/api/user", routesApiUser);
 
 // Worker 시작 YouTube Video Worker

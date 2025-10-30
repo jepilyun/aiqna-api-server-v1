@@ -31,13 +31,13 @@ export async function handleProcessingError(
       await DBSqlProcessingLogYoutubeVideo.updateByVideoId(key, data);
       break;
     case ERequestCreateContentType.Instagram:
-      await DBSqlProcessingLogInstagramPost.updateByPostUrl(key, { ...data, instagram_post_url: key });
+      await DBSqlProcessingLogInstagramPost.updateByPostUrl(key, data);
       break;
     case ERequestCreateContentType.Blog:
-      await DBSqlProcessingLogBlogPost.updateByPostUrl(key, { ...data, blog_post_url: key });
+      await DBSqlProcessingLogBlogPost.updateByPostUrl(key, data);
       break;
     case ERequestCreateContentType.Text:
-      await DBSqlProcessingLogText.updateByHashKey(key, { ...data, hash_key: key });
+      await DBSqlProcessingLogText.updateByHashKey(key, data);
       break;
     default:
       console.warn(`Unknown content type: ${type}`);

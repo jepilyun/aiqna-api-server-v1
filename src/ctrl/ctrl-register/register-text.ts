@@ -136,13 +136,12 @@ async function processTextToPinecone(
   await withRetry(
     async () => {
       const metadata = {
-        title: textData.title ?? undefined, // Title
+        title: textData.title ?? "Unknown", // Title
       };
 
       await saveTextToPinecone(textData, metadata);
 
       await DBSqlProcessingLogText.updateByHashKey(textData.hash_key, {
-        hash_key: textData.hash_key,
         is_pinecone_processed: true,
         processing_status: EProcessingStatusType.completed,
       });
