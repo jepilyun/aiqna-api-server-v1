@@ -35,7 +35,8 @@ export async function registerInstagramPost(
 ): Promise<{ success: boolean; instagramPostUrl: string }> {
   try {
     console.log(`\n🚀 Starting Instagram post processing: ${instagramPostUrl}`);
-    const logResult = await DBSqlProcessingLogInstagramPost.selectByPostUrl(instagramPostUrl);
+    const logResult =
+      await DBSqlProcessingLogInstagramPost.selectByPostUrl(instagramPostUrl);
     const log = logResult.data?.[0];
 
     // 1. Instagram Metadata 처리

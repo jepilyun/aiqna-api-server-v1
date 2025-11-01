@@ -24,38 +24,39 @@ export async function routeCtrlAdminTextRegister(req: Request, res: Response) {
     //   },
     // }
 
-    const result = await HelperContentProcessing.processContent<TRegisterRequestTextData>(
-      { content, title }, 
-      {
-        extractKey: (data) =>
-          ContentKeyManager.createContentKey(
-            ERequestCreateContentType.Text,
-            data.content,
-          ),
+    const result =
+      await HelperContentProcessing.processContent<TRegisterRequestTextData>(
+        { content, title },
+        {
+          extractKey: (data) =>
+            ContentKeyManager.createContentKey(
+              ERequestCreateContentType.Text,
+              data.content,
+            ),
 
-        checkExisting: async (hashKey) => {
-          const existingLog =
-            await DBSqlProcessingLogText.selectByHashKey(hashKey);
-          return {
-            isProcessing:
-              existingLog.data?.[0]?.processing_status === "processing",
-          };
+          checkExisting: async (hashKey) => {
+            const existingLog =
+              await DBSqlProcessingLogText.selectByHashKey(hashKey);
+            return {
+              isProcessing:
+                existingLog.data?.[0]?.processing_status === "processing",
+            };
+          },
+
+          processor: async (data) => {
+            await registerText(data.content, data.title || "");
+          },
+
+          createResponse: (hashKey, isAlreadyProcessing) => ({
+            success: true,
+            hashKey,
+            message: isAlreadyProcessing
+              ? "Already processing"
+              : "Processing started",
+            statusUrl: `/api/process-status/text`,
+          }),
         },
-
-        processor: async (data) => {
-          await registerText(data.content, data.title || "");
-        },
-
-        createResponse: (hashKey, isAlreadyProcessing) => ({
-          success: true,
-          hashKey,
-          message: isAlreadyProcessing
-            ? "Already processing"
-            : "Processing started",
-          statusUrl: `/api/process-status/text`,
-        }),
-      }
-    );
+      );
 
     res.json({
       success: result.success,

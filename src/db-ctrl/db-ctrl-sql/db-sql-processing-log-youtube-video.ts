@@ -100,8 +100,10 @@ export default class DBSqlProcessingLogYoutubeVideo {
     const { data, error } = await supabaseClient
       .from(SQL_DB_TABLE.youtube_video_processing_logs)
       .select("*")
-        // is_transcript_exist ∈ { NULL, true }
-      .or(`${F_PROCESSING_LOG_YOUTUBE_VIDEO.is_transcript_exist.id}.is.null,${F_PROCESSING_LOG_YOUTUBE_VIDEO.is_transcript_exist.id}.eq.true`)
+      // is_transcript_exist ∈ { NULL, true }
+      .or(
+        `${F_PROCESSING_LOG_YOUTUBE_VIDEO.is_transcript_exist.id}.is.null,${F_PROCESSING_LOG_YOUTUBE_VIDEO.is_transcript_exist.id}.eq.true`,
+      )
       .eq(F_PROCESSING_LOG_YOUTUBE_VIDEO.is_transcript_fetched.id, false)
       .neq(F_PROCESSING_LOG_YOUTUBE_VIDEO.processing_status.id, "processing") // 처리 중인 것 제외
       .order(orderBy, { ascending: true })

@@ -17,7 +17,8 @@ export const MSG_YOUTUBE_VIDEO = {
     error_no_video_id: "[ERROR] Register YouTube Video No Video ID",
     error: "[ERROR] Register YouTube Video",
     success: "[SUCCESS] Register YouTube Video",
-    error_video_id_duplicate: "[ERROR] Register YouTube Video Video ID Duplicate",
+    error_video_id_duplicate:
+      "[ERROR] Register YouTube Video Video ID Duplicate",
   },
   get_detail: {
     error: "[ERROR] Get YouTube Video Detail",
@@ -30,6 +31,7 @@ export const MSG_YOUTUBE_VIDEO = {
   delete: {
     error: "[ERROR] Delete YouTube Video",
     success: "[SUCCESS] Delete YouTube Video",
-    fail_no_data_to_delete: "[ERROR] Delete YouTube Video Fail No Data To Delete",
+    fail_no_data_to_delete:
+      "[ERROR] Delete YouTube Video Fail No Data To Delete",
   },
 };

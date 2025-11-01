@@ -11,11 +11,13 @@ import DBPinecone from "../../db-ctrl/db-ctrl-pinecone/db-pinecone.js";
 import { ContentKeyManager } from "../../utils/content-key-manager.js";
 import { ERequestCreateContentType } from "../../consts/const.js";
 import { chunkYouTubeDescription } from "../chunk/chunk-youtube-description.js";
-import { safeForEmbedding, toSnippet } from "../../utils/chunk-embedding-utils.js";
-
+import {
+  safeForEmbedding,
+  toSnippet,
+} from "../../utils/chunk-embedding-utils.js";
 
 /**
- * Save YouTube Description to Pinecone 
+ * Save YouTube Description to Pinecone
  * @param videoData
  * @param vectorMetadata
  */
@@ -41,9 +43,7 @@ export async function saveYouTubeDescriptionToPinecone(
     const chunks = chunkYouTubeDescription(videoData.description ?? "");
 
     if (chunks.length === 0) {
-      console.warn(
-        `⚠️  No chunks generated for description, skipping...`,
-      );
+      console.warn(`⚠️  No chunks generated for description, skipping...`);
       return;
     }
 
@@ -66,12 +66,13 @@ export async function saveYouTubeDescriptionToPinecone(
         let chunkMetadata: TAnalyzedContentMetadata | null = null;
 
         try {
-          chunkMetadata = await metadataExtractor.generateMetadataFromFullTranscript(
-            videoData.video_id,
-            vectorMetadata.title ?? "",
-            chunk.text,
-            "description",
-          );
+          chunkMetadata =
+            await metadataExtractor.generateMetadataFromFullTranscript(
+              videoData.video_id,
+              vectorMetadata.title ?? "",
+              chunk.text,
+              "description",
+            );
 
           if (idx < 2) {
             console.log(`→ Metadata:`, {
@@ -100,7 +101,9 @@ export async function saveYouTubeDescriptionToPinecone(
           text: toSnippet(chunk.text),
           text_length: chunk.text.length,
           embedding_model: PROVIDER_CONFIGS.openai.model,
-          embedding_dimensions: provider.getDimensions(PROVIDER_CONFIGS.openai.model),
+          embedding_dimensions: provider.getDimensions(
+            PROVIDER_CONFIGS.openai.model,
+          ),
           created_at: new Date().toISOString(),
         };
 
@@ -113,7 +116,8 @@ export async function saveYouTubeDescriptionToPinecone(
           metadata.published_at = vectorMetadata.published_date;
         if (vectorMetadata.thumbnail_url)
           metadata.thumbnail_url = vectorMetadata.thumbnail_url;
-        if (vectorMetadata.duration) metadata.duration = vectorMetadata.duration;
+        if (vectorMetadata.duration)
+          metadata.duration = vectorMetadata.duration;
         if (vectorMetadata.view_count)
           metadata.view_count = vectorMetadata.view_count;
         if (vectorMetadata.like_count)
@@ -147,14 +151,15 @@ export async function saveYouTubeDescriptionToPinecone(
     // DBPinecone을 사용한 배치 업로드
     await DBPinecone.upsertBatch(PROVIDER_CONFIGS.openai.index, vectors, 100);
 
-    console.log(
-      `  ✓ Completed ${chunks.length} chunks for description`,
-    );
+    console.log(`  ✓ Completed ${chunks.length} chunks for description`);
 
     console.log(`[${PROVIDER_CONFIGS.openai.type}] ✓ Success`);
     return { provider: PROVIDER_CONFIGS.openai.type, status: "success" };
   } catch (error) {
-    console.error(`[${PROVIDER_CONFIGS.openai.type}] ✗ Failed:`, (error as Error).message);
+    console.error(
+      `[${PROVIDER_CONFIGS.openai.type}] ✗ Failed:`,
+      (error as Error).message,
+    );
     return { provider: PROVIDER_CONFIGS.openai.type, status: "error", error };
   }
 }

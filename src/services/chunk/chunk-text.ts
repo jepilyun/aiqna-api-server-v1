@@ -36,11 +36,17 @@ export function chunkTextContent(
 
   // 0) 전처리
   const text = cleanText
-    ? content.replace(/\u00A0/g, " ").replace(/\s+/g, " ").trim()
+    ? content
+        .replace(/\u00A0/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
     : content;
 
   // 1) 길이 측정자
-  const useTokens = !!(tokenCounter && (maxTokens || overlapTokens || minTokens));
+  const useTokens = !!(
+    tokenCounter &&
+    (maxTokens || overlapTokens || minTokens)
+  );
   const lengthOf = (t: string) => (useTokens ? tokenCounter!(t) : t.length);
 
   const maxBudget = useTokens ? (maxTokens ?? 700) : maxChars;
@@ -48,13 +54,19 @@ export function chunkTextContent(
   const minBudget = useTokens ? (minTokens ?? 150) : minChars;
 
   // 안전 가드: 오버랩은 항상 maxBudget-1 이하
-  const safeOverlap = Math.max(0, Math.min(rawOverlap, Math.max(0, maxBudget - 1)));
+  const safeOverlap = Math.max(
+    0,
+    Math.min(rawOverlap, Math.max(0, maxBudget - 1)),
+  );
 
   const chunks: TChunkTextContent[] = [];
 
   // 2) 문장 분리 개선 (인용부호 여러 개 대응)
   const SENT_SPLIT = /(?<=[.!?]["'"]*)\s+|(?<=[.!?]["'"]*)(?=[A-Z])/g;
-  const sentences = text.split(SENT_SPLIT).map((s) => s.trim()).filter(Boolean);
+  const sentences = text
+    .split(SENT_SPLIT)
+    .map((s) => s.trim())
+    .filter(Boolean);
 
   // 2-1) 문장 분리가 어려운 텍스트면 문자 슬라이싱 폴백
   if (sentences.length < 2 && lengthOf(text) > maxBudget) {
@@ -122,7 +134,7 @@ export function chunkTextContent(
     let overlapCount = 0;
     const clampedOverlap = Math.min(
       safeOverlap,
-      Math.floor(chunkLength * MAX_OVERLAP_RATIO)
+      Math.floor(chunkLength * MAX_OVERLAP_RATIO),
     );
 
     for (let k = chunkSentences.length - 1; k >= 0; k--) {

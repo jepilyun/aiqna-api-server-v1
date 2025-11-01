@@ -4,13 +4,11 @@ import { routeCtrlAdminAiAsk } from "../route-ctrl/route-ctrl-admin/ask/route-ct
 
 const router = express.Router();
 
-
 // AI 질의 (관리자용 - 더 많은 권한)
 router.post(
   "/",
   // adminAuthMiddleware,
   routeCtrlAdminAiAsk,
 );
-
 
 export default router;

@@ -15,10 +15,12 @@ export const MSG_INSTAGRAM_POST = {
     success: "[SUCCESS] Get Instagram Post Search List",
   },
   register: {
-    error_no_instagram_post_url: "[ERROR] Register Instagram Post No Instagram Post URL",
+    error_no_instagram_post_url:
+      "[ERROR] Register Instagram Post No Instagram Post URL",
     error: "[ERROR] Register Instagram Post",
     success: "[SUCCESS] Register Instagram Post",
-    error_instagram_post_url_duplicate: "[ERROR] Register Instagram Post Instagram Post URL Duplicate",
+    error_instagram_post_url_duplicate:
+      "[ERROR] Register Instagram Post Instagram Post URL Duplicate",
   },
   get_detail: {
     error: "[ERROR] Get Instagram Post Detail",
@@ -31,6 +33,7 @@ export const MSG_INSTAGRAM_POST = {
   delete: {
     error: "[ERROR] Delete Instagram Post",
     success: "[SUCCESS] Delete Instagram Post",
-    fail_no_data_to_delete: "[ERROR] Delete Instagram Post Fail No Data To Delete",
+    fail_no_data_to_delete:
+      "[ERROR] Delete Instagram Post Fail No Data To Delete",
   },
 };

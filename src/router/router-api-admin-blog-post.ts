@@ -7,8 +7,6 @@ import { routeCtrlAdminBlogPostUpdate } from "../route-ctrl/route-ctrl-admin/blo
 
 const router = express.Router();
 
-
-
 // Blog Post List
 router.get(
   "/list/:start",
@@ -37,9 +35,6 @@ router.put(
   routeCtrlAdminBlogPostUpdate,
 );
 
-
-
-
 // Blog Post Processing List
 // router.get(
 //   "/processing/list/:start",
@@ -67,7 +62,5 @@ router.put(
 //   // adminAuthMiddleware,
 //   routeCtrlAdminProcessingBlogPostUpdate,
 // );
-
-
 
 export default router;

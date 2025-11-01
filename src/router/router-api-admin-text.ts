@@ -7,7 +7,6 @@ import { routeCtrlAdminTextUpdate } from "../route-ctrl/route-ctrl-admin/text/ro
 
 const router = express.Router();
 
-
 // Text List
 router.get(
   "/list/:start",
@@ -36,8 +35,6 @@ router.put(
   routeCtrlAdminTextUpdate,
 );
 
-
-
 // Text List
 // router.get(
 //   "/processing/list/:start",
@@ -65,8 +62,5 @@ router.put(
 //   // adminAuthMiddleware,
 //   routeCtrlAdminProcessingTextUpdate,
 // );
-
-
-
 
 export default router;

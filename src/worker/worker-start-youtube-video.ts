@@ -16,7 +16,6 @@ import { ERequestCreateContentType } from "../consts/const.js";
 import { fetchYouTubeVideoDataFromDB } from "../services/youtube-video/fetch-youtube-video-data-from-db.js";
 import { saveYouTubeDescriptionToPinecone } from "../services/youtube-video/save-youtube-description-to-pinecone.js";
 
-
 /**
  * YouTube 비디오 처리 레이트 리미터
  * 한번 처리하고 특정 시간 대기하고 다시 처리
@@ -44,10 +43,11 @@ export async function workerStartYouTubeVideo() {
       }
 
       // 1. 처리할 작업 1개 가져오기
-      const resultPendingJobs = await DBSqlProcessingLogYoutubeVideo.selectPendingJobs({
-        limit: 1,
-        orderBy: "created_at", // 가장 오래된 것부터 처리
-      });
+      const resultPendingJobs =
+        await DBSqlProcessingLogYoutubeVideo.selectPendingJobs({
+          limit: 1,
+          orderBy: "created_at", // 가장 오래된 것부터 처리
+        });
 
       const job = resultPendingJobs.data?.[0] || null;
 
@@ -62,7 +62,9 @@ export async function workerStartYouTubeVideo() {
 
       // 🔒 자막이 없는 동영상인지 먼저 체크
       if (job.is_transcript_exist === false) {
-        console.log(`⏭️ ${job.video_id}: transcript marked ABSENT; skipping transcript/pinecone steps.`);
+        console.log(
+          `⏭️ ${job.video_id}: transcript marked ABSENT; skipping transcript/pinecone steps.`,
+        );
         await DBSqlProcessingLogYoutubeVideo.updateByVideoId(job.video_id, {
           processing_status: EProcessingStatusType.completed,
           last_processed_at: new Date().toISOString(),
@@ -85,7 +87,7 @@ export async function workerStartYouTubeVideo() {
         "raw", // ✅ Supabase Storage 캐시 경로 명시
         "../data/transcripts", // ✅ 로컬 캐시 경로 명시
       );
-    
+
       // 존재/가져옴 상태를 정확히 반영
       await DBSqlProcessingLogYoutubeVideo.updateByVideoId(job.video_id, {
         is_transcript_exist: transcripts.length > 0, // 0이면 false로 확정
@@ -93,9 +95,13 @@ export async function workerStartYouTubeVideo() {
         last_processed_at: new Date().toISOString(),
       });
 
-
       // 5. Save Transcripts to Pinecone
-      await saveTranscriptsToPinecone(job.video_id, transcripts, videoData, job);
+      await saveTranscriptsToPinecone(
+        job.video_id,
+        transcripts,
+        videoData,
+        job,
+      );
 
       // 6. Rate Limiting 적용
       rateLimiter.incrementProcessed();
@@ -108,7 +114,6 @@ export async function workerStartYouTubeVideo() {
     }
   }
 }
-
 
 /**
  * 개별 작업 처리
@@ -127,7 +132,9 @@ async function saveTranscriptsToPinecone(
       }
 
       if (transcripts.length === 0) {
-        console.warn("⚠️ No transcripts available, skipping Pinecone processing");
+        console.warn(
+          "⚠️ No transcripts available, skipping Pinecone processing",
+        );
         return;
       }
 
@@ -147,10 +154,7 @@ async function saveTranscriptsToPinecone(
             like_count: videoData.like_count,
           };
 
-          await saveYouTubeTranscriptsToPinecone(
-            transcripts,
-            metadata,
-          );
+          await saveYouTubeTranscriptsToPinecone(transcripts, metadata);
 
           if (videoData.description && videoData.description.length > 40) {
             await saveYouTubeDescriptionToPinecone(videoData, metadata);
@@ -183,4 +187,3 @@ async function saveTranscriptsToPinecone(
     );
   }
 }
-

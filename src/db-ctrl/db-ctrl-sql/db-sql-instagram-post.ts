@@ -90,7 +90,6 @@ export default class DBSqlInstagramPost {
     }
   }
 
-
   /**
    * instagram_post_url로 Instagram 포스트 조회
    * @param uuid36 Instagram 포스트 URL
@@ -125,7 +124,6 @@ export default class DBSqlInstagramPost {
       );
     }
   }
-
 
   /**
    * user_id로 Instagram 포스트 목록 조회
@@ -361,7 +359,6 @@ export default class DBSqlInstagramPost {
       );
     }
   }
-
 
   /**
    * Instagram 포스트 삭제 기능

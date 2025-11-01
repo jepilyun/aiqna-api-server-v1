@@ -33,14 +33,14 @@ type TChunkYouTubeVideoTranscriptOptions = {
 
 /**
  * 내부: 마이크로 세그먼트 병합
- * 
+ *
  * 목적: 매우 짧은 세그먼트들(예: "안녕", "하세요")을 미리 합쳐서
  *       나중에 청킹할 때 너무 잘게 쪼개지지 않도록 함
- * 
+ *
  * 병합 조건:
  * 1) 이전 세그먼트와 현재 세그먼트 사이의 시간 간격이 maxGapSec 이하
  * 2) 또는 현재까지 모은 그룹의 총 글자 수가 minGroupChars 미만
- * 
+ *
  * @param segs - 세그먼트 배열
  * @param maxGapSec - 인접 세그먼트 간 최대 갭(초). 예: 0.8초
  * @param minGroupChars - 그룹 최소 글자 길이(문자). 예: 40자
@@ -52,14 +52,14 @@ function coalesceSmallSegments(
   minGroupChars: number,
 ): TYouTubeTranscriptStandardSegment[] {
   if (!segs.length) return segs;
-  
+
   const out: TYouTubeTranscriptStandardSegment[] = [];
   let bucket: TYouTubeTranscriptStandardSegment[] = [segs[0]]; // 현재 병합 중인 그룹
 
   // 헬퍼 함수: 세그먼트 배열의 총 텍스트 길이 계산
   const textLen = (arr: TYouTubeTranscriptStandardSegment[]) =>
     arr.map((x) => x.text).join(" ").length;
-  
+
   // 헬퍼 함수: 두 세그먼트 사이의 시간 간격 계산
   const gap = (
     a: TYouTubeTranscriptStandardSegment,
@@ -70,11 +70,11 @@ function coalesceSmallSegments(
   for (let i = 1; i < segs.length; i++) {
     const prev = bucket[bucket.length - 1]; // 현재 그룹의 마지막 세그먼트
     const curr = segs[i]; // 처리 중인 세그먼트
-    
+
     // 병합 조건: 시간 간격이 짧거나 OR 그룹이 아직 작으면
     const shouldMerge =
       gap(prev, curr) <= maxGapSec || textLen(bucket) < minGroupChars;
-    
+
     if (shouldMerge) {
       bucket.push(curr); // 현재 그룹에 추가
     } else {
@@ -105,7 +105,7 @@ function coalesceSmallSegments(
 
 /**
  * YouTube Transcript를 적절한 크기의 chunk로 분할
- * 
+ *
  * 전체 흐름:
  * 1) 인코딩 검증
  * 2) 텍스트 전처리 (잡음 제거, 짧은 세그먼트 제거)
@@ -114,7 +114,7 @@ function coalesceSmallSegments(
  * 5) 메인 청킹 로직 (예산 기반으로 청크 생성)
  * 6) 후처리 (꼬리 청크 병합, 시간 하한 보정)
  * 7) 최종 검증
- * 
+ *
  * @param segments - 세그먼트 배열
  * @param options - 옵션
  * @returns 분할된 청크 배열
@@ -152,12 +152,14 @@ export function chunkYouTubeVideoTranscript(
   // STEP 1: 인코딩 검증
   // ========================================
   // UTF-8 깨진 문자 패턴 검사 (예: ì, ë 등)
-  const hasCorruptedEncoding = segments.some(seg => 
-    /[ì|ë|ê|ìŠ|ì—|í]/.test(seg.text || '')
+  const hasCorruptedEncoding = segments.some((seg) =>
+    /[ì|ë|ê|ìŠ|ì—|í]/.test(seg.text || ""),
   );
   if (hasCorruptedEncoding) {
-    console.error('❌ Corrupted encoding detected in segments');
-    throw new Error('Invalid transcript encoding - please re-fetch transcripts');
+    console.error("❌ Corrupted encoding detected in segments");
+    throw new Error(
+      "Invalid transcript encoding - please re-fetch transcripts",
+    );
   }
 
   // ========================================
@@ -180,7 +182,8 @@ export function chunkYouTubeVideoTranscript(
   let cleaned: TYouTubeTranscriptStandardSegment[] = [];
   for (const seg of segments) {
     const text = normalize(seg.text ?? "");
-    if (text.length >= dropShortSegUnder) { // 3자 이상만 유지
+    if (text.length >= dropShortSegUnder) {
+      // 3자 이상만 유지
       cleaned.push({ ...seg, text });
     }
   }
@@ -204,25 +207,27 @@ export function chunkYouTubeVideoTranscript(
     // 선병합으로 인해 너무 긴 세그먼트가 생성될 수 있음
     // 예: 1000자짜리 세그먼트 → 400자씩 2~3개로 분할
     const splitCleaned: TYouTubeTranscriptStandardSegment[] = [];
-    
+
     for (const seg of cleaned) {
       const text = seg.text ?? "";
-      
+
       // maxChars의 50%(=400자) 초과 시 분할
       // 이유: 청킹 시 2개가 합쳐져도 800자를 넘지 않도록
       if (text.length > maxChars * 0.5) {
-        
         // 문장 경계로 분할 (마침표, 느낌표, 물음표 + 공백)
-        const sentences = text.split(/[.!?]+\s+/).filter(s => s.trim());
+        const sentences = text.split(/[.!?]+\s+/).filter((s) => s.trim());
         const targetSize = maxChars * 0.4; // 320자 목표 (400자보다 약간 작게)
 
         let currentText = ""; // 현재 누적 중인 텍스트
         const tempSegments: string[] = []; // 분할된 텍스트들
-        
+
         // 문장을 하나씩 추가하면서 targetSize에 도달하면 분할
         for (const sentence of sentences) {
           // 현재 텍스트 + 새 문장이 목표 크기를 초과하고, 현재 텍스트가 비어있지 않으면
-          if (currentText.length + sentence.length > targetSize && currentText) {
+          if (
+            currentText.length + sentence.length > targetSize &&
+            currentText
+          ) {
             tempSegments.push(currentText.trim()); // 현재까지 누적된 텍스트 저장
             currentText = sentence; // 새 문장으로 시작
           } else {
@@ -243,10 +248,10 @@ export function chunkYouTubeVideoTranscript(
         const actualCount = tempSegments.length;
         if (actualCount > 0) {
           const durationPerSeg = seg.duration / actualCount; // 각 조각의 시간
-          
+
           for (let idx = 0; idx < tempSegments.length; idx++) {
             splitCleaned.push({
-              start: seg.start + (idx * durationPerSeg), // 시작 시간 = 원래 시작 + (인덱스 * 조각 시간)
+              start: seg.start + idx * durationPerSeg, // 시작 시간 = 원래 시작 + (인덱스 * 조각 시간)
               duration: durationPerSeg, // 조각 시간
               text: tempSegments[idx],
             });
@@ -268,7 +273,7 @@ export function chunkYouTubeVideoTranscript(
     tokenCounter &&
     (maxTokens || overlapTokens || minTokens)
   );
-  
+
   // 길이 측정 함수: 토큰 또는 문자
   const lengthOf = (t: string) => (useTokens ? tokenCounter!(t) : t.length);
 
@@ -296,20 +301,20 @@ export function chunkYouTubeVideoTranscript(
   // 청크 생성 함수: 세그먼트 배열을 하나의 청크로 변환
   const pushChunk = (segs: TYouTubeTranscriptStandardSegment[]) => {
     if (!segs.length) return;
-    
+
     // 모든 세그먼트의 텍스트를 공백으로 연결
     const text = segs
       .map((s) => s.text ?? "")
       .join(" ")
       .trim();
     if (!text) return;
-    
+
     // 시작 시간 = 첫 세그먼트의 시작
     const startTime = segs[0].start ?? 0;
     // 끝 시간 = 마지막 세그먼트의 끝
     const last = segs[segs.length - 1];
     const endTime = (last.start ?? 0) + (last.duration ?? 0);
-    
+
     chunks.push({ text, startTime, endTime });
   };
 
@@ -320,7 +325,7 @@ export function chunkYouTubeVideoTranscript(
   ) => {
     const out: TYouTubeTranscriptStandardSegment[] = [];
     let acc = 0; // 누적 길이
-    
+
     // 뒤에서부터 역순으로 순회
     for (let i = segs.length - 1; i >= 0; i--) {
       const t = (segs[i].text ?? "") + " ";
@@ -364,7 +369,7 @@ export function chunkYouTubeVideoTranscript(
       // ========================================
       // 청크 확정 및 겹침 처리
       // ========================================
-      
+
       // 1) 현재 버킷을 청크로 확정
       pushChunk(bucket);
 
@@ -397,7 +402,7 @@ export function chunkYouTubeVideoTranscript(
     const last = chunks[chunks.length - 1];
     const prev = chunks[chunks.length - 2];
     const lastLen = lengthOf(last.text);
-    
+
     // 마지막 청크가 minBudget(400자)의 60%(=240자) 미만이면
     if (lastLen < Math.max(Math.round(minBudget * 0.6), 1)) {
       const merged: TChunkYouTueVideoTranscript = {
@@ -418,7 +423,7 @@ export function chunkYouTubeVideoTranscript(
     for (let i = 0; i < chunks.length; i++) {
       const c = chunks[i];
       const dur = c.endTime - c.startTime; // 청크의 시간 길이
-      
+
       if (dur < minDurationSec) {
         // 이전 청크가 있으면 이전 청크와 병합
         if (i > 0) {
@@ -430,7 +435,7 @@ export function chunkYouTubeVideoTranscript(
           };
           chunks.splice(i, 1); // 현재 청크 제거
           i -= 1; // 인덱스 조정
-        } 
+        }
         // 다음 청크가 있으면 다음 청크와 병합
         else if (i + 1 < chunks.length) {
           const next = chunks[i + 1];
@@ -468,13 +473,17 @@ export function chunkYouTubeVideoTranscript(
   // STEP 10: 최종 검증 (여기에 추가!)
   // ========================================
   // 최대 예산의 1.5배(1200자)를 초과하는 청크가 있으면 경고
-  if (chunks.some(chunk => lengthOf(chunk.text) > maxBudget * 1.5)) {
-    console.warn('⚠️ Some chunks exceed 1.5x maxBudget - consider lowering coalesceMinGroupChars');
+  if (chunks.some((chunk) => lengthOf(chunk.text) > maxBudget * 1.5)) {
+    console.warn(
+      "⚠️ Some chunks exceed 1.5x maxBudget - consider lowering coalesceMinGroupChars",
+    );
     // 디버깅을 위해 초과한 청크 정보 출력
     chunks.forEach((chunk, idx) => {
       const len = lengthOf(chunk.text);
       if (len > maxBudget * 1.5) {
-        console.warn(`  - Chunk ${idx}: ${len} ${useTokens ? 'tokens' : 'chars'} (${chunk.startTime.toFixed(1)}s - ${chunk.endTime.toFixed(1)}s)`);
+        console.warn(
+          `  - Chunk ${idx}: ${len} ${useTokens ? "tokens" : "chars"} (${chunk.startTime.toFixed(1)}s - ${chunk.endTime.toFixed(1)}s)`,
+        );
       }
     });
   }

@@ -10,9 +10,20 @@ import { TRegisterRequestBlogPostData } from "../../../types/shared.js";
  * @param res
  * @returns
  */
-export async function routeCtrlAdminBlogPostRegister(req: Request, res: Response) {
+export async function routeCtrlAdminBlogPostRegister(
+  req: Request,
+  res: Response,
+) {
   try {
-    const { blogPostUrl, title, content, publishedDate, tags, platform, platformUrl } = req.body as TRegisterRequestBlogPostData;
+    const {
+      blogPostUrl,
+      title,
+      content,
+      publishedDate,
+      tags,
+      platform,
+      platformUrl,
+    } = req.body as TRegisterRequestBlogPostData;
 
     // data: {
     //   blog?: {
@@ -26,42 +37,51 @@ export async function routeCtrlAdminBlogPostRegister(req: Request, res: Response
     //   },
     // }
 
-    const result = await HelperContentProcessing.processContent<TRegisterRequestBlogPostData>(
-      { blogPostUrl, title, content, publishedDate, tags, platform, platformUrl }, 
-      {
-        extractKey: (data) => data.blogPostUrl,
-
-        checkExisting: async (postUrl) => {
-          const existingLog =
-            await DBSqlProcessingLogBlogPost.selectByPostUrl(postUrl);
-          return {
-            isProcessing:
-              existingLog.data?.[0]?.processing_status === "processing",
-          };
+    const result =
+      await HelperContentProcessing.processContent<TRegisterRequestBlogPostData>(
+        {
+          blogPostUrl,
+          title,
+          content,
+          publishedDate,
+          tags,
+          platform,
+          platformUrl,
         },
+        {
+          extractKey: (data) => data.blogPostUrl,
 
-        processor: async (data) => {
-          await registerBlogPost(
-            data.blogPostUrl,
-            data.title || "",
-            data.content || "",
-            data.publishedDate,
-            data.tags,
-            data.platform,
-            data.platformUrl,
-          );
+          checkExisting: async (postUrl) => {
+            const existingLog =
+              await DBSqlProcessingLogBlogPost.selectByPostUrl(postUrl);
+            return {
+              isProcessing:
+                existingLog.data?.[0]?.processing_status === "processing",
+            };
+          },
+
+          processor: async (data) => {
+            await registerBlogPost(
+              data.blogPostUrl,
+              data.title || "",
+              data.content || "",
+              data.publishedDate,
+              data.tags,
+              data.platform,
+              data.platformUrl,
+            );
+          },
+
+          createResponse: (postUrl, isAlreadyProcessing) => ({
+            success: true,
+            blogUrl: postUrl,
+            message: isAlreadyProcessing
+              ? "Already processing"
+              : "Processing started",
+            statusUrl: `/api/process-status/blog-post`,
+          }),
         },
-
-        createResponse: (postUrl, isAlreadyProcessing) => ({
-          success: true,
-          blogUrl: postUrl,
-          message: isAlreadyProcessing
-            ? "Already processing"
-            : "Processing started",
-          statusUrl: `/api/process-status/blog-post`,
-        }),
-      }
-    );
+      );
 
     res.json({
       success: result.success,

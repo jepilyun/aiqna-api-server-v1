@@ -1,6 +1,4 @@
-import {
-  LIST_LIMIT,
-} from "aiqna_common_v1";
+import { LIST_LIMIT } from "aiqna_common_v1";
 import { RequestHandler } from "express";
 import { resError, resSuccess } from "../../../utils/response.js";
 import { checkRequiredFieldsAreProvided } from "../../../utils/check-required-fields.js";
@@ -11,19 +9,10 @@ import DBSqlText from "../../../db-ctrl/db-ctrl-sql/db-sql-text.js";
  * Text 목록 조회
  * @route GET /api/admin/text/list/:start
  */
-export const routeCtrlAdminTextList: RequestHandler = async (
-  req,
-  res,
-) => {
+export const routeCtrlAdminTextList: RequestHandler = async (req, res) => {
   const { start } = req.params;
 
-  if (
-    !checkRequiredFieldsAreProvided(
-      start,
-      MSG_TEXT.error.no_start,
-      res,
-    )
-  ) {
+  if (!checkRequiredFieldsAreProvided(start, MSG_TEXT.error.no_start, res)) {
     return;
   }
 
@@ -39,4 +28,3 @@ export const routeCtrlAdminTextList: RequestHandler = async (
     return;
   }
 };
-

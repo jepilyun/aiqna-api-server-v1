@@ -7,7 +7,6 @@ import { routeCtrlAdminInstagramPostUpdate } from "../route-ctrl/route-ctrl-admi
 
 const router = express.Router();
 
-
 // Instagram Post List
 router.get(
   "/list/:start",
@@ -35,7 +34,6 @@ router.put(
   // adminAuthMiddleware,
   routeCtrlAdminInstagramPostUpdate,
 );
-
 
 // Instagram Post Processing List
 // router.get(
@@ -65,8 +63,4 @@ router.put(
 //   routeCtrlAdminProcessingInstagramPostUpdate,
 // );
 
-
-
-
 export default router;
-

@@ -144,7 +144,9 @@ export default class DBSqlYoutubeVideo {
         .single<string>(); // ✅ 문자열로 받기
 
       if (error) {
-        throw new Error(`#1 Youtube 비디오 Upsert 중 오류 발생 >>> ${error.message}`);
+        throw new Error(
+          `#1 Youtube 비디오 Upsert 중 오류 발생 >>> ${error.message}`,
+        );
       }
 
       // video_id를 문자열로 반환받음

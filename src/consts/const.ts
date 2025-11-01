@@ -1,6 +1,5 @@
 import { EMBEDDING_MODEL, PINECONE_INDEX_NAME } from "aiqna_common_v1";
 
-
 /**
  * Request Create Content Type Enum
  */
@@ -15,10 +14,10 @@ export enum ERequestCreateContentType {
  * Request Processing Status Enum
  */
 export enum EProcessingStatusType {
-  pending = "pending", 
-  processing = "processing", 
-  completed = "completed", 
-  failed = "failed"
+  pending = "pending",
+  processing = "processing",
+  completed = "completed",
+  failed = "failed",
 }
 
 /**

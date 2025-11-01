@@ -15,19 +15,13 @@ export const routeCtrlAdminBlogPostDetail: RequestHandler = async (
   const { uuid36 } = req.params;
 
   if (
-    !checkRequiredFieldsAreProvided(
-      uuid36,
-      MSG_BLOG_POST.error.no_uuid36,
-      res,
-    )
+    !checkRequiredFieldsAreProvided(uuid36, MSG_BLOG_POST.error.no_uuid36, res)
   ) {
     return;
   }
 
   try {
-    const dbResponse = await DBSqlBlogPost.selectByUuid36(
-      uuid36,
-    );
+    const dbResponse = await DBSqlBlogPost.selectByUuid36(uuid36);
     resSuccess(res, MSG_BLOG_POST.get_detail.success, null, 200, dbResponse);
     return;
   } catch (error: unknown) {

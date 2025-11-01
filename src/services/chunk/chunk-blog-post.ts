@@ -30,9 +30,15 @@ export function chunkBlogPostContent(
   if (!content || content.trim().length === 0) return [];
 
   // ✅ 전처리: 여기서 만든 text를 아래에서 실제로 사용
-  const text = cleanText ? content.replace(/\u00A0/g, " ").replace(/\s+/g, " ").trim() : content;
+  const text = cleanText
+    ? content
+        .replace(/\u00A0/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+    : content;
 
-  const useTokens = !!tokenCounter && !!(maxTokens || overlapTokens || minTokens);
+  const useTokens =
+    !!tokenCounter && !!(maxTokens || overlapTokens || minTokens);
   const lengthOf = (t: string) => (useTokens ? tokenCounter!(t) : t.length);
 
   const maxBudget = useTokens ? (maxTokens ?? 700) : maxChars;

@@ -11,7 +11,10 @@ import { PROVIDER_CONFIGS } from "../../consts/const.js";
 import DBPinecone from "../../db-ctrl/db-ctrl-pinecone/db-pinecone.js";
 import { ContentKeyManager } from "../../utils/content-key-manager.js";
 import { ERequestCreateContentType } from "../../consts/const.js";
-import { safeForEmbedding, toSnippet } from "../../utils/chunk-embedding-utils.js";
+import {
+  safeForEmbedding,
+  toSnippet,
+} from "../../utils/chunk-embedding-utils.js";
 
 // === 1) 유틸: 문장 단위로 자르고, maxChars/overlapChars/maxDurationSec 강제 ===
 type BaseChunk = { text: string; startTime: number; endTime: number };
@@ -20,7 +23,7 @@ function splitBySentences(text: string): string[] {
   // . ! ? 기준 대략적 분할 (필요하면 더 정교한 splitter로 교체)
   return text
     .split(/(?<=[.!?])\s+(?=[A-Z가-힣0-9])/g)
-    .map(s => s.trim())
+    .map((s) => s.trim())
     .filter(Boolean);
 }
 
@@ -31,7 +34,7 @@ function normalizeChunks(
     overlapChars?: number;
     maxDurationSec?: number;
     minChars?: number;
-  }
+  },
 ): BaseChunk[] {
   const maxChars = Math.max(200, opts.maxChars);
   const overlapChars = Math.max(0, opts.overlapChars ?? 0);
@@ -57,7 +60,8 @@ function normalizeChunks(
     let curStart = c.startTime;
     let curEnd = c.startTime;
     const totalDur = Math.max(0, dur);
-    const secPerChar = totalDur > 0 && c.text.length > 0 ? totalDur / c.text.length : 0;
+    const secPerChar =
+      totalDur > 0 && c.text.length > 0 ? totalDur / c.text.length : 0;
 
     const pushBuf = () => {
       const text = buf.trim();
@@ -140,9 +144,8 @@ function normalizeChunks(
   return out;
 }
 
-
 /**
- * Save YouTube Transcripts to Pinecone 
+ * Save YouTube Transcripts to Pinecone
  * @param transcripts
  * @param vectorMetadata
  */
@@ -205,12 +208,13 @@ export async function saveYouTubeTranscriptsToPinecone(
           let chunkMetadata: TAnalyzedContentMetadata | null = null;
 
           try {
-            chunkMetadata = await metadataExtractor.generateMetadataFromFullTranscript(
-              transcript.videoId,
-              vectorMetadata.title ?? "",
-              chunk.text,
-              transcript.language,
-            );
+            chunkMetadata =
+              await metadataExtractor.generateMetadataFromFullTranscript(
+                transcript.videoId,
+                vectorMetadata.title ?? "",
+                chunk.text,
+                transcript.language,
+              );
 
             if (idx < 2) {
               console.log(`→ Metadata:`, {
@@ -228,22 +232,25 @@ export async function saveYouTubeTranscriptsToPinecone(
 
           const chunkId = ContentKeyManager.createChunkId(contentKey, idx);
 
-          const metadata: Record<string, string | number | boolean | string[]> = {
-            video_id: transcript.videoId,
-            title: vectorMetadata.title ?? "",
-            type: "transcript", // 🔥 검색 필터용
-            content_type: "youtube_video_transcript",
-            language: transcript.language,
-            chunk_index: idx,
-            chunk_id: chunkId,
-            start_time: chunk.startTime,
-            end_time: chunk.endTime,
-            text: toSnippet(chunk.text),
-            text_length: chunk.text.length,
-            embedding_model: PROVIDER_CONFIGS.openai.model,
-            embedding_dimensions: provider.getDimensions(PROVIDER_CONFIGS.openai.model),
-            created_at: new Date().toISOString(),
-          };
+          const metadata: Record<string, string | number | boolean | string[]> =
+            {
+              video_id: transcript.videoId,
+              title: vectorMetadata.title ?? "",
+              type: "transcript", // 🔥 검색 필터용
+              content_type: "youtube_video_transcript",
+              language: transcript.language,
+              chunk_index: idx,
+              chunk_id: chunkId,
+              start_time: chunk.startTime,
+              end_time: chunk.endTime,
+              text: toSnippet(chunk.text),
+              text_length: chunk.text.length,
+              embedding_model: PROVIDER_CONFIGS.openai.model,
+              embedding_dimensions: provider.getDimensions(
+                PROVIDER_CONFIGS.openai.model,
+              ),
+              created_at: new Date().toISOString(),
+            };
 
           // 기존 비디오 메타데이터
           if (vectorMetadata.channel_title)
@@ -254,7 +261,8 @@ export async function saveYouTubeTranscriptsToPinecone(
             metadata.published_at = vectorMetadata.published_date;
           if (vectorMetadata.thumbnail_url)
             metadata.thumbnail_url = vectorMetadata.thumbnail_url;
-          if (vectorMetadata.duration) metadata.duration = vectorMetadata.duration;
+          if (vectorMetadata.duration)
+            metadata.duration = vectorMetadata.duration;
           if (vectorMetadata.view_count)
             metadata.view_count = vectorMetadata.view_count;
           if (vectorMetadata.like_count)
@@ -296,7 +304,10 @@ export async function saveYouTubeTranscriptsToPinecone(
     console.log(`[${PROVIDER_CONFIGS.openai.type}] ✓ Success`);
     return { provider: PROVIDER_CONFIGS.openai.type, status: "success" };
   } catch (error) {
-    console.error(`[${PROVIDER_CONFIGS.openai.type}] ✗ Failed:`, (error as Error).message);
+    console.error(
+      `[${PROVIDER_CONFIGS.openai.type}] ✗ Failed:`,
+      (error as Error).message,
+    );
     return { provider: PROVIDER_CONFIGS.openai.type, status: "error", error };
   }
 }

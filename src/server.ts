@@ -9,6 +9,10 @@ import routesApiAdminBlogPost from "./router/router-api-admin-blog-post.js";
 import routesApiAdminText from "./router/router-api-admin-text.js";
 import routesApiAdminVector from "./router/router-api-admin-vector.js";
 import routesApiUser from "./router/router-api-user.js";
+import routesApiAdminProcessingStatusYouTubeVideo from "./router/router-api-admin-processing-status-youtube-video.js";
+import routesApiAdminProcessingStatusInstagramPost from "./router/router-api-admin-processing-status-instagram-post.js";
+import routesApiAdminProcessingStatusBlogPost from "./router/router-api-admin-processing-status-blog-post.js";
+import routesApiAdminProcessingStatusText from "./router/router-api-admin-processing-status-text.js";
 import { workerStartYouTubeVideo } from "./worker/worker-start-youtube-video.js";
 
 dotenv.config();
@@ -32,16 +36,28 @@ app.use(
 app.use(express.json());
 
 app.use("/api/admin/youtube-video", routesApiAdminYouTubeVideo);
-// app.use("/api/admin/processing-status/youtube-video", routesApiAdminProcessingStatusYouTubeVideo);
+app.use(
+  "/api/admin/processing-status/youtube-video",
+  routesApiAdminProcessingStatusYouTubeVideo,
+);
 
 app.use("/api/admin/instagram", routesApiAdminInstagramPost);
-// app.use("/api/admin/processing-status/instagram", routesApiAdminProcessingStatusInstagramPost);
+app.use(
+  "/api/admin/processing-status/instagram",
+  routesApiAdminProcessingStatusInstagramPost,
+);
 
 app.use("/api/admin/blog", routesApiAdminBlogPost);
-// app.use("/api/admin/processing-status/blog", routesApiAdminProcessingStatusBlogPost);
+app.use(
+  "/api/admin/processing-status/blog",
+  routesApiAdminProcessingStatusBlogPost,
+);
 
 app.use("/api/admin/text", routesApiAdminText);
-// app.use("/api/admin/processing-status/text", routesApiAdminProcessingStatusText);
+app.use(
+  "/api/admin/processing-status/text",
+  routesApiAdminProcessingStatusText,
+);
 
 app.use("/api/admin/ask", routesApiAdminAiAsk);
 app.use("/api/admin/vector", routesApiAdminVector);

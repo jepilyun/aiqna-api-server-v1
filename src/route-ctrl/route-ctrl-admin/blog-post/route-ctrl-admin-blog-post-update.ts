@@ -17,20 +17,13 @@ export const routeCtrlAdminBlogPostUpdate: RequestHandler = async (
   const updateData = req.body as TSqlBlogPostDetailUpdate;
 
   if (
-    !checkRequiredFieldsAreProvided(
-      uuid36,
-      MSG_BLOG_POST.error.no_uuid36,
-      res,
-    )
+    !checkRequiredFieldsAreProvided(uuid36, MSG_BLOG_POST.error.no_uuid36, res)
   ) {
     return;
   }
 
   try {
-    const dbResponse = await DBSqlBlogPost.updateByUuid36(
-      uuid36,
-      updateData,
-    );
+    const dbResponse = await DBSqlBlogPost.updateByUuid36(uuid36, updateData);
     resSuccess(res, MSG_BLOG_POST.update.success, null, 200, dbResponse);
     return;
   } catch (error: unknown) {

@@ -26,7 +26,6 @@ export type TProcessingConfig<T> = {
   };
 };
 
-
 export type TProcessResult = {
   success: boolean;
   uniqueKey: string;
@@ -64,7 +63,8 @@ export class HelperContentProcessing {
         uniqueKey: key,
         status: "already_processing",
         message: typeof resp.message === "string" ? resp.message : undefined,
-        statusUrl: typeof resp.statusUrl === "string" ? resp.statusUrl : undefined,
+        statusUrl:
+          typeof resp.statusUrl === "string" ? resp.statusUrl : undefined,
       };
     }
 
@@ -80,7 +80,8 @@ export class HelperContentProcessing {
       uniqueKey: key,
       status: "queued",
       message: typeof resp.message === "string" ? resp.message : undefined,
-      statusUrl: typeof resp.statusUrl === "string" ? resp.statusUrl : undefined,
+      statusUrl:
+        typeof resp.statusUrl === "string" ? resp.statusUrl : undefined,
     };
   }
 

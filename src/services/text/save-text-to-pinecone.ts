@@ -83,7 +83,8 @@ export async function saveTextToPinecone(
           content: chunk.text, // ✅ 각 청크의 실제 텍스트 사용
         };
 
-        extractedMetadata = await metadataExtractor.generateMetadataFromText(chunkData);
+        extractedMetadata =
+          await metadataExtractor.generateMetadataFromText(chunkData);
 
         if (idx < 2) {
           console.log(`   Metadata:`, {

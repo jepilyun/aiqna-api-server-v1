@@ -25,10 +25,14 @@ export const routeCtrlAdminYouTubeVideoDetail: RequestHandler = async (
   }
 
   try {
-    const dbResponse = await DBSqlYoutubeVideo.selectByVideoId(
-      videoId,
+    const dbResponse = await DBSqlYoutubeVideo.selectByVideoId(videoId);
+    resSuccess(
+      res,
+      MSG_YOUTUBE_VIDEO.get_detail.success,
+      null,
+      200,
+      dbResponse,
     );
-    resSuccess(res, MSG_YOUTUBE_VIDEO.get_detail.success, null, 200, dbResponse);
     return;
   } catch (error: unknown) {
     resError(res, error, MSG_YOUTUBE_VIDEO.get_detail.error, null, 500);

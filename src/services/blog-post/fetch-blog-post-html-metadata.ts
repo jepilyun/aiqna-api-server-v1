@@ -36,25 +36,24 @@ export const fetchBlogPostHTMLMetadata = async (
         // 필수
         platform: "Windows",
         platformVersion: "10.0.0",
-        architecture: "x86",   // 또는 "x86_64"
-        model: "",             // 데스크톱이므로 공란
+        architecture: "x86", // 또는 "x86_64"
+        model: "", // 데스크톱이므로 공란
         mobile: false,
-    
+
         // 선택(버전에 따라 요구될 수도 있어 넉넉히 채우면 안전)
         brands: [
           { brand: "Chromium", version: "120" },
-          { brand: "Google Chrome", version: "120" }
+          { brand: "Google Chrome", version: "120" },
         ],
         fullVersionList: [
           { brand: "Chromium", version: "120.0.0.0" },
-          { brand: "Google Chrome", version: "120.0.0.0" }
+          { brand: "Google Chrome", version: "120.0.0.0" },
         ],
         bitness: "64",
-        wow64: false
+        wow64: false,
       },
       // 일부 버전에서는 platform 옵션도 지원하지만, 위의 metadata.platform으로 충분합니다.
     });
-    
 
     await page.setExtraHTTPHeaders({
       "Accept-Language": "en-US,en;q=0.9",

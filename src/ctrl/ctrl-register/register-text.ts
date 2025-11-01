@@ -69,7 +69,6 @@ export async function registerText(
   }
 }
 
-
 /**
  * Create New Text
  * 새로운 텍스트 데이터 생성 및 DB 저장

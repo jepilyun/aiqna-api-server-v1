@@ -1,6 +1,4 @@
-import {
-  LIST_LIMIT,
-} from "aiqna_common_v1";
+import { LIST_LIMIT } from "aiqna_common_v1";
 import { RequestHandler } from "express";
 import { resError, resSuccess } from "../../../utils/response.js";
 import { MSG_YOUTUBE_VIDEO } from "../../../consts/msg/msg-youtube-video.js";

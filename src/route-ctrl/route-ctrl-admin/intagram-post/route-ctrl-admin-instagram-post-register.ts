@@ -16,7 +16,14 @@ export async function routeCtrlAdminInstagramPostRegister(
   res: Response,
 ) {
   try {
-    const { instagramPostUrl, description, tags, userId, userProfileUrl, publishedDate } = req.body as TRegisterRequestInstagramPostData;
+    const {
+      instagramPostUrl,
+      description,
+      tags,
+      userId,
+      userProfileUrl,
+      publishedDate,
+    } = req.body as TRegisterRequestInstagramPostData;
 
     // data: {
     //   instagram?: {
@@ -29,41 +36,51 @@ export async function routeCtrlAdminInstagramPostRegister(
     //   },
     // }
 
-    const result = await HelperContentProcessing.processContent<TRegisterRequestInstagramPostData>(
-      { instagramPostUrl, description, tags, userId, userProfileUrl, publishedDate }, 
-      {
-        extractKey: (data) => data.instagramPostUrl,
-
-        checkExisting: async (instagramPostUrl) => {
-          const existingLog =
-            await DBSqlProcessingLogInstagramPost.selectByPostUrl(instagramPostUrl);
-          return {
-            isProcessing:
-              existingLog.data?.[0]?.processing_status === "processing",
-          };
+    const result =
+      await HelperContentProcessing.processContent<TRegisterRequestInstagramPostData>(
+        {
+          instagramPostUrl,
+          description,
+          tags,
+          userId,
+          userProfileUrl,
+          publishedDate,
         },
+        {
+          extractKey: (data) => data.instagramPostUrl,
 
-        processor: async (data) => {
-          await registerInstagramPost(
-            data.instagramPostUrl,
-            data.description,
-            data.userId,
-            data.userProfileUrl,
-            data.publishedDate,
-            data.tags,
-          );
+          checkExisting: async (instagramPostUrl) => {
+            const existingLog =
+              await DBSqlProcessingLogInstagramPost.selectByPostUrl(
+                instagramPostUrl,
+              );
+            return {
+              isProcessing:
+                existingLog.data?.[0]?.processing_status === "processing",
+            };
+          },
+
+          processor: async (data) => {
+            await registerInstagramPost(
+              data.instagramPostUrl,
+              data.description,
+              data.userId,
+              data.userProfileUrl,
+              data.publishedDate,
+              data.tags,
+            );
+          },
+
+          createResponse: (instagramPostUrl, isAlreadyProcessing) => ({
+            success: true,
+            instagramUrl: instagramPostUrl,
+            message: isAlreadyProcessing
+              ? "Already processing"
+              : "Processing started",
+            statusUrl: `/api/process-status/instagram-post`,
+          }),
         },
-
-        createResponse: (instagramPostUrl, isAlreadyProcessing) => ({
-          success: true,
-          instagramUrl: instagramPostUrl,
-          message: isAlreadyProcessing
-            ? "Already processing"
-            : "Processing started",
-          statusUrl: `/api/process-status/instagram-post`,
-        }),
-      }
-    );
+      );
 
     res.json({
       success: result.success,

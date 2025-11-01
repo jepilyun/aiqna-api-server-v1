@@ -25,10 +25,14 @@ export const routeCtrlAdminInstagramPostDetail: RequestHandler = async (
   }
 
   try {
-    const dbResponse = await DBSqlInstagramPost.selectByUuid36(
-      uuid36,
+    const dbResponse = await DBSqlInstagramPost.selectByUuid36(uuid36);
+    resSuccess(
+      res,
+      MSG_INSTAGRAM_POST.get_detail.success,
+      null,
+      200,
+      dbResponse,
     );
-    resSuccess(res, MSG_INSTAGRAM_POST.get_detail.success, null, 200, dbResponse);
     return;
   } catch (error: unknown) {
     resError(res, error, MSG_INSTAGRAM_POST.get_detail.error, null, 500);

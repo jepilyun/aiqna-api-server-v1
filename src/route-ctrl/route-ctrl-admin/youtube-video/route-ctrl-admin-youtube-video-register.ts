@@ -13,7 +13,10 @@ import { MSG_YOUTUBE_VIDEO } from "../../../consts/msg/msg-youtube-video.js";
  * @param res
  * @returns
  */
-export async function routeCtrlAdminYouTubeVideoRegister(req: Request, res: Response) {
+export async function routeCtrlAdminYouTubeVideoRegister(
+  req: Request,
+  res: Response,
+) {
   try {
     const { videoId, isShorts } = req.body as TRegisterRequestYouTubeVideoData;
     const extractedVideoId = HelperYouTube.extractVideoId(videoId);
@@ -23,35 +26,39 @@ export async function routeCtrlAdminYouTubeVideoRegister(req: Request, res: Resp
     }
 
     // 공통 헬퍼 사용
-    const result = await HelperContentProcessing.processContent<TRegisterRequestYouTubeVideoData>(
-      { videoId, isShorts },
-      {
-        extractKey: (item) => item.videoId,
+    const result =
+      await HelperContentProcessing.processContent<TRegisterRequestYouTubeVideoData>(
+        { videoId, isShorts },
+        {
+          extractKey: (item) => item.videoId,
 
-        checkExisting: async (videoId) => {
-          const existingLog =
-            await DBSqlProcessingLogYoutubeVideo.selectByVideoId(videoId);
-          return {
-            isProcessing:
-              existingLog.data?.[0]?.processing_status === "processing",
-            data: existingLog.data?.[0],
-          };
+          checkExisting: async (videoId) => {
+            const existingLog =
+              await DBSqlProcessingLogYoutubeVideo.selectByVideoId(videoId);
+            return {
+              isProcessing:
+                existingLog.data?.[0]?.processing_status === "processing",
+              data: existingLog.data?.[0],
+            };
+          },
+
+          processor: async (item) => {
+            await registerYouTubeVideo({
+              videoId: item.videoId,
+              isShorts: item.isShorts,
+            });
+          },
+
+          createResponse: (videoId, isAlreadyProcessing) => ({
+            success: true,
+            videoId,
+            message: isAlreadyProcessing
+              ? "Already processing"
+              : "Processing started",
+            statusUrl: `/api/process-status/youtube-video/${videoId}`,
+          }),
         },
-
-        processor: async (item) => {
-          await registerYouTubeVideo({ videoId: item.videoId, isShorts: item.isShorts });
-        },
-
-        createResponse: (videoId, isAlreadyProcessing) => ({
-          success: true,
-          videoId,
-          message: isAlreadyProcessing
-            ? "Already processing"
-            : "Processing started",
-          statusUrl: `/api/process-status/youtube-video/${videoId}`,
-        }),
-      },
-    );
+      );
 
     res.json({
       success: result.success,

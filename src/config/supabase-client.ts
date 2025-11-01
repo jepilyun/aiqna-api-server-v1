@@ -6,7 +6,7 @@ dotenv.config();
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAPIKeyServiceRole = process.env.SUPABASE_SERVICE_ROLE;
 
-export const BUCKET_TRANSCRIPT = "transcripts"; 
+export const BUCKET_TRANSCRIPT = "transcripts";
 
 /**
  * Supabase 클라이언트 생성

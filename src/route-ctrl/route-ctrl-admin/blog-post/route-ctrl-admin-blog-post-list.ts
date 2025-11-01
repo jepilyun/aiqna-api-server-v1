@@ -1,6 +1,4 @@
-import {
-  LIST_LIMIT,
-} from "aiqna_common_v1";
+import { LIST_LIMIT } from "aiqna_common_v1";
 import { RequestHandler } from "express";
 import { resError, resSuccess } from "../../../utils/response.js";
 import { checkRequiredFieldsAreProvided } from "../../../utils/check-required-fields.js";
@@ -11,18 +9,11 @@ import DBSqlBlogPost from "../../../db-ctrl/db-ctrl-sql/db-sql-blog-post.js";
  * Blog Post 목록 조회
  * @route GET /api/admin/blog-post/list/:start
  */
-export const routeCtrlAdminBlogPostList: RequestHandler = async (
-  req,
-  res,
-) => {
+export const routeCtrlAdminBlogPostList: RequestHandler = async (req, res) => {
   const { start } = req.params;
 
   if (
-    !checkRequiredFieldsAreProvided(
-      start,
-      MSG_BLOG_POST.error.no_start,
-      res,
-    )
+    !checkRequiredFieldsAreProvided(start, MSG_BLOG_POST.error.no_start, res)
   ) {
     return;
   }

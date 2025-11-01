@@ -4,13 +4,16 @@ export function pastelColorFromSeed(seed: string = "default"): string {
   // 간단 해시 → 0~360 hue
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) % 360;
-  const s = 55;  // 낮은 채도(파스텔)
-  const l = 78;  // 높은 명도(파스텔)
+  const s = 55; // 낮은 채도(파스텔)
+  const l = 78; // 높은 명도(파스텔)
   return `hsl(${h} ${s}% ${l}%)`; // CSS hsl() 포맷
 }
 
 // HEX/HSL/RGB 상관없이 받아서 가독성 좋은 글자색(검/흰) 반환
-export function readableTextColor(bg: string, fallback: string = "#111827"): string {
+export function readableTextColor(
+  bg: string,
+  fallback: string = "#111827",
+): string {
   try {
     const { r, g, b } = toRGB(bg);
     // WCAG 상대 휘도 기반 간단 판정
@@ -25,7 +28,9 @@ function toRGB(input: string): { r: number; g: number; b: number } {
   const s = input.trim().toLowerCase();
 
   // hsl(h s% l%) 또는 hsl(h, s%, l%)
-  const hslMatch = s.match(/hsl\(\s*([\d.]+)[,\s]+([\d.]+)%[,\s]+([\d.]+)%\s*\)/);
+  const hslMatch = s.match(
+    /hsl\(\s*([\d.]+)[,\s]+([\d.]+)%[,\s]+([\d.]+)%\s*\)/,
+  );
   if (hslMatch) {
     const h = parseFloat(hslMatch[1]);
     const S = parseFloat(hslMatch[2]) / 100;
@@ -34,7 +39,9 @@ function toRGB(input: string): { r: number; g: number; b: number } {
     const C = (1 - Math.abs(2 * L - 1)) * S;
     const X = C * (1 - Math.abs(((h / 60) % 2) - 1));
     const m = L - C / 2;
-    let r1 = 0, g1 = 0, b1 = 0;
+    let r1 = 0,
+      g1 = 0,
+      b1 = 0;
     if (0 <= h && h < 60) [r1, g1, b1] = [C, X, 0];
     else if (60 <= h && h < 120) [r1, g1, b1] = [X, C, 0];
     else if (120 <= h && h < 180) [r1, g1, b1] = [0, C, X];
@@ -75,8 +82,14 @@ function toRGB(input: string): { r: number; g: number; b: number } {
 }
 
 function getLuminance(r: number, g: number, b: number): number {
-  const srgb = [r, g, b].map(v => v / 255).map(v => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)));
+  const srgb = [r, g, b]
+    .map((v) => v / 255)
+    .map((v) =>
+      v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4),
+    );
   return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
 }
 
-function clamp255(n: number) { return Math.max(0, Math.min(255, Math.round(n))); }
+function clamp255(n: number) {
+  return Math.max(0, Math.min(255, Math.round(n)));
+}

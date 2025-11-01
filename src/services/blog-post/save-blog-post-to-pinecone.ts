@@ -51,7 +51,7 @@ export async function saveBlogPostToPinecone(
     maxChars: 800, // ✅ 800자로 줄임
     overlapChars: 100, // ✅ 100자로 줄임
   });
-console.log(`chunks:>>>>>>>>>>`, chunks);
+  console.log(`chunks:>>>>>>>>>>`, chunks);
   console.log(
     `📦 Created ${chunks.length} chunks for ${blogPost.blog_post_url}`,
   );

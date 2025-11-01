@@ -18,7 +18,8 @@ export const MSG_BLOG_POST = {
     error_no_blog_post_url: "[ERROR] Register Blog Post No Blog Post URL",
     error: "[ERROR] Register Blog Post",
     success: "[SUCCESS] Register Blog Post",
-    error_blog_post_url_duplicate: "[ERROR] Register Blog Post Blog Post URL Duplicate",
+    error_blog_post_url_duplicate:
+      "[ERROR] Register Blog Post Blog Post URL Duplicate",
   },
   get_detail: {
     error: "[ERROR] Get Blog Post Detail",

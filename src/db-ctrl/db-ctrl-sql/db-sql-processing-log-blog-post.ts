@@ -89,6 +89,38 @@ export default class DBSqlProcessingLogBlogPost {
   }
 
   /**
+   * blog_post_url로 블로그 포스트 처리 로그 조회
+   * @param postUrl 블로그 포스트 URL
+   * @returns 블로그 포스트 처리 로그 목록과 총 개수
+   */
+  static async selectById(
+    id: number,
+  ): Promise<ResponseDBSelect<TSqlProcessingLogBlogPost[]>> {
+    try {
+      const { data, error, count } = await supabaseClient
+        .from(SQL_DB_TABLE.blog_post_processing_logs)
+        .select("*", { count: "exact" })
+        .eq(F_PROCESSING_LOG_BLOG_POST.id.id, id)
+        .overrideTypes<TSqlProcessingLogBlogPost[]>();
+
+      if (error) {
+        throw new Error(
+          `#1 블로그 포스트 처리 로그 조회(SELECT By Id) 중 오류 발생 >>> ${error.message}`,
+        );
+      }
+
+      return { data: data || [], count: count || 0 };
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(
+        "#3 블로그 포스트 처리 로그 조회(SELECT By Id) 중 알 수 없는 오류가 발생했습니다.",
+      );
+    }
+  }
+
+  /**
    * processing_status로 블로그 포스트 처리 로그 목록 조회
    * @param status 처리 상태 (pending, processing, completed, failed)
    * @param start 시작 인덱스
@@ -237,6 +269,41 @@ export default class DBSqlProcessingLogBlogPost {
   }
 
   /**
+   * 블로그 포스트 처리 로그 수정 기능
+   * @param id 블로그 포스트 URL
+   * @param updateData 수정할 블로그 포스트 처리 로그 정보
+   * @returns 블로그 포스트 처리 로그 정보
+   */
+  static async updateById(
+    id: number,
+    updateData: TSqlProcessingLogBlogPostUpdate,
+  ): Promise<ResponseDBSelect<TSqlProcessingLogBlogPost[]>> {
+    try {
+      const { data, error } = await supabaseClient
+        .from(SQL_DB_TABLE.blog_post_processing_logs)
+        .update(updateData)
+        .eq(F_PROCESSING_LOG_BLOG_POST.id.id, id)
+        .select()
+        .overrideTypes<TSqlProcessingLogBlogPost[]>();
+
+      if (error) {
+        throw new Error(
+          `#1 블로그 포스트 처리 로그 정보 수정(UPDATE By Id) 중 오류 발생 >>> ${error.message}`,
+        );
+      }
+
+      return { data: data || [] };
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(
+        "#3 블로그 포스트 처리 로그 정보 수정(UPDATE By Id) 중 알 수 없는 오류가 발생했습니다.",
+      );
+    }
+  }
+
+  /**
    * 블로그 포스트 처리 로그 삭제 기능
    * @param postUrl 블로그 포스트 URL
    * @returns 삭제된 블로그 포스트 처리 로그 정보
@@ -265,6 +332,39 @@ export default class DBSqlProcessingLogBlogPost {
       }
       throw new Error(
         "#3 블로그 포스트 처리 로그 정보 삭제(DELETE) 중 알 수 없는 오류가 발생했습니다.",
+      );
+    }
+  }
+
+  /**
+   * 블로그 포스트 처리 로그 삭제 기능
+   * @param id 블로그 포스트 URL
+   * @returns 삭제된 블로그 포스트 처리 로그 정보
+   */
+  static async deleteById(
+    id: number,
+  ): Promise<ResponseDBSelect<TSqlProcessingLogBlogPost[]>> {
+    try {
+      const { data, error } = await supabaseClient
+        .from(SQL_DB_TABLE.blog_post_processing_logs)
+        .delete()
+        .eq(F_PROCESSING_LOG_BLOG_POST.id.id, id)
+        .select()
+        .overrideTypes<TSqlProcessingLogBlogPost[]>();
+
+      if (error) {
+        throw new Error(
+          `#1 블로그 포스트 처리 로그 정보 삭제(DELETE By Id) 중 오류 발생 >>> ${error.message}`,
+        );
+      }
+
+      return { data: data || [] };
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(
+        "#3 블로그 포스트 처리 로그 정보 삭제(DELETE By Id) 중 알 수 없는 오류가 발생했습니다.",
       );
     }
   }

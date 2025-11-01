@@ -13,8 +13,7 @@ import supabaseClient from "../../../config/supabase-client.js";
 import pineconeClient from "../../../config/pinecone-client.js";
 import { HelperYouTube } from "../../../utils/helper-youtube.js";
 
-
-/* 
+/*
  * =========================
  * Types
  * =========================
@@ -54,36 +53,34 @@ type TPineconeHit<M extends IPineconeVectorMetadataBase> = {
 /**
  * =========================
  *  Type Guards
- * ========================= 
+ * =========================
  */
 function isVideoMetadata(
-  metadata: IPineconeVectorMetadataBase
+  metadata: IPineconeVectorMetadataBase,
 ): metadata is IPineconeVectorMetadataForVideo {
-  return metadata.type === 'video' || 'video_id' in metadata;
+  return metadata.type === "video" || "video_id" in metadata;
 }
 
 function isInstagramMetadata(
-  metadata: IPineconeVectorMetadataBase
+  metadata: IPineconeVectorMetadataBase,
 ): metadata is IPineconeVectorMetadataForInstagramPost {
-  return metadata.type === 'instagram' || 'instagram_post_url' in metadata;
+  return metadata.type === "instagram" || "instagram_post_url" in metadata;
 }
 
 function isBlogMetadata(
-  metadata: IPineconeVectorMetadataBase
+  metadata: IPineconeVectorMetadataBase,
 ): metadata is IPineconeVectorMetadataForBlogPost {
-  return metadata.type === 'blog' || 'blog_post_url' in metadata;
+  return metadata.type === "blog" || "blog_post_url" in metadata;
 }
 
-
-/** 
+/**
  * =========================
  *  Helpers
- * ========================= 
+ * =========================
  */
 const EMBED_MODEL = process.env.EMBEDDING_MODEL ?? "text-embedding-3-small";
 const EMBED_DIM = Number(process.env.EMBEDDING_DIM ?? "512");
 const MODEL_SUPPORTS_DIM = /^text-embedding-3-/.test(EMBED_MODEL);
-
 
 /**
  * embed
@@ -109,7 +106,6 @@ async function embed(text: string): Promise<number[]> {
 
   return vec;
 }
-
 
 /**
  * buildRagPrompt
@@ -164,10 +160,10 @@ async function generateAnswer(
   return r.choices[0]?.message?.content?.trim() ?? "";
 }
 
-/** 
+/**
  * =========================
  *  Controller
- * ========================= 
+ * =========================
  */
 export async function routeCtrlAdminAiAsk(req: Request, res: Response) {
   try {
@@ -238,16 +234,16 @@ export async function routeCtrlAdminAiAsk(req: Request, res: Response) {
     }
 
     // 6) 비디오 메타데이터만 필터링하여 조회
-    const videoMatches = matches.filter((m) => 
-      m.metadata && isVideoMetadata(m.metadata)
+    const videoMatches = matches.filter(
+      (m) => m.metadata && isVideoMetadata(m.metadata),
     );
 
     const videoIds = Array.from(
       new Set(
         videoMatches
           .map((m) => (m.metadata as IPineconeVectorMetadataForVideo).video_id)
-          .filter((v): v is string => typeof v === "string" && v.length > 0)
-      )
+          .filter((v): v is string => typeof v === "string" && v.length > 0),
+      ),
     );
 
     let videos: TSqlYoutubeVideoDetail[] = [];
@@ -295,8 +291,9 @@ export async function routeCtrlAdminAiAsk(req: Request, res: Response) {
           source,
         };
       })
-      .filter((c): c is { text: string; source: string } => 
-        c !== null && c.text.length > 0
+      .filter(
+        (c): c is { text: string; source: string } =>
+          c !== null && c.text.length > 0,
       );
 
     if (!topContexts.length) {
@@ -306,18 +303,18 @@ export async function routeCtrlAdminAiAsk(req: Request, res: Response) {
           "Found relevant content but couldn't extract text. Please check the sources directly.",
         sources: matches.map((m) => {
           if (!m.metadata) return { id: m.id, score: m.score };
-          
+
           if (isVideoMetadata(m.metadata)) {
             return {
               id: m.id,
               score: m.score,
-              type: 'video',
+              type: "video",
               videoId: m.metadata.video_id,
               start: m.metadata.video_start_time,
               end: m.metadata.video_end_time,
             };
           }
-          
+
           return { id: m.id, score: m.score, type: m.metadata.type };
         }),
         videos,
@@ -340,7 +337,7 @@ export async function routeCtrlAdminAiAsk(req: Request, res: Response) {
           return {
             id: m.id,
             score: m.score,
-            type: 'unknown',
+            type: "unknown",
           };
         }
 
@@ -356,10 +353,10 @@ export async function routeCtrlAdminAiAsk(req: Request, res: Response) {
           const url = vId
             ? HelperYouTube.buildWatchUrl(vId, m.metadata.video_start_time)
             : null;
-          
+
           return {
             ...baseSource,
-            type: 'video',
+            type: "video",
             videoId: vId,
             start: m.metadata.video_start_time ?? null,
             end: m.metadata.video_end_time ?? null,
@@ -368,14 +365,14 @@ export async function routeCtrlAdminAiAsk(req: Request, res: Response) {
         } else if (isInstagramMetadata(m.metadata)) {
           return {
             ...baseSource,
-            type: 'instagram',
+            type: "instagram",
             url: m.metadata.instagram_post_url ?? null,
             imageUrl: m.metadata.local_image_url ?? null,
           };
         } else if (isBlogMetadata(m.metadata)) {
           return {
             ...baseSource,
-            type: 'blog',
+            type: "blog",
             url: m.metadata.blog_post_url ?? null,
             platform: m.metadata.blog_platform ?? null,
           };
@@ -383,7 +380,7 @@ export async function routeCtrlAdminAiAsk(req: Request, res: Response) {
 
         return {
           ...baseSource,
-          type: m.metadata.type ?? 'unknown',
+          type: m.metadata.type ?? "unknown",
         };
       }),
       videos: videos.map((v) => ({
@@ -407,9 +404,3 @@ export async function routeCtrlAdminAiAsk(req: Request, res: Response) {
     });
   }
 }
-
-
-
-
-
-

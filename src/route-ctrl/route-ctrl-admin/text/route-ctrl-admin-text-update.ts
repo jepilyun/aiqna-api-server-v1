@@ -9,28 +9,18 @@ import DBSqlText from "../../../db-ctrl/db-ctrl-sql/db-sql-text.js";
  * Text 수정
  * @route PUT /api/admin/text/update/:hashKey
  */
-export const routeCtrlAdminTextUpdate: RequestHandler = async (
-  req,
-  res,
-) => {
+export const routeCtrlAdminTextUpdate: RequestHandler = async (req, res) => {
   const { hashKey } = req.params;
   const updateData = req.body as TSqlTextDetailUpdate;
 
   if (
-    !checkRequiredFieldsAreProvided(
-      hashKey,
-      MSG_TEXT.error.no_hashKey,
-      res,
-    )
+    !checkRequiredFieldsAreProvided(hashKey, MSG_TEXT.error.no_hashKey, res)
   ) {
     return;
   }
 
   try {
-    const dbResponse = await DBSqlText.updateByHashKey(
-      hashKey,
-      updateData,
-    );
+    const dbResponse = await DBSqlText.updateByHashKey(hashKey, updateData);
     resSuccess(res, MSG_TEXT.update.success, null, 200, dbResponse);
     return;
   } catch (error: unknown) {

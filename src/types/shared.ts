@@ -80,20 +80,22 @@ export type TBlogPostHTMLMetadata = {
   local_image_url?: string | null;
 };
 
-
-
 // Provider 타입 정의
-export type EmbeddingProviderType = 'openai' | 'cohere' | 'voyage' | 'huggingface' | 'gemini';
+export type EmbeddingProviderType =
+  | "openai"
+  | "cohere"
+  | "voyage"
+  | "huggingface"
+  | "gemini";
 
 // 타입 추출 (개선된 버전)
 export type PineconeIndexName = string; // 또는 리터럴 유니온으로 제한
-
 
 /**
  * YouTube Video Request
  */
 export type TRegisterRequestYouTubeVideoData = {
-  videoId  : string;
+  videoId: string;
   isShorts: boolean;
 };
 
@@ -129,6 +131,3 @@ export type TRegisterRequestTextData = {
   content: string;
   title: string | null;
 };
-
-
-

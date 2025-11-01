@@ -7,7 +7,6 @@ import { routeCtrlAdminVectorDelete } from "../route-ctrl/route-ctrl-admin/route
 
 const router = express.Router();
 
-
 // Pinecone Vector 관리
 router.get(
   "/list/:vector",
@@ -29,6 +28,5 @@ router.delete(
   // adminAuthMiddleware,
   routeCtrlAdminVectorDelete,
 );
-
 
 export default router;
