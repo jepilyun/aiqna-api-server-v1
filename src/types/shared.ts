@@ -43,10 +43,34 @@ export type TYouTubeVideoCaptionsAvailable = {
  * Extracted Content(YouTube Video, Instagram Post) Metadata
  */
 export type TAnalyzedContentMetadata = {
-  categories: string[];
-  keywords: string[];
-  locations: string[];
-  names: string[];
+  // 위치 정보 (계층적 구조)
+  info_country: string[];
+  info_city: string[];
+  info_district: string[];
+  info_neighborhood: string[];
+  info_landmark: string[];
+  
+  // 카테고리 및 태그
+  info_category: string[];
+  info_name: string[];
+  info_special_tag: string[];
+  info_influencer: string[];
+  
+  // 시간 및 활동
+  info_season: string[];
+  info_time_of_day: string[];
+  info_activity_type: string[];
+  
+  // 타겟 및 실용 정보
+  info_target_audience: string[];
+  reservationRequired: boolean;
+  travelTips: string[];
+
+  // 언어 및 감정 분석
+  language: string;
+  sentimentScore: number;
+  mainTopic: string;
+
   confidence_score: number;
 };
 

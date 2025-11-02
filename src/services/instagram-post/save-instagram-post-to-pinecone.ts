@@ -59,21 +59,63 @@ export async function saveInstagramPostToPinecone(
     ...instagramPostMetadata,
   };
 
+
   // 청크별 추출된 메타데이터 추가
   if (extractedMetadata) {
-    if (extractedMetadata.categories.length > 0) {
-      metadata.categories = extractedMetadata.categories;
+    if (extractedMetadata.info_country.length > 0) {
+      metadata.info_country = extractedMetadata.info_country;
     }
-    if (extractedMetadata.keywords.length > 0) {
-      metadata.keywords = extractedMetadata.keywords;
+    if (extractedMetadata.info_city.length > 0) {
+      metadata.info_city = extractedMetadata.info_city;
     }
-    if (extractedMetadata.locations.length > 0) {
-      metadata.locations = extractedMetadata.locations;
+    if (extractedMetadata.info_district.length > 0) {
+      metadata.info_district = extractedMetadata.info_district;
     }
-    if (extractedMetadata.names.length > 0) {
-      metadata.names = extractedMetadata.names;
+    if (extractedMetadata.info_neighborhood.length > 0) {
+      metadata.info_neighborhood = extractedMetadata.info_neighborhood;
     }
-    metadata.confidence_score = extractedMetadata.confidence_score;
+    if (extractedMetadata.info_category.length > 0) {
+      metadata.info_category = extractedMetadata.info_category;
+    }
+    if (extractedMetadata.info_name.length > 0) {
+      metadata.info_name = extractedMetadata.info_name;
+    }
+    if (extractedMetadata.info_special_tag.length > 0) {
+      metadata.info_special_tag = extractedMetadata.info_special_tag;
+    }
+    if (extractedMetadata.info_influencer.length > 0) {
+      metadata.info_influencer = extractedMetadata.info_influencer;
+    }
+    if (extractedMetadata.info_season.length > 0) {
+      metadata.info_season = extractedMetadata.info_season;
+    }
+    if (extractedMetadata.info_time_of_day.length > 0) {
+      metadata.info_time_of_day = extractedMetadata.info_time_of_day;
+    }
+    if (extractedMetadata.info_activity_type.length > 0) {
+      metadata.info_activity_type = extractedMetadata.info_activity_type;
+    }
+    if (extractedMetadata.info_target_audience.length > 0) {
+      metadata.info_target_audience = extractedMetadata.info_target_audience;
+    }
+    if (extractedMetadata.reservationRequired) {
+      metadata.reservationRequired = extractedMetadata.reservationRequired;
+    }
+    if (extractedMetadata.travelTips.length > 0) {
+      metadata.travelTips = extractedMetadata.travelTips;
+    }
+    if (extractedMetadata.language) {
+      metadata.language = extractedMetadata.language;
+    }
+    if (extractedMetadata.sentimentScore) {
+      metadata.sentimentScore = extractedMetadata.sentimentScore;
+    }
+    if (extractedMetadata.mainTopic) {
+      metadata.mainTopic = extractedMetadata.mainTopic;
+    }
+    if (extractedMetadata.confidence_score) {
+      metadata.confidence_score = extractedMetadata.confidence_score;
+    }
   }
 
   // ✅ TPineconeVector 객체 생성
