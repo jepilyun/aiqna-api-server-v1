@@ -35,32 +35,4 @@ router.put(
   routeCtrlAdminBlogPostUpdate,
 );
 
-// Blog Post Processing List
-// router.get(
-//   "/processing/list/:start",
-//   // adminAuthMiddleware,
-//   routeCtrlAdminProcessingBlogPostList,
-// );
-
-// // Blog Post Processing Register
-// router.post(
-//   "/processing/register",
-//   // adminAuthMiddleware,
-//   routeCtrlAdminProcessingBlogPostRegister,
-// );
-
-// // Blog Post Processing Detail
-// router.get(
-//   "/processing/detail/:uuid36",
-//   // adminAuthMiddleware,
-//   routeCtrlAdminProcessingBlogPostDetail,
-// );
-
-// // Blog Post Processing Update
-// router.put(
-//   "/processing/update/:uuid36",
-//   // adminAuthMiddleware,
-//   routeCtrlAdminProcessingBlogPostUpdate,
-// );
-
 export default router;

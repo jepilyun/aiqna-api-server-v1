@@ -35,32 +35,4 @@ router.put(
   routeCtrlAdminYouTubeVideoUpdate,
 );
 
-// YouTube Video Processing List
-// router.get(
-//   "/processing/list/:start",
-//   // adminAuthMiddleware,
-//   routeCtrlAdminProcessingYouTubeVideoList,
-// );
-
-// // YouTube Video Processing Register
-// router.post(
-//   "/processing/register",
-//   // adminAuthMiddleware,
-//   routeCtrlAdminProcessingYouTubeVideoRegister,
-// );
-
-// // YouTube Video Processing Detail
-// router.get(
-//   "/processing/detail/:videoId",
-//   // adminAuthMiddleware,
-//   routeCtrlAdminProcessingYouTubeVideoDetail,
-// );
-
-// // YouTube Video Processing Update
-// router.put(
-//   "/processing/update/:videoId",
-//   // adminAuthMiddleware,
-//   routeCtrlAdminProcessingYouTubeVideoUpdate,
-// );
-
 export default router;

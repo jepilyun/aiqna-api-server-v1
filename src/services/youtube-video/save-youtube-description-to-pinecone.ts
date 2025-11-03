@@ -89,8 +89,8 @@ export async function saveYouTubeDescriptionToPinecone(
               info_time_of_day: extractedMetadata?.info_time_of_day,
               info_activity_type: extractedMetadata?.info_activity_type,
               info_target_audience: extractedMetadata?.info_target_audience,
-              reservationRequired: extractedMetadata?.reservationRequired,
-              travelTips: extractedMetadata?.travelTips,
+              info_reservation_required: extractedMetadata?.info_reservation_required,
+              info_travel_tips: extractedMetadata?.info_travel_tips,
               language: extractedMetadata?.language,
               sentimentScore: extractedMetadata?.sentimentScore,
               mainTopic: extractedMetadata?.mainTopic,
@@ -178,11 +178,11 @@ export async function saveYouTubeDescriptionToPinecone(
           if (extractedMetadata.info_target_audience.length > 0) {
             metadata.info_target_audience = extractedMetadata.info_target_audience;
           }
-          if (extractedMetadata.reservationRequired) {
-            metadata.reservationRequired = extractedMetadata.reservationRequired;
+          if (extractedMetadata.info_reservation_required) {
+            metadata.info_reservation_required = extractedMetadata.info_reservation_required;
           }
-          if (extractedMetadata.travelTips.length > 0) {
-            metadata.travelTips = extractedMetadata.travelTips;
+          if (extractedMetadata.info_travel_tips.length > 0) {
+            metadata.info_travel_tips = extractedMetadata.info_travel_tips;
           }
           if (extractedMetadata.language) {
             metadata.language = extractedMetadata.language;

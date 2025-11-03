@@ -35,32 +35,4 @@ router.put(
   routeCtrlAdminInstagramPostUpdate,
 );
 
-// Instagram Post Processing List
-// router.get(
-//   "/processing/list/:start",
-//   // adminAuthMiddleware,
-//   routeCtrlAdminProcessingInstagramPostList,
-// );
-
-// // Instagram Post Processing Register
-// router.post(
-//   "/processing/register",
-//   // adminAuthMiddleware,
-//   routeCtrlAdminProcessingInstagramPostRegister,
-// );
-
-// // Instagram Post Processing Detail
-// router.get(
-//   "/processing/detail/:uuid36",
-//   // adminAuthMiddleware,
-//   routeCtrlAdminProcessingInstagramPostDetail,
-// );
-
-// // Instagram Post Processing Update
-// router.put(
-//   "/processing/update/:uuid36",
-//   // adminAuthMiddleware,
-//   routeCtrlAdminProcessingInstagramPostUpdate,
-// );
-
 export default router;

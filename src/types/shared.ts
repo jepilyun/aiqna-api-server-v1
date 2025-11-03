@@ -63,8 +63,8 @@ export type TAnalyzedContentMetadata = {
   
   // 타겟 및 실용 정보
   info_target_audience: string[];
-  reservationRequired: boolean;
-  travelTips: string[];
+  info_reservation_required: boolean;
+  info_travel_tips: string[];
 
   // 언어 및 감정 분석
   language: string;

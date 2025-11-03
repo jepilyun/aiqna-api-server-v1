@@ -35,32 +35,4 @@ router.put(
   routeCtrlAdminTextUpdate,
 );
 
-// Text List
-// router.get(
-//   "/processing/list/:start",
-//   // adminAuthMiddleware,
-//   routeCtrlAdminProcessingTextList,
-// );
-
-// // Text Register
-// router.post(
-//   "/processing/register",
-//   // adminAuthMiddleware,
-//   routeCtrlAdminProcessingTextRegister,
-// );
-
-// // Text Detail
-// router.get(
-//   "/processing/detail/:hashKey",
-//   // adminAuthMiddleware,
-//   routeCtrlAdminProcessingTextDetail,
-// );
-
-// // Text Update
-// router.put(
-//   "/processing/update/:hashKey",
-//   // adminAuthMiddleware,
-//   routeCtrlAdminProcessingTextUpdate,
-// );
-
 export default router;

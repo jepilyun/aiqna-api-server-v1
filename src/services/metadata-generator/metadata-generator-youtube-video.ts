@@ -114,8 +114,8 @@ export class MetadataGeneratorYouTubeVideo {
       info_time_of_day: [],
       info_activity_type: [],
       info_target_audience: [],
-      reservationRequired: false,
-      travelTips: [],
+      info_reservation_required: false,
+      info_travel_tips: [],
       language: language || "ko", // 파라미터로 받은 language 사용
       sentimentScore: 0.5,
       mainTopic: "",
@@ -201,8 +201,8 @@ export class MetadataGeneratorYouTubeVideo {
         info_time_of_day: result.info_time_of_day || [],
         info_activity_type: result.info_activity_type || [],
         info_target_audience: result.info_target_audience || [],
-        reservationRequired: result.reservationRequired || false,
-        travelTips: result.travelTips || [],
+        info_reservation_required: result.info_reservation_required || false,
+        info_travel_tips: result.info_travel_tips || [],
         language: result.language || "ko",
         sentimentScore: result.sentimentScore || 0.5,
         mainTopic: result.mainTopic || "",
@@ -224,8 +224,8 @@ export class MetadataGeneratorYouTubeVideo {
         info_time_of_day: [],
         info_activity_type: [],
         info_target_audience: [],
-        reservationRequired: false,
-        travelTips: [],
+        info_reservation_required: false,
+        info_travel_tips: [],
         language: "ko",
         sentimentScore: 0.5,
         mainTopic: "",
@@ -234,125 +234,130 @@ export class MetadataGeneratorYouTubeVideo {
     }
   }
 
-/**
- * Get System Prompt
- */
-private getSystemPrompt(): string {
-  return `You are an expert at analyzing YouTube video transcripts about Korean travel, food, and lifestyle content.
-
-Your task is to extract comprehensive structured metadata from the transcript.
-
-Respond ONLY in valid JSON format with ALL fields below:
-
-{
-  "info_country": ["대한민국", "미국"],
-  "info_city": ["서울", "부산"],
-  "info_district": ["종로구", "해운대구"],
-  "info_neighborhood": ["안국동", "가로수길"],
-  "info_landmark": ["남산타워", "한강"],
-  "info_category": ["Restaurant", "Museum"],
-  "info_name": ["스타벅스", "현대백화점"],
-  "info_special_tag": ["OpenRun", "LocalFood"],
-  "info_influencer": ["Jennie", "BTS"],
-  "info_season": ["Spring", "Winter"],
-  "info_time_of_day": ["Morning", "Night"],
-  "info_activity_type": ["Cycling", "Hiking"],
-  "info_target_audience": ["FamilyTrip", "SoloTravel"],
-  "reservationRequired": false,
-  "travelTips": ["MustBookAhead", "AvoidWeekend"],
-  "language": "ko",
-  "sentimentScore": 0.85,
-  "mainTopic": "Budget Travel Tips in Seoul",
-  "confidence_score": 0.95
-}
-
-**Field Definitions:**
-
-**info_country** (국가명 - 원어):
-- Extract country names mentioned (use native language)
-- Examples: "대한민국", "일본", "미국", "프랑스"
-
-**info_city** (도시명 - 원어):
-- City names mentioned
-- Examples: "서울", "부산", "제주", "도쿄"
-
-**info_district** (구/군 - 원어):
-- District/borough names
-- Examples: "종로구", "강남구", "해운대구"
-
-**info_neighborhood** (동네/거리명 - 원어):
-- Specific neighborhood or street names
-- Examples: "안국동", "삼청동", "가로수길", "홍대"
-
-**info_landmark** (랜드마크 - 원어):
-- Famous landmarks, attractions
-- Examples: "남산타워", "한강", "경복궁", "롯데월드"
-
-**info_category** (카테고리 - ENGLISH ONLY, from predefined list):
-Select ONLY from: "Cafe", "Restaurant", "Shopping", "Palace", "History", 
-"Museum", "Exhibition", "ThemePark", "Activity", "Experience", "Festival", 
-"Market", "Park", "Tour", "Beach", "Mountain", "Temple", "Street", "NightLife"
-
-**info_name** (업체명/브랜드명 - 원어):
-- Specific store, restaurant, or brand names
-- Examples: "스타벅스", "현대백화점", "교보문고"
-
-**info_special_tag** (특별 태그 - ENGLISH, CamelCase):
-- "OpenRun" (오픈런 필요), "LocalFood" (현지 음식), "HiddenGem" (숨은 명소),
-- "Instagrammable" (인스타 핫플), "BudgetFriendly" (가성비), "Luxury" (럭셔리),
-- "PetFriendly" (반려동물 동반), "KidFriendly" (아이 동반), "Halal" (할랄),
-- "Vegetarian" (채식), "LateNight" (심야 영업), "Seasonal" (계절 한정)
-
-**info_influencer** (인플루언서/유명인 - 원어):
-- Celebrity or influencer names mentioned
-- Examples: "Jennie", "BTS", "백종원", "박나래"
-
-**info_season** (계절 - ENGLISH):
-- When to visit: "Spring", "Summer", "Fall", "Winter", "AllYear"
-
-**info_time_of_day** (시간대 - ENGLISH):
-- Best time to visit: "Morning", "Afternoon", "Evening", "Night", "Anytime"
-
-**info_activity_type** (활동 유형 - ENGLISH, CamelCase):
-- "Cycling", "Hiking", "Skiing", "Swimming", "Shopping", "Dining",
-- "Photography", "Cultural", "Sightseeing", "Relaxation", "Adventure"
-
-**info_target_audience** (타겟 - ENGLISH, CamelCase):
-- "FamilyTrip", "SoloTravel", "Couples", "Friends", "Business", 
-- "Students", "Seniors", "Backpackers"
-
-**reservationRequired** (예약 필수 - boolean):
-- true if reservation/booking is mentioned as required or recommended
-- false otherwise
-
-**travelTips** (여행 팁 - ENGLISH, CamelCase, max 5):
-- Short, actionable tips extracted from the video
-- Examples: "MustBookAhead", "AvoidWeekend", "ArriveEarly", "BringCash",
-- "CheckWeather", "UsePublicTransport", "WearComfortableShoes"
-
-**language** (언어 코드):
-- Primary language of the video: "ko", "en", "ja", "zh", "es", etc.
-
-**sentimentScore** (감정 점수 - 0.0 to 1.0):
-- Overall sentiment/positivity of the video
-- 0.0-0.3: Negative, 0.3-0.7: Neutral, 0.7-1.0: Positive
-
-**mainTopic** (핵심 주제 - ENGLISH):
-- One sentence summarizing the main topic
-- Example: "Budget Travel Tips in Seoul", "Best Cafes in Gangnam"
-
-**confidence_score** (신뢰도 - 0.0 to 1.0):
-- Overall confidence in the extracted metadata
-
-**Extraction Rules:**
-1. Extract ONLY information explicitly mentioned in the transcript
-2. Use original language for location names and proper nouns
-3. Use English for categories, tags, and standardized fields
-4. Maximum 5 items per array field (prioritize most relevant)
-5. If information is not mentioned, use empty array [] or appropriate default
-6. Be conservative - only extract what you're confident about
-7. For boolean fields, default to false if unclear`;
+  /**
+   * Get System Prompt
+   */
+  private getSystemPrompt(): string {
+    return `You are an expert at analyzing YouTube video transcripts about Korean travel, food, and lifestyle content.
+  
+  Your task is to extract comprehensive structured metadata from the transcript.
+  
+  Respond ONLY in valid JSON format with ALL fields below:
+  
+  {
+    "info_country": ["대한민국", "미국"],
+    "info_city": ["서울", "부산"],
+    "info_district": ["종로구", "해운대구"],
+    "info_neighborhood": ["안국동", "가로수길"],
+    "info_landmark": ["남산타워", "한강"],
+    "info_category": ["Restaurant", "Museum"],
+    "info_name": ["스타벅스", "현대백화점"],
+    "info_special_tag": ["OpenRun", "LocalFood"],
+    "info_influencer": ["Jennie", "BTS"],
+    "info_season": ["Spring", "Winter"],
+    "info_time_of_day": ["Morning", "Night"],
+    "info_activity_type": ["Cycling", "Hiking"],
+    "info_target_audience": ["FamilyTrip", "SoloTravel"],
+    "info_reservation_required": false,
+    "info_travel_tips": ["주말을 피하는 게 좋아요", "대중교통을 이용해 주세요"],
+    "language": "ko",
+    "sentimentScore": 0.85,
+    "mainTopic": "Budget Travel Tips in Seoul",
+    "confidence_score": 0.95
   }
+  
+  **Field Definitions:**
+  
+  **info_country** (국가명 - 원어):
+  - Extract country names mentioned (use native language)
+  - Examples: "대한민국", "일본", "미국", "프랑스"
+  
+  **info_city** (도시명 - 원어):
+  - City names mentioned
+  - Examples: "서울", "부산", "제주", "도쿄"
+  
+  **info_district** (구/군 - 원어):
+  - District/borough names
+  - Examples: "종로구", "강남구", "해운대구"
+  
+  **info_neighborhood** (동네/거리명 - 원어):
+  - Specific neighborhood or street names
+  - Examples: "안국동", "삼청동", "가로수길", "홍대"
+  
+  **info_landmark** (랜드마크 - 원어):
+  - Famous landmarks, attractions
+  - Examples: "남산타워", "한강", "경복궁", "롯데월드"
+  
+  **info_category** (카테고리 - ENGLISH ONLY, from predefined list):
+  Select ONLY from: "Cafe", "Restaurant", "Shopping", "Palace", "History", 
+  "Museum", "Exhibition", "ThemePark", "Activity", "Experience", "Festival", 
+  "Market", "Park", "Tour", "Beach", "Mountain", "Temple", "Street", "NightLife"
+  
+  **info_name** (업체명/브랜드명 - 원어):
+  - Specific store, restaurant, or brand names
+  - Examples: "스타벅스", "현대백화점", "교보문고"
+  
+  **info_special_tag** (특별 태그 - ENGLISH, CamelCase):
+  - "OpenRun" (오픈런 필요), "LocalFood" (현지 음식), "HiddenGem" (숨은 명소),
+  - "Instagrammable" (인스타 핫플), "BudgetFriendly" (가성비), "Luxury" (럭셔리),
+  - "PetFriendly" (반려동물 동반), "KidFriendly" (아이 동반), "Halal" (할랄),
+  - "Vegetarian" (채식), "LateNight" (심야 영업), "Seasonal" (계절 한정)
+  
+  **info_influencer** (인플루언서/유명인 - 원어):
+  - Celebrity or influencer names mentioned
+  - Examples: "Jennie", "BTS", "백종원", "박나래"
+  
+  **info_season** (계절 - ENGLISH):
+  - When to visit: "Spring", "Summer", "Fall", "Winter", "AllYear"
+  
+  **info_time_of_day** (시간대 - ENGLISH):
+  - Best time to visit: "Morning", "Afternoon", "Evening", "Night", "Anytime"
+  
+  **info_activity_type** (활동 유형 - ENGLISH, CamelCase):
+  - "Cycling", "Hiking", "Skiing", "Swimming", "Shopping", "Dining",
+  - "Photography", "Cultural", "Sightseeing", "Relaxation", "Adventure"
+  
+  **info_target_audience** (타겟 - ENGLISH, CamelCase):
+  - "FamilyTrip", "SoloTravel", "Couples", "Friends", "Business", 
+  - "Students", "Seniors", "Backpackers"
+  
+  **info_reservation_required** (예약 필수 - boolean):
+  - true if reservation/booking is mentioned as required or recommended
+  - false otherwise
+  
+  **info_travel_tips** (여행 팁 - 한국어 문장, max 5):
+  - Short, actionable tips in natural Korean sentences
+  - Must be complete sentences ending with 요/에요/습니다
+  - Examples: "주말을 피하는 게 좋아요", "미리 예약하는 것을 추천해요", 
+    "일찍 도착하는 게 좋아요", "현금을 준비해 가세요", "날씨를 확인하고 가세요",
+    "대중교통을 이용해 주세요", "편한 신발을 착용하세요", "한복을 입으면 무료 입장이에요"
+  - Extract tips directly from the video transcript or infer practical advice
+  - Write in a friendly, conversational tone
+  
+  **language** (언어 코드):
+  - Primary language of the video: "ko", "en", "ja", "zh", "es", etc.
+  
+  **sentimentScore** (감정 점수 - 0.0 to 1.0):
+  - Overall sentiment/positivity of the video
+  - 0.0-0.3: Negative, 0.3-0.7: Neutral, 0.7-1.0: Positive
+  
+  **mainTopic** (핵심 주제 - ENGLISH):
+  - One sentence summarizing the main topic
+  - Example: "Budget Travel Tips in Seoul", "Best Cafes in Gangnam"
+  
+  **confidence_score** (신뢰도 - 0.0 to 1.0):
+  - Overall confidence in the extracted metadata
+  
+  **Extraction Rules:**
+  1. Extract ONLY information explicitly mentioned in the transcript
+  2. Use original language for location names and proper nouns
+  3. Use English for categories, tags, and standardized fields
+  4. Use Korean sentences for info_travel_tips (natural, conversational style)
+  5. Maximum 5 items per array field (prioritize most relevant)
+  6. If information is not mentioned, use empty array [] or appropriate default
+  7. Be conservative - only extract what you're confident about
+  8. For boolean fields, default to false if unclear`;
+}
 
   /**
    * Build Prompt

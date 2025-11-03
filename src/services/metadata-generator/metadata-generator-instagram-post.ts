@@ -132,8 +132,8 @@ export class MetadataGeneratorInstagramPost {
       info_time_of_day: [],
       info_activity_type: [],
       info_target_audience: [],
-      reservationRequired: false,
-      travelTips: [],
+      info_reservation_required: false,
+      info_travel_tips: [],
       language,
       sentimentScore: 0.5,
       mainTopic: "",
@@ -219,8 +219,8 @@ export class MetadataGeneratorInstagramPost {
         info_time_of_day: result.info_time_of_day || [],
         info_activity_type: result.info_activity_type || [],
         info_target_audience: result.info_target_audience || [],
-        reservationRequired: result.reservationRequired || false,
-        travelTips: result.travelTips || [],
+        info_reservation_required: result.info_reservation_required || false,
+        info_travel_tips: result.info_travel_tips || [],
         language: result.language || "ko",
         sentimentScore: result.sentimentScore || 0.5,
         mainTopic: result.mainTopic || "",
@@ -240,6 +240,8 @@ export class MetadataGeneratorInstagramPost {
 
 Your task is to extract comprehensive structured metadata from the Instagram content.
 
+Your task is to extract comprehensive structured metadata from the blog post content.
+
 Respond ONLY in valid JSON format with ALL fields below:
 
 {
@@ -256,8 +258,8 @@ Respond ONLY in valid JSON format with ALL fields below:
   "info_time_of_day": ["Morning", "Night"],
   "info_activity_type": ["Cycling", "Hiking"],
   "info_target_audience": ["FamilyTrip", "SoloTravel"],
-  "reservationRequired": false,
-  "travelTips": ["MustBookAhead", "AvoidWeekend"],
+  "info_reservation_required": false,
+  "info_travel_tips": ["주말을 피하는 게 좋아요", "대중교통을 이용해 주세요"],
   "language": "ko",
   "sentimentScore": 0.85,
   "mainTopic": "Budget Travel Tips in Seoul",
@@ -319,14 +321,18 @@ Select ONLY from: "Cafe", "Restaurant", "Shopping", "Palace", "History",
 - "FamilyTrip", "SoloTravel", "Couples", "Friends", "Business", 
 - "Students", "Seniors", "Backpackers"
 
-**reservationRequired** (예약 필수 - boolean):
+**info_reservation_required** (예약 필수 - boolean):
 - true if reservation/booking is mentioned as required or recommended
 - false otherwise
 
-**travelTips** (여행 팁 - ENGLISH, CamelCase, max 5):
-- Short, actionable tips extracted from the content
-- Examples: "MustBookAhead", "AvoidWeekend", "ArriveEarly", "BringCash",
-- "CheckWeather", "UsePublicTransport", "WearComfortableShoes"
+**info_travel_tips** (여행 팁 - 한국어 문장, max 5):
+- Short, actionable tips in natural Korean sentences
+- Must be complete sentences ending with 요/에요/습니다
+- Examples: "주말을 피하는 게 좋아요", "미리 예약하는 것을 추천해요", 
+  "일찍 도착하는 게 좋아요", "현금을 준비해 가세요", "날씨를 확인하고 가세요",
+  "대중교통을 이용해 주세요", "편한 신발을 착용하세요", "한복을 입으면 무료 입장이에요"
+- Extract tips directly from the content or infer practical advice
+- Write in a friendly, conversational tone
 
 **language** (언어 코드):
 - Primary language of the content: "ko", "en", "ja", "zh", "es", etc.
@@ -346,11 +352,12 @@ Select ONLY from: "Cafe", "Restaurant", "Shopping", "Palace", "History",
 1. Extract ONLY information explicitly mentioned in the content
 2. Use original language for location names and proper nouns
 3. Use English for categories, tags, and standardized fields
-4. Maximum 5 items per array field (prioritize most relevant)
-5. If information is not mentioned, use empty array [] or appropriate default
-6. Be conservative - only extract what you're confident about
-7. For boolean fields, default to false if unclear
-8. Instagram posts often use hashtags - extract relevant info from them too`;
+4. Use Korean sentences for info_travel_tips (natural, conversational style)
+5. Maximum 5 items per array field (prioritize most relevant)
+6. If information is not mentioned, use empty array [] or appropriate default
+7. Be conservative - only extract what you're confident about
+8. For boolean fields, default to false if unclear
+9. Instagram posts often use hashtags - extract relevant info from them too`;
   }
 
   /**
