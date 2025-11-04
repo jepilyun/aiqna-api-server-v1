@@ -11,6 +11,9 @@ import DBPinecone from "../../db-ctrl/db-ctrl-pinecone/db-pinecone.js";
 import { OpenAIEmbeddingProvider } from "../embedding/openai-embedding.js";
 import { ContentKeyManager } from "../../utils/content-key-manager.js";
 import { ERequestCreateContentType } from "../../consts/const.js";
+import DBSqlInstagramPost from "../../db-ctrl/db-ctrl-sql/db-sql-instagram-post.js";
+import { saveJsonToLocal } from "../../utils/helper-json.js";
+import { getInstagramPostId } from "../../utils/helper-instagram.js";
 
 /**
  * Pinecone 저장 함수 (Provider 기반) - 청크별 메타데이터 추출
@@ -43,6 +46,8 @@ export async function saveInstagramPostToPinecone(
 
   extractedMetadata =
     await metadataExtractor.generateMetadataFromInstagramPost(instagramPost);
+
+  saveJsonToLocal(extractedMetadata, `metadata_from_${getInstagramPostId(instagramPost.instagram_post_url)}.json`, "_instagram", "../data/metadataFromInstagramPost");
 
   const contentKey = ContentKeyManager.createContentKey(
     ERequestCreateContentType.Instagram,
@@ -101,9 +106,9 @@ export async function saveInstagramPostToPinecone(
     if (extractedMetadata.info_reservation_required) {
       metadata.info_reservation_required = extractedMetadata.info_reservation_required;
     }
-    if (extractedMetadata.info_travel_tips.length > 0) {
-      metadata.info_travel_tips = extractedMetadata.info_travel_tips;
-    }
+    // if (extractedMetadata.info_travel_tips.length > 0) {
+    //   metadata.info_travel_tips = extractedMetadata.info_travel_tips;
+    // }
     if (extractedMetadata.language) {
       metadata.language = extractedMetadata.language;
     }
@@ -127,6 +132,23 @@ export async function saveInstagramPostToPinecone(
 
   // DBPinecone을 사용한 업로드
   await DBPinecone.upsertOne(indexName, vector);
+
+  await DBSqlInstagramPost.updateByPostUrl(instagramPost.instagram_post_url, {
+    info_country: extractedMetadata?.info_country,
+    info_city: extractedMetadata?.info_city,
+    info_district: extractedMetadata?.info_district,
+    info_neighborhood: extractedMetadata?.info_neighborhood,
+    info_category: extractedMetadata?.info_category,
+    info_name: extractedMetadata?.info_name,
+    info_special_tag: extractedMetadata?.info_special_tag,
+    info_influencer: extractedMetadata?.info_influencer,
+    info_season: extractedMetadata?.info_season,
+    info_time_of_day: extractedMetadata?.info_time_of_day,
+    info_activity_type: extractedMetadata?.info_activity_type,
+    // info_target_audience: extractedMetadata?.info_target_audience,
+    info_reservation_required: extractedMetadata?.info_reservation_required,
+    info_travel_tips: extractedMetadata?.info_travel_tips,
+  });
 
   console.log(`✓ Completed for ${instagramPost.instagram_post_url}`);
 }

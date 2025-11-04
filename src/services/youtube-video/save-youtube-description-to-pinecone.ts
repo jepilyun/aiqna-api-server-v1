@@ -1,7 +1,6 @@
 import {
   IPineconeVectorMetadataForVideo,
   TPineconeVector,
-  TSqlYoutubeVideoDetail,
 } from "aiqna_common_v1";
 import { OpenAIEmbeddingProvider } from "../embedding/openai-embedding.js";
 import { TAnalyzedContentMetadata } from "../../types/shared.js";
@@ -15,6 +14,8 @@ import {
   safeForEmbedding,
   toSnippet,
 } from "../../utils/chunk-embedding-utils.js";
+import { youtube_v3 } from "googleapis";
+import { saveJsonToLocal } from "../../utils/helper-json.js";
 
 /**
  * Save YouTube Description to Pinecone
@@ -22,7 +23,7 @@ import {
  * @param vectorMetadata
  */
 export async function saveYouTubeDescriptionToPinecone(
-  videoData: TSqlYoutubeVideoDetail,
+  videoData: youtube_v3.Schema$Video,
   vectorMetadata: Partial<IPineconeVectorMetadataForVideo>,
 ) {
   try {
@@ -36,16 +37,19 @@ export async function saveYouTubeDescriptionToPinecone(
 
     const contentKey = ContentKeyManager.createContentKey(
       ERequestCreateContentType.YoutubeVideo,
-      videoData.video_id,
+      videoData.id ?? "",
       "description",
     );
 
-    const chunks = chunkYouTubeDescription(videoData.description ?? "");
+    const chunks = chunkYouTubeDescription(videoData.snippet?.description ?? "");
 
     if (chunks.length === 0) {
       console.warn(`⚠️  No chunks generated for description, skipping...`);
       return;
     }
+
+    const metadataFromFullDescription = await metadataExtractor.generateMetadataFromText(videoData.id ?? "", vectorMetadata.title ?? "", videoData.snippet?.description ?? "", "description");
+    saveJsonToLocal(metadataFromFullDescription, `metadata_from_${videoData.id}.json`, "_full_description", "../data/metadataFromFullDescription");
 
     const vectors: TPineconeVector[] = await Promise.all(
       chunks.map(async (chunk, idx) => {
@@ -67,8 +71,8 @@ export async function saveYouTubeDescriptionToPinecone(
 
         try {
           extractedMetadata =
-            await metadataExtractor.generateMetadataFromFullTranscript(
-              videoData.video_id,
+            await metadataExtractor.generateMetadataFromText(
+              videoData.id ?? "",
               vectorMetadata.title ?? "",
               chunk.text,
               "description",
@@ -107,7 +111,7 @@ export async function saveYouTubeDescriptionToPinecone(
         const chunkId = ContentKeyManager.createChunkId(contentKey, idx);
 
         const metadata: Record<string, string | number | boolean | string[]> = {
-          video_id: videoData.video_id,
+          video_id: videoData.id ?? "",
           title: vectorMetadata.title ?? "",
           type: "transcript", // 🔥 검색 필터용
           content_type: "youtube_video_description",
@@ -138,7 +142,6 @@ export async function saveYouTubeDescriptionToPinecone(
           metadata.view_count = vectorMetadata.view_count;
         if (vectorMetadata.like_count)
           metadata.like_count = vectorMetadata.like_count;
-
 
         // 청크별 추출된 메타데이터 추가
         if (extractedMetadata) {
@@ -181,9 +184,9 @@ export async function saveYouTubeDescriptionToPinecone(
           if (extractedMetadata.info_reservation_required) {
             metadata.info_reservation_required = extractedMetadata.info_reservation_required;
           }
-          if (extractedMetadata.info_travel_tips.length > 0) {
-            metadata.info_travel_tips = extractedMetadata.info_travel_tips;
-          }
+          // if (extractedMetadata.info_travel_tips.length > 0) {
+          //   metadata.info_travel_tips = extractedMetadata.info_travel_tips;
+          // }
           if (extractedMetadata.language) {
             metadata.language = extractedMetadata.language;
           }
@@ -210,7 +213,6 @@ export async function saveYouTubeDescriptionToPinecone(
     await DBPinecone.upsertBatch(PROVIDER_CONFIGS.openai.index, vectors, 100);
 
     console.log(`  ✓ Completed ${chunks.length} chunks for description`);
-
     console.log(`[${PROVIDER_CONFIGS.openai.type}] ✓ Success`);
     return { provider: PROVIDER_CONFIGS.openai.type, status: "success" };
   } catch (error) {

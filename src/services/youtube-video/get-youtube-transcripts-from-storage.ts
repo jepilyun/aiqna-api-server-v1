@@ -19,7 +19,7 @@ import { saveJsonToLocal } from "../../utils/helper-json.js";
 /**
  * 여러 언어의 트랜스크립트를 저장하고 결과 반환
  */
-export async function getYouTubeTranscriptsFromStorage(
+export async function getYouTubeTranscriptsFromStorageOrYouTubeServer(
   videoId: string,
   preferredLanguages: string[] = ["ko", "en"],
   supabaseStorageFolder: string = "raw",

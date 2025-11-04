@@ -3,6 +3,7 @@ import { fetchYoutubeVideoAPI } from "../../services/youtube-video/fetch-youtube
 import DBSqlYoutubeVideo from "../../db-ctrl/db-ctrl-sql/db-sql-youtube-video.js";
 import { EProcessingStatusType } from "../../consts/const.js";
 import { TRegisterRequestYouTubeVideoData } from "../../types/shared.js";
+import { saveYouTubeDescriptionToPinecone } from "../../services/youtube-video/save-youtube-description-to-pinecone.js";
 
 /**
  * YouTube 비디오 요청 등록
@@ -36,6 +37,19 @@ export async function registerYouTubeVideo({
       is_api_data_fetched: true,
       is_transcript_fetched: false,
       is_pinecone_processed: false,
+    });
+
+    // 여기서 YouTube Description 처리하기 (Pinecone 처리)
+    await saveYouTubeDescriptionToPinecone(videoData, {
+      video_id: videoData.id ?? "",
+      title: videoData.snippet?.title ?? "",
+      channel_title: videoData.snippet?.channelTitle ?? "",
+      channel_id: videoData.snippet?.channelId ?? "",
+      published_date: videoData.snippet?.publishedAt ?? "",
+      thumbnail_url: videoData.snippet?.thumbnails?.default?.url ?? "",
+      duration: videoData.contentDetails?.duration ?? "",
+      view_count: Number(videoData.statistics?.viewCount ?? 0),
+      like_count: Number(videoData.statistics?.likeCount ?? 0),
     });
 
     console.log(`✅ Video registered for background processing: ${videoId}`);

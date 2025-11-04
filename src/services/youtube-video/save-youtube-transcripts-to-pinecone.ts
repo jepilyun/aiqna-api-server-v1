@@ -15,6 +15,8 @@ import {
   safeForEmbedding,
   toSnippet,
 } from "../../utils/chunk-embedding-utils.js";
+import { saveJsonToLocal } from "../../utils/helper-json.js";
+import DBSqlYoutubeVideo from "../../db-ctrl/db-ctrl-sql/db-sql-youtube-video.js";
 
 // === 1) 유틸: 문장 단위로 자르고, maxChars/overlapChars/maxDurationSec 강제 ===
 type BaseChunk = { text: string; startTime: number; endTime: number };
@@ -146,11 +148,11 @@ function normalizeChunks(
 
 /**
  * Save YouTube Transcripts to Pinecone
- * @param transcripts
+ * @param transcriptsOfAllLanguages
  * @param vectorMetadata
  */
 export async function saveYouTubeTranscriptsToPinecone(
-  transcripts: TYouTubeTranscriptStandardFormat[],
+  transcriptsOfAllLanguages: TYouTubeTranscriptStandardFormat[],
   vectorMetadata: Partial<IPineconeVectorMetadataForVideo>,
 ) {
   try {
@@ -162,7 +164,9 @@ export async function saveYouTubeTranscriptsToPinecone(
 
     const metadataExtractor = new MetadataGeneratorYouTubeVideo();
 
-    for (const transcript of transcripts) {
+    let metadataUpdated = false;
+
+    for (const transcript of transcriptsOfAllLanguages) {
       console.log(
         `📝 Tier 2/3: Saving ${transcript.language} transcript chunks...`,
       );
@@ -172,7 +176,40 @@ export async function saveYouTubeTranscriptsToPinecone(
         transcript.videoId,
         transcript.language,
       );
+
       const chunksRaw = chunkYouTubeVideoTranscript(transcript.segments);
+
+      const fullChunkText = chunksRaw.map((chunk) => chunk.text).join(" ");
+      const metadataFromFullChunkText = await metadataExtractor.generateMetadataFromText(
+        transcript.videoId,
+        vectorMetadata.title ?? "",
+        fullChunkText,
+        transcript.language,
+      );
+
+      // DEV
+      saveJsonToLocal(metadataFromFullChunkText, `metadata_from_full_chunk_text_${transcript.language}_${transcript.videoId}.json`, transcript.language, "../data/metadataFromFullChunkText");
+
+      if (!metadataUpdated) {
+        await DBSqlYoutubeVideo.updateByVideoId(transcript.videoId, {
+          info_country: metadataFromFullChunkText.info_country,
+          info_city: metadataFromFullChunkText.info_city,
+          info_district: metadataFromFullChunkText.info_district,
+          info_neighborhood: metadataFromFullChunkText.info_neighborhood,
+          info_landmark: metadataFromFullChunkText.info_landmark,
+          info_category: metadataFromFullChunkText.info_category,
+          info_name: metadataFromFullChunkText.info_name,
+          info_special_tag: metadataFromFullChunkText.info_special_tag,
+          info_influencer: metadataFromFullChunkText.info_influencer,
+          info_season: metadataFromFullChunkText.info_season,
+          info_time_of_day: metadataFromFullChunkText.info_time_of_day,
+          info_activity_type: metadataFromFullChunkText.info_activity_type,
+          // info_target_audience: metadataFromFullChunkText.info_target_audience,
+          info_reservation_required: metadataFromFullChunkText.info_reservation_required,
+          info_travel_tips: metadataFromFullChunkText.info_travel_tips,
+        });
+        metadataUpdated = true;
+      }
 
       // 변경: 후처리로 강제 재청킹
       const chunks = normalizeChunks(chunksRaw as BaseChunk[], {
@@ -209,7 +246,7 @@ export async function saveYouTubeTranscriptsToPinecone(
 
           try {
             extractedMetadata =
-              await metadataExtractor.generateMetadataFromFullTranscript(
+              await metadataExtractor.generateMetadataFromText(
                 transcript.videoId,
                 vectorMetadata.title ?? "",
                 chunk.text,
@@ -217,7 +254,7 @@ export async function saveYouTubeTranscriptsToPinecone(
               );
 
             if (idx < 2) {
-              console.log(`   Metadata:`, {
+              console.log(`Metadata:`, {
                 info_country: extractedMetadata?.info_country,
                 info_city: extractedMetadata?.info_city,
                 info_district: extractedMetadata?.info_district,
@@ -325,9 +362,9 @@ export async function saveYouTubeTranscriptsToPinecone(
             if (extractedMetadata.info_reservation_required) {
               metadata.info_reservation_required = extractedMetadata.info_reservation_required;
             }
-            if (extractedMetadata.info_travel_tips.length > 0) {
-              metadata.info_travel_tips = extractedMetadata.info_travel_tips;
-            }
+            // if (extractedMetadata.info_travel_tips.length > 0) {
+            //   metadata.info_travel_tips = extractedMetadata.info_travel_tips;
+            // }
             if (extractedMetadata.language) {
               metadata.language = extractedMetadata.language;
             }

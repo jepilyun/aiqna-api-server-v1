@@ -17,7 +17,6 @@ export async function saveJsonToLocal(
   storagePath: string = "../data/transcripts",
 ): Promise<string> {
   try {
-    // ~ 확장
     const expandedPath = storagePath.startsWith("~")
       ? storagePath.replace("~", process.env.HOME || "")
       : storagePath;

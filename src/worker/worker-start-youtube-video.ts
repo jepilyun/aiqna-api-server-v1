@@ -8,13 +8,13 @@ import {
 import { handleProcessingError } from "../services/handle-processing-error.js";
 import { withRetry } from "../utils/retry/retry-common.js";
 import { saveYouTubeTranscriptsToPinecone } from "../services/youtube-video/save-youtube-transcripts-to-pinecone.js";
-import { getYouTubeTranscriptsFromStorage } from "../services/youtube-video/get-youtube-transcripts-from-storage.js";
+import { getYouTubeTranscriptsFromStorageOrYouTubeServer } from "../services/youtube-video/get-youtube-transcripts-from-storage.js";
 import { sleep } from "../utils/sleep.js";
 import { RateLimiterWorkerYouTubeVideo } from "./rate-limiter-worker-youtube-video.js";
 import { EProcessingStatusType } from "../consts/const.js";
 import { ERequestCreateContentType } from "../consts/const.js";
 import { fetchYouTubeVideoDataFromDB } from "../services/youtube-video/fetch-youtube-video-data-from-db.js";
-import { saveYouTubeDescriptionToPinecone } from "../services/youtube-video/save-youtube-description-to-pinecone.js";
+// import { saveYouTubeDescriptionToPinecone } from "../services/youtube-video/save-youtube-description-to-pinecone.js";
 
 /**
  * YouTube 비디오 처리 레이트 리미터
@@ -81,7 +81,7 @@ export async function workerStartYouTubeVideo() {
       }
 
       // 4. Get Transcripts from Storage
-      const transcripts = await getYouTubeTranscriptsFromStorage(
+      const transcripts = await getYouTubeTranscriptsFromStorageOrYouTubeServer(
         job.video_id,
         ["en", "ko"],
         "raw", // ✅ Supabase Storage 캐시 경로 명시
@@ -155,10 +155,6 @@ async function saveTranscriptsToPinecone(
           };
 
           await saveYouTubeTranscriptsToPinecone(transcripts, metadata);
-
-          if (videoData.description && videoData.description.length > 40) {
-            await saveYouTubeDescriptionToPinecone(videoData, metadata);
-          }
 
           await DBSqlProcessingLogYoutubeVideo.updateByVideoId(videoId, {
             is_pinecone_processed: true,

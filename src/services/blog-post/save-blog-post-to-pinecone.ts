@@ -12,6 +12,7 @@ import { OpenAIEmbeddingProvider } from "../embedding/openai-embedding.js";
 import { chunkBlogPostContent } from "../chunk/chunk-blog-post.js";
 import { ContentKeyManager } from "../../utils/content-key-manager.js";
 import { ERequestCreateContentType } from "../../consts/const.js";
+import { saveJsonToLocal } from "../../utils/helper-json.js";
 
 /**
  * Pinecone 저장 함수 (Provider 기반) - 청크별 메타데이터 추출
@@ -60,6 +61,9 @@ export async function saveBlogPostToPinecone(
     console.warn("⚠️ No chunks generated, skipping...");
     return;
   }
+
+  const metadataFromFullBlogPost = await metadataExtractor.generateMetadataFromBlogPost(blogPost);
+  saveJsonToLocal(metadataFromFullBlogPost, `metadata_from_${blogPost.blog_post_url}.json`, "_blog", "../data/metadataFromBlogPost");
 
   // 각 청크에 대해 벡터 생성
   const vectors: TPineconeVector[] = await Promise.all(
@@ -180,9 +184,9 @@ export async function saveBlogPostToPinecone(
         if (extractedMetadata.info_reservation_required) {
           metadata.info_reservation_required = extractedMetadata.info_reservation_required;
         }
-        if (extractedMetadata.info_travel_tips.length > 0) {
-          metadata.info_travel_tips = extractedMetadata.info_travel_tips;
-        }
+        // if (extractedMetadata.info_travel_tips.length > 0) {
+        //   metadata.info_travel_tips = extractedMetadata.info_travel_tips;
+        // }
         if (extractedMetadata.language) {
           metadata.language = extractedMetadata.language;
         }
