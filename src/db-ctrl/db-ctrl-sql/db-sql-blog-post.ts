@@ -262,23 +262,23 @@ export default class DBSqlBlogPost {
 
   /**
    * 블로그 포스트 삭제 기능
-   * @param postUrl 블로그 포스트 URL
+   * @param uuid36 블로그 포스트 URL
    * @returns 삭제된 블로그 포스트 정보
    */
-  static async deleteByPostUrl(
-    postUrl: string,
+  static async deleteByUuid36(
+    uuid36: string,
   ): Promise<ResponseDBSelect<TSqlBlogPostDetail[]>> {
     try {
       const { data, error, count } = await supabaseClient
         .from(SQL_DB_TABLE.blog_posts)
         .delete()
-        .eq(F_BLOG_POST.blog_post_url.id, postUrl)
+        .eq(F_BLOG_POST.uuid_36.id, uuid36)
         .select()
         .overrideTypes<TSqlBlogPostDetail[]>();
 
       if (error) {
         throw new Error(
-          `#1 블로그 포스트 정보 삭제(DELETE) 중 오류 발생 >>> ${error.message}`,
+          `#1 블로그 포스트 정보 삭제(DELETE By Uuid36) 중 오류 발생 >>> ${error.message}`,
         );
       }
 
@@ -288,7 +288,7 @@ export default class DBSqlBlogPost {
         throw error;
       }
       throw new Error(
-        "#3 블로그 포스트 정보 삭제(DELETE) 중 알 수 없는 오류가 발생했습니다.",
+        "#3 블로그 포스트 정보 삭제(DELETE By Uuid36) 중 알 수 없는 오류가 발생했습니다.",
       );
     }
   }

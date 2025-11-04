@@ -4,6 +4,7 @@ import { routeCtrlAdminTextRegister } from "../route-ctrl/route-ctrl-admin/text/
 import { routeCtrlAdminTextList } from "../route-ctrl/route-ctrl-admin/text/route-ctrl-admin-text-list.js";
 import { routeCtrlAdminTextDetail } from "../route-ctrl/route-ctrl-admin/text/route-ctrl-admin-text-detail.js";
 import { routeCtrlAdminTextUpdate } from "../route-ctrl/route-ctrl-admin/text/route-ctrl-admin-text-update.js";
+import { routeCtrlAdminTextDelete } from "../route-ctrl/route-ctrl-admin/text/route-ctrl-admin-text-delete.js";
 
 const router = express.Router();
 
@@ -33,6 +34,13 @@ router.put(
   "/update/:hashKey",
   // adminAuthMiddleware,
   routeCtrlAdminTextUpdate,
+);
+
+// Text Delete
+router.delete(
+  "/delete/:hashKey",
+  // adminAuthMiddleware,
+  routeCtrlAdminTextDelete,
 );
 
 export default router;

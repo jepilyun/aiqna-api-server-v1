@@ -4,6 +4,7 @@ import { routeCtrlAdminYouTubeVideoRegister } from "../route-ctrl/route-ctrl-adm
 import { routeCtrlAdminYouTubeVideoList } from "../route-ctrl/route-ctrl-admin/youtube-video/route-ctrl-admin-youtube-video-list.js";
 import { routeCtrlAdminYouTubeVideoDetail } from "../route-ctrl/route-ctrl-admin/youtube-video/route-ctrl-admin-youtube-video-detail.js";
 import { routeCtrlAdminYouTubeVideoUpdate } from "../route-ctrl/route-ctrl-admin/youtube-video/route-ctrl-admin-youtube-video-update.js";
+import { routeCtrlAdminYouTubeVideoDelete } from "../route-ctrl/route-ctrl-admin/youtube-video/route-ctrl-admin-youtube-video-delete.js";
 
 const router = express.Router();
 
@@ -34,5 +35,12 @@ router.put(
   // adminAuthMiddleware,
   routeCtrlAdminYouTubeVideoUpdate,
 );
+
+// YouTube Video Delete
+router.delete(
+  "/delete/:videoId",
+  // adminAuthMiddleware,
+  routeCtrlAdminYouTubeVideoDelete,
+)
 
 export default router;

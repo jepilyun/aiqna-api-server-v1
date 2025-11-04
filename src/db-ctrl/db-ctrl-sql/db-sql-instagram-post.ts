@@ -362,23 +362,23 @@ export default class DBSqlInstagramPost {
 
   /**
    * Instagram 포스트 삭제 기능
-   * @param postUrl Instagram 포스트 URL
+   * @param uuid36 Instagram 포스트 UUID36
    * @returns 삭제된 Instagram 포스트 정보
    */
-  static async deleteByPostUrl(
-    postUrl: string,
+  static async deleteByUuid36(
+    uuid36: string,
   ): Promise<ResponseDBSelect<TSqlInstagramPostDetail[]>> {
     try {
       const { data, error, count } = await supabaseClient
         .from(SQL_DB_TABLE.instagram_posts)
         .delete()
-        .eq(F_INSTAGRAM_POST.instagram_post_url.id, postUrl)
+        .eq(F_INSTAGRAM_POST.uuid_36.id, uuid36)
         .select()
         .overrideTypes<TSqlInstagramPostDetail[]>();
 
       if (error) {
         throw new Error(
-          `#1 Instagram 포스트 정보 삭제(DELETE) 중 오류 발생 >>> ${error.message}`,
+          `#1 Instagram 포스트 정보 삭제(DELETE By Uuid36) 중 오류 발생 >>> ${error.message}`,
         );
       }
 
@@ -391,7 +391,7 @@ export default class DBSqlInstagramPost {
         throw error;
       }
       throw new Error(
-        "#3 Instagram 포스트 정보 삭제(DELETE) 중 알 수 없는 오류가 발생했습니다.",
+        "#3 Instagram 포스트 정보 삭제(DELETE By Uuid36) 중 알 수 없는 오류가 발생했습니다.",
       );
     }
   }

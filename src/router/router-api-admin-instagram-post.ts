@@ -4,6 +4,7 @@ import { routeCtrlAdminInstagramPostRegister } from "../route-ctrl/route-ctrl-ad
 import { routeCtrlAdminInstagramPostList } from "../route-ctrl/route-ctrl-admin/intagram-post/route-ctrl-admin-instagram-post-list.js";
 import { routeCtrlAdminInstagramPostDetail } from "../route-ctrl/route-ctrl-admin/intagram-post/route-ctrl-admin-instagram-post-detail.js";
 import { routeCtrlAdminInstagramPostUpdate } from "../route-ctrl/route-ctrl-admin/intagram-post/route-ctrl-admin-instagram-post-update.js";
+import { routeCtrlAdminInstagramPostDelete } from "../route-ctrl/route-ctrl-admin/intagram-post/route-ctrl-admin-instagram-post-delete.js";
 
 const router = express.Router();
 
@@ -33,6 +34,13 @@ router.put(
   "/update/:uuid36",
   // adminAuthMiddleware,
   routeCtrlAdminInstagramPostUpdate,
+);
+
+// Instagram Post Delete
+router.delete(
+  "/delete/:uuid36",
+  // adminAuthMiddleware,
+  routeCtrlAdminInstagramPostDelete,
 );
 
 export default router;
