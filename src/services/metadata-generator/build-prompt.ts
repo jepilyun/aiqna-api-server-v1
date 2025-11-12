@@ -1,10 +1,13 @@
 type SourceType = "youtube" | "instagram" | "blog" | "text";
 type LocaleHint = string | string[]; // "Korea" | "대한민국" | ["대한민국", "일본"] 등
 
-export type TGeneratorOptions = {
-  source?: SourceType;         // 기본 youtube
-  countryHint?: LocaleHint;    // 예시/가이드에 쓰일 국가 샘플
-  maxPlaceTips?: number;       // info_travel_tips 내 장소 최대 개수 (기본 10)
+export type TMetadataPromptGeneratorOptions = {
+  source?: "youtube" | "instagram" | "blog";
+  countryHint?: string;
+  maxPlaceTips?: number;
+  provider?: "groq" | "ollama" | "openai";
+  model?: string;
+  modelName?: string;
 };
 
 type TBuildSystemPromptOptions = {

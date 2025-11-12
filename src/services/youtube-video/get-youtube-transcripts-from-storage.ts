@@ -14,7 +14,14 @@ import { convertYouTubeTranscriptSegmentsToStandard } from "./convert-youtube-tr
 import { sleep } from "../../utils/sleep.js";
 import { fetchYoutubeVideoTranscriptByLanguage } from "./fetch-youtube-video-transcript-by-language.js";
 import DBSqlYoutubeVideoTranscript from "../../db-ctrl/db-ctrl-sql/db-sql-youtube-video-transcript.js";
-import { saveJsonToLocal } from "../../utils/helper-json.js";
+import { saveDataToLocal } from "../../utils/save-file.js";
+
+
+export type TTranscriptFetchResult = {
+  transcripts: TYouTubeTranscriptStandardFormat[];
+  source: 'cache' | 'youtube';  // 데이터 출처
+  youtubeApiCallCount: number;  // YouTube API 호출 횟수
+};
 
 /**
  * 여러 언어의 트랜스크립트를 저장하고 결과 반환
@@ -24,11 +31,18 @@ export async function getYouTubeTranscriptsFromStorageOrYouTubeServer(
   preferredLanguages: string[] = ["ko", "en"],
   supabaseStorageFolder: string = "raw",
   localDiskPath: string = "../data/transcripts",
-): Promise<TYouTubeTranscriptStandardFormat[]> {
+): Promise<TTranscriptFetchResult> {  // ✅ 반환 타입 변경
   try {
     // 1. 사용 가능한 언어 핸들 가져오기
     const availableHandles = await getAvailableLanguageHandles(videoId);
-    if (!availableHandles) return [];
+
+    // DEV Save File
+    // ytb_video_XXXXXXXX_s04_transcript_available_handles.txt
+    saveDataToLocal(availableHandles, `ytb_video_${videoId}_s04_transcript`, "available_handles", "txt", "../data/metaYouTube");
+
+    if (!availableHandles) {
+      return { transcripts: [], source: 'cache', youtubeApiCallCount: 0 };
+    }
 
     // 2. 처리할 언어 핸들 결정
     const handlesToFetch = selectHandlesToFetch(
@@ -36,8 +50,8 @@ export async function getYouTubeTranscriptsFromStorageOrYouTubeServer(
       availableHandles,
     );
 
-    // 3. 각 언어별 트랜스크립트 처리
-    const savedTranscripts =
+    // 3. 각 언어별 트랜스크립트 처리 (소스 정보 포함)
+    const { savedTranscripts, youtubeApiCallCount } =
       await getYouTubeTranscriptsFromStorageAfterFetchAndSaveToStorage(
         videoId,
         handlesToFetch,
@@ -49,16 +63,24 @@ export async function getYouTubeTranscriptsFromStorageOrYouTubeServer(
       throw new Error(`No transcripts could be saved for video ${videoId}`);
     }
 
+    // ✅ 소스 판단: YouTube API를 한 번이라도 호출했으면 'youtube'
+    const source = youtubeApiCallCount > 0 ? 'youtube' : 'cache';
+
     console.log(
-      `✅ Successfully saved ${savedTranscripts.length} transcript(s)`,
+      `✅ Successfully saved ${savedTranscripts.length} transcript(s) from ${source.toUpperCase()} (API calls: ${youtubeApiCallCount})`,
     );
-    return savedTranscripts;
+    
+    return { 
+      transcripts: savedTranscripts, 
+      source,
+      youtubeApiCallCount 
+    };
   } catch (error) {
     console.error(
       `❌ Error in saveYouTubeTranscriptsToDb for ${videoId}:`,
       error,
     );
-    return [];
+    return { transcripts: [], source: 'cache', youtubeApiCallCount: 0 };
   }
 }
 
@@ -136,8 +158,12 @@ async function getYouTubeTranscriptsFromStorageAfterFetchAndSaveToStorage(
   handlesToFetch: TTranscriptTrackHandle[],
   supabaseStorageFolder: string,
   localStoragePath: string,
-): Promise<TYouTubeTranscriptStandardFormat[]> {
+): Promise<{ 
+  savedTranscripts: TYouTubeTranscriptStandardFormat[]; 
+  youtubeApiCallCount: number;  // ✅ 추가
+}> {
   const savedTranscripts: TYouTubeTranscriptStandardFormat[] = [];
+  let youtubeApiCallCount = 0;  // ✅ YouTube API 호출 카운터
 
   for (let i = 0; i < handlesToFetch.length; i++) {
     const handle = handlesToFetch[i];
@@ -152,11 +178,13 @@ async function getYouTubeTranscriptsFromStorageAfterFetchAndSaveToStorage(
       );
 
       if (cachedTranscript) {
+        console.log(`⚡ [CACHE HIT] Using cached transcript for ${lang}`);
         savedTranscripts.push(cachedTranscript);
-        continue;
+        continue;  // ✅ 캐시 히트 시 YouTube API 호출 안 함
       }
 
       // 2. Fetch new transcript from YouTube and save to Storage
+      console.log(`🌐 [YOUTUBE API] Fetching ${lang} from YouTube server...`);
       const transcript =
         await fetchTranscriptsFromYouTubeServerAndSaveToStorage(
           videoId,
@@ -167,6 +195,7 @@ async function getYouTubeTranscriptsFromStorageAfterFetchAndSaveToStorage(
 
       if (transcript) {
         savedTranscripts.push(transcript);
+        youtubeApiCallCount++;  // ✅ YouTube API 호출 카운트 증가
       }
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
@@ -174,13 +203,14 @@ async function getYouTubeTranscriptsFromStorageAfterFetchAndSaveToStorage(
       continue;
     }
 
-    // 마지막 언어가 아니면 랜덤 대기
+    // ✅ YouTube API를 호출한 경우에만 throttling 적용
     if (i < handlesToFetch.length - 1) {
+      // 다음 언어도 캐시에 없을 가능성 체크 (선택적 최적화)
       await applyThrottling();
     }
   }
 
-  return savedTranscripts;
+  return { savedTranscripts, youtubeApiCallCount };  // ✅ 카운트 반환
 }
 
 /**
@@ -286,23 +316,27 @@ async function fetchTranscriptsFromYouTubeServerAndSaveToStorage(
   );
 
   // 3-2-4. 표준 포맷 변환
-  const transcript = convertToStandardFormat(
+  const standardFormatTranscript = convertToStandardFormat(
     videoId,
     language,
     transcriptSegmentsUnknown,
     transcriptResult,
   );
 
+  // DEV Save File
+  // ytb_video_XXXXXXXX_s07_transcript_lang_XX_segments_standard_format.json [파일 체크해보기]
+  saveDataToLocal(standardFormatTranscript, `ytb_video_${videoId}_s07_transcript_lang_${language}`, "segments_standard_format", "json", "../data/metaYouTube");
+
   // 3-2-5. 로컬 백업 (선택적)
   await saveYouTubeTranscriptToLocalDisk(
-    transcript,
+    standardFormatTranscript,
     videoId,
     language,
     localStoragePath,
   );
 
   console.log(`✅ ${language} 트랜스크립트 처리 완료`);
-  return transcript;
+  return standardFormatTranscript;
 }
 
 // 파일 상단 근처
@@ -496,7 +530,7 @@ async function saveYouTubeTranscriptToLocalDisk(
   if (!localStoragePath) return;
 
   try {
-    await saveJsonToLocal(transcript, videoId, language, localStoragePath);
+    await saveDataToLocal(transcript, videoId, language, "json", localStoragePath);
     const fileName = `${videoId}_${language}.json`;
     console.log(`✓ Backed up to local: ${localStoragePath}/${fileName}`);
   } catch (backupError: unknown) {

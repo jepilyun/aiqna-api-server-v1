@@ -167,33 +167,24 @@ async function processBlogPostToPinecone(
 
   console.log("📤 Processing to Pinecone...");
 
-  await withRetry(
-    async () => {
-      const metadata = {
-        blog_post_url: blogPost.blog_post_url, // Instagram 게시물 URL
-        title: blogPost.title, // Blog 제목
-        image: blogPost.og_image ?? undefined, // Blog 이미지
-        published_date: blogPost.published_date ?? undefined, // Blog 게시 날짜 (ISO 8601 형식)
-        local_image_url: blogPost.local_image_url ?? undefined, // Blog 로컬 이미지 URL
-        tags: blogPost.tags, // Blog 태그
-        blog_platform: blogPost.platform ?? "Unknown", // Blog 플랫폼
-        blog_platform_url: blogPost.platform_url ?? "Unknown", // Blog 플랫폼 URL
-      };
+  const metadata = {
+    blog_post_url: blogPost.blog_post_url, // Instagram 게시물 URL
+    title: blogPost.title, // Blog 제목
+    image: blogPost.og_image ?? undefined, // Blog 이미지
+    published_date: blogPost.published_date ?? undefined, // Blog 게시 날짜 (ISO 8601 형식)
+    local_image_url: blogPost.local_image_url ?? undefined, // Blog 로컬 이미지 URL
+    tags: blogPost.tags, // Blog 태그
+    blog_platform: blogPost.platform ?? "Unknown", // Blog 플랫폼
+    blog_platform_url: blogPost.platform_url ?? "Unknown", // Blog 플랫폼 URL
+  };
 
-      await saveBlogPostToPinecone(blogPost, metadata);
+  await saveBlogPostToPinecone(blogPost, metadata);
 
-      // Processing Log 업데이트
-      await DBSqlProcessingLogBlogPost.updateByPostUrl(blogPost.blog_post_url, {
-        is_pinecone_processed: true,
-        processing_status: EProcessingStatusType.completed,
-      });
+  // Processing Log 업데이트
+  await DBSqlProcessingLogBlogPost.updateByPostUrl(blogPost.blog_post_url, {
+    is_pinecone_processed: true,
+    processing_status: EProcessingStatusType.completed,
+  });
 
-      console.log("✅ Pinecone processing completed");
-    },
-    {
-      maxRetries: 3,
-      baseDelay: 1000,
-      operationName: "Pinecone processing",
-    },
-  );
+  console.log("✅ Pinecone processing completed");
 }

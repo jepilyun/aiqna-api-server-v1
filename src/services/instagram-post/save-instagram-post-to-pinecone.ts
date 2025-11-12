@@ -10,9 +10,9 @@ import { MetadataGeneratorInstagramPost } from "../metadata-generator/metadata-g
 import DBPinecone from "../../db-ctrl/db-ctrl-pinecone/db-pinecone.js";
 import { OpenAIEmbeddingProvider } from "../embedding/openai-embedding.js";
 import { ContentKeyManager } from "../../utils/content-key-manager.js";
-import { ERequestCreateContentType } from "../../consts/const.js";
+import { ERequestCreateContentType, METADATA_GENERATOR_MODEL, METADATA_GENERATOR_MODEL_NAME, METADATA_GENERATOR_PROVIDER } from "../../consts/const.js";
 import DBSqlInstagramPost from "../../db-ctrl/db-ctrl-sql/db-sql-instagram-post.js";
-import { saveJsonToLocal } from "../../utils/helper-json.js";
+import { saveDataToLocal } from "../../utils/save-file.js";
 import { getInstagramPostId } from "../../utils/helper-instagram.js";
 
 /**
@@ -26,7 +26,10 @@ export async function saveInstagramPostToPinecone(
 ): Promise<void> {
   const provider = new OpenAIEmbeddingProvider();
   const embeddingModel = modelName || provider.getDefaultModel();
-  const metadataExtractor = new MetadataGeneratorInstagramPost();
+  const metadataExtractor = new MetadataGeneratorInstagramPost({
+    provider: METADATA_GENERATOR_PROVIDER,              // "openai" 도 가능
+    model: METADATA_GENERATOR_MODEL,
+  });
 
   let content = "";
 
@@ -42,12 +45,30 @@ export async function saveInstagramPostToPinecone(
   const embedding = await provider.generateEmbedding(content, embeddingModel);
 
   // 2. 메타데이터 추출
-  let extractedMetadata: TAnalyzedContentMetadata | null = null;
+  let parsedMetadata: TAnalyzedContentMetadata | null = null;
 
-  extractedMetadata =
+  const rawMetadata =
     await metadataExtractor.generateMetadataFromInstagramPost(instagramPost);
 
-  saveJsonToLocal(extractedMetadata, `metadata_from_${getInstagramPostId(instagramPost.instagram_post_url)}.json`, "_instagram", "../data/metadataFromInstagramPost");
+  if (!rawMetadata) {
+    console.warn(`⚠️  No metadata generated for ${instagramPost.instagram_post_url}, skipping...`);
+    return;
+  }
+
+  // DEV Save File
+  // instagram_post_XXXXXXXX_s02_meta_[provider]_[model]_raw.txt
+  saveDataToLocal(rawMetadata, `instagram_post_${getInstagramPostId(instagramPost.instagram_post_url)}_s02_meta_${METADATA_GENERATOR_PROVIDER}_${METADATA_GENERATOR_MODEL_NAME}`, "raw", "txt", "../data/metaInstagram");
+
+  parsedMetadata = await metadataExtractor.parseResponse(rawMetadata);
+
+  if (!parsedMetadata) {
+    console.warn(`⚠️  No parsed metadata generated for ${instagramPost.instagram_post_url}, skipping...`);
+    return;
+  }
+
+  // DEV Save File
+  // instagram_post_XXXXXXXX_s03_meta_[provider]_[model]_parsed.json
+  saveDataToLocal(parsedMetadata, `instagram_post_${getInstagramPostId(instagramPost.instagram_post_url)}_s03_meta_${METADATA_GENERATOR_PROVIDER}_${METADATA_GENERATOR_MODEL_NAME}`, "parsed", "json", "../data/metaInstagram");
 
   const contentKey = ContentKeyManager.createContentKey(
     ERequestCreateContentType.Instagram,
@@ -66,60 +87,60 @@ export async function saveInstagramPostToPinecone(
 
 
   // 청크별 추출된 메타데이터 추가
-  if (extractedMetadata) {
-    if (extractedMetadata.info_country.length > 0) {
-      metadata.info_country = extractedMetadata.info_country;
+  if (parsedMetadata) {
+    if (parsedMetadata.info_country.length > 0) {
+      metadata.info_country = parsedMetadata.info_country;
     }
-    if (extractedMetadata.info_city.length > 0) {
-      metadata.info_city = extractedMetadata.info_city;
+    if (parsedMetadata.info_city.length > 0) {
+      metadata.info_city = parsedMetadata.info_city;
     }
-    if (extractedMetadata.info_district.length > 0) {
-      metadata.info_district = extractedMetadata.info_district;
+    if (parsedMetadata.info_district.length > 0) {
+      metadata.info_district = parsedMetadata.info_district;
     }
-    if (extractedMetadata.info_neighborhood.length > 0) {
-      metadata.info_neighborhood = extractedMetadata.info_neighborhood;
+    if (parsedMetadata.info_neighborhood.length > 0) {
+      metadata.info_neighborhood = parsedMetadata.info_neighborhood;
     }
-    if (extractedMetadata.info_category.length > 0) {
-      metadata.info_category = extractedMetadata.info_category;
+    if (parsedMetadata.info_category.length > 0) {
+      metadata.info_category = parsedMetadata.info_category;
     }
-    if (extractedMetadata.info_name.length > 0) {
-      metadata.info_name = extractedMetadata.info_name;
+    if (parsedMetadata.info_name.length > 0) {
+      metadata.info_name = parsedMetadata.info_name;
     }
-    if (extractedMetadata.info_special_tag.length > 0) {
-      metadata.info_special_tag = extractedMetadata.info_special_tag;
+    if (parsedMetadata.info_special_tag.length > 0) {
+      metadata.info_special_tag = parsedMetadata.info_special_tag;
     }
-    if (extractedMetadata.info_influencer.length > 0) {
-      metadata.info_influencer = extractedMetadata.info_influencer;
+    if (parsedMetadata.info_influencer.length > 0) {
+      metadata.info_influencer = parsedMetadata.info_influencer;
     }
-    if (extractedMetadata.info_season.length > 0) {
-      metadata.info_season = extractedMetadata.info_season;
+    if (parsedMetadata.info_season.length > 0) {
+      metadata.info_season = parsedMetadata.info_season;
     }
-    if (extractedMetadata.info_time_of_day.length > 0) {
-      metadata.info_time_of_day = extractedMetadata.info_time_of_day;
+    if (parsedMetadata.info_time_of_day.length > 0) {
+      metadata.info_time_of_day = parsedMetadata.info_time_of_day;
     }
-    if (extractedMetadata.info_activity_type.length > 0) {
-      metadata.info_activity_type = extractedMetadata.info_activity_type;
+    if (parsedMetadata.info_activity_type.length > 0) {
+      metadata.info_activity_type = parsedMetadata.info_activity_type;
     }
-    if (extractedMetadata.info_target_audience.length > 0) {
-      metadata.info_target_audience = extractedMetadata.info_target_audience;
+    if (parsedMetadata.info_target_audience.length > 0) {
+      metadata.info_target_audience = parsedMetadata.info_target_audience;
     }
-    if (extractedMetadata.info_reservation_required) {
-      metadata.info_reservation_required = extractedMetadata.info_reservation_required;
+    if (parsedMetadata.info_reservation_required) {
+      metadata.info_reservation_required = parsedMetadata.info_reservation_required;
     }
     // if (extractedMetadata.info_travel_tips.length > 0) {
     //   metadata.info_travel_tips = extractedMetadata.info_travel_tips;
     // }
-    if (extractedMetadata.language) {
-      metadata.language = extractedMetadata.language;
+    if (parsedMetadata.language) {
+      metadata.language = parsedMetadata.language;
     }
-    if (extractedMetadata.sentimentScore) {
-      metadata.sentimentScore = extractedMetadata.sentimentScore;
+    if (parsedMetadata.sentimentScore) {
+      metadata.sentimentScore = parsedMetadata.sentimentScore;
     }
-    if (extractedMetadata.mainTopic) {
-      metadata.mainTopic = extractedMetadata.mainTopic;
+    if (parsedMetadata.mainTopic) {
+      metadata.mainTopic = parsedMetadata.mainTopic;
     }
-    if (extractedMetadata.confidence_score) {
-      metadata.confidence_score = extractedMetadata.confidence_score;
+    if (parsedMetadata.confidence_score) {
+      metadata.confidence_score = parsedMetadata.confidence_score;
     }
   }
 
@@ -134,20 +155,20 @@ export async function saveInstagramPostToPinecone(
   await DBPinecone.upsertOne(indexName, vector);
 
   await DBSqlInstagramPost.updateByPostUrl(instagramPost.instagram_post_url, {
-    info_country: extractedMetadata?.info_country,
-    info_city: extractedMetadata?.info_city,
-    info_district: extractedMetadata?.info_district,
-    info_neighborhood: extractedMetadata?.info_neighborhood,
-    info_category: extractedMetadata?.info_category,
-    info_name: extractedMetadata?.info_name,
-    info_special_tag: extractedMetadata?.info_special_tag,
-    info_influencer: extractedMetadata?.info_influencer,
-    info_season: extractedMetadata?.info_season,
-    info_time_of_day: extractedMetadata?.info_time_of_day,
-    info_activity_type: extractedMetadata?.info_activity_type,
-    // info_target_audience: extractedMetadata?.info_target_audience,
-    info_reservation_required: extractedMetadata?.info_reservation_required,
-    info_travel_tips: extractedMetadata?.info_travel_tips,
+    info_country: parsedMetadata?.info_country,
+    info_city: parsedMetadata?.info_city,
+    info_district: parsedMetadata?.info_district,
+    info_neighborhood: parsedMetadata?.info_neighborhood,
+    info_category: parsedMetadata?.info_category,
+    info_name: parsedMetadata?.info_name,
+    info_special_tag: parsedMetadata?.info_special_tag,
+    info_influencer: parsedMetadata?.info_influencer,
+    info_season: parsedMetadata?.info_season,
+    info_time_of_day: parsedMetadata?.info_time_of_day,
+    info_activity_type: parsedMetadata?.info_activity_type,
+    // info_target_audience: parsedMetadata?.info_target_audience,
+    info_reservation_required: parsedMetadata?.info_reservation_required,
+    info_travel_tips: parsedMetadata?.info_travel_tips,
   });
 
   console.log(`✓ Completed for ${instagramPost.instagram_post_url}`);

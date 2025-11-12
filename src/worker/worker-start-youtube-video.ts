@@ -14,7 +14,7 @@ import { RateLimiterWorkerYouTubeVideo } from "./rate-limiter-worker-youtube-vid
 import { EProcessingStatusType } from "../consts/const.js";
 import { ERequestCreateContentType } from "../consts/const.js";
 import { fetchYouTubeVideoDataFromDB } from "../services/youtube-video/fetch-youtube-video-data-from-db.js";
-// import { saveYouTubeDescriptionToPinecone } from "../services/youtube-video/save-youtube-description-to-pinecone.js";
+
 
 /**
  * YouTube 비디오 처리 레이트 리미터
@@ -31,7 +31,7 @@ export async function workerStartYouTubeVideo() {
 
   while (true) {
     try {
-      // Rate Limiter Check (Rest Time)
+      // Rate Limiter Check (Rest Time) - 배치 완료 후 휴식
       if (rateLimiter.shouldRest()) {
         const restTime = rateLimiter.getRestTime();
         console.log(
@@ -46,21 +46,20 @@ export async function workerStartYouTubeVideo() {
       const resultPendingJobs =
         await DBSqlProcessingLogYoutubeVideo.selectPendingJobs({
           limit: 1,
-          orderBy: "created_at", // 가장 오래된 것부터 처리
+          orderBy: "created_at",
         });
 
       const job = resultPendingJobs.data?.[0] || null;
 
       if (!job) {
         console.log("⏳ No pending jobs, waiting...", new Date().toISOString());
-        await sleep(1200000); // 1200초(20분) 대기
+        await sleep(1200000);
         continue;
       }
 
-      // 2. 작업 처리
       console.log(`\n🎬 Processing video: ${job.video_id}`);
 
-      // 🔒 자막이 없는 동영상인지 먼저 체크
+      // 자막이 없는 동영상인지 먼저 체크
       if (job.is_transcript_exist === false) {
         console.log(
           `⏭️ ${job.video_id}: transcript marked ABSENT; skipping transcript/pinecone steps.`,
@@ -80,17 +79,28 @@ export async function workerStartYouTubeVideo() {
         continue;
       }
 
-      // 4. Get Transcripts from Storage
-      const transcripts = await getYouTubeTranscriptsFromStorageOrYouTubeServer(
-        job.video_id,
-        ["en", "ko"],
-        "raw", // ✅ Supabase Storage 캐시 경로 명시
-        "../data/transcripts", // ✅ 로컬 캐시 경로 명시
-      );
+      // 4. Get Transcripts from Storage (✅ 소스 정보 포함)
+      const { transcripts, source, youtubeApiCallCount } = 
+        await getYouTubeTranscriptsFromStorageOrYouTubeServer(
+          job.video_id,
+          ["en", "ko"],
+          "raw",
+          "../data/transcripts",
+        );
+      
+      if (transcripts.length === 0) {
+        console.error(`❌ No transcripts found for ${job.video_id}`);
+        await DBSqlProcessingLogYoutubeVideo.updateByVideoId(job.video_id, {
+          processing_status: EProcessingStatusType.completed,
+          is_transcript_exist: false,
+          last_processed_at: new Date().toISOString(),
+        });
+        continue;
+      }
 
       // 존재/가져옴 상태를 정확히 반영
       await DBSqlProcessingLogYoutubeVideo.updateByVideoId(job.video_id, {
-        is_transcript_exist: transcripts.length > 0, // 0이면 false로 확정
+        is_transcript_exist: transcripts.length > 0,
         is_transcript_fetched: transcripts.length > 0,
         last_processed_at: new Date().toISOString(),
       });
@@ -103,14 +113,26 @@ export async function workerStartYouTubeVideo() {
         job,
       );
 
-      // 6. Rate Limiting 적용
-      rateLimiter.incrementProcessed();
-      const delay = rateLimiter.getNextDelay();
-      console.log(`⏱️  Waiting ${delay}ms before next request...`);
-      await sleep(delay);
+      // 6. ✅ YouTube API 호출 여부에 따라 Rate Limiting 적용
+      if (source === 'youtube') {
+        rateLimiter.incrementProcessed();
+        const delay = rateLimiter.getNextDelay();
+        console.log(
+          `⏱️  [YOUTUBE API] Called ${youtubeApiCallCount} time(s). ` +
+          `Waiting ${delay}ms (${(delay / 1000).toFixed(0)}s) before next request...`
+        );
+        await sleep(delay);
+      } else {
+        console.log(
+          `⚡ [CACHE HIT] All transcripts from cache. No rate limit delay needed.`
+        );
+        // 캐시 히트 시 짧은 딜레이만 (CPU 부하 방지)
+        await sleep(100);
+      }
+
     } catch (error) {
       console.error("❌ Worker error:", error);
-      await sleep(30000); // 에러 시 30초 대기
+      await sleep(30000);
     }
   }
 }

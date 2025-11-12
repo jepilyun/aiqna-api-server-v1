@@ -4,6 +4,7 @@ import DBSqlYoutubeVideo from "../../db-ctrl/db-ctrl-sql/db-sql-youtube-video.js
 import { EProcessingStatusType } from "../../consts/const.js";
 import { TRegisterRequestYouTubeVideoData } from "../../types/shared.js";
 import { saveYouTubeDescriptionToPinecone } from "../../services/youtube-video/save-youtube-description-to-pinecone.js";
+import { HelperYouTube } from "../../utils/helper-youtube.js";
 
 /**
  * YouTube 비디오 요청 등록
@@ -19,14 +20,14 @@ export async function registerYouTubeVideo({
   uniqueKey: string;
   status: string;
 }> {
-  if (videoId.length === 0) {
+  if (videoId.length === 0 || !HelperYouTube.isValidVideoId(videoId)) {
     throw new Error("No valid video IDs provided.");
   }
 
   try {
     console.log(`📝 Registering YouTube video for processing log: ${videoId}`);
 
-    // 1. API 데이터 즉시 가져오기
+    // 1. YouTube API 데이터 즉시 가져오기
     const videoData = await fetchYoutubeVideoAPI(videoId);
     await DBSqlYoutubeVideo.upsert(videoData, isShorts);
 
@@ -41,7 +42,7 @@ export async function registerYouTubeVideo({
 
     // 여기서 YouTube Description 처리하기 (Pinecone 처리)
     await saveYouTubeDescriptionToPinecone(videoData, {
-      video_id: videoData.id ?? "",
+      video_id: videoId,
       title: videoData.snippet?.title ?? "",
       channel_title: videoData.snippet?.channelTitle ?? "",
       channel_id: videoData.snippet?.channelId ?? "",
@@ -68,6 +69,5 @@ export async function registerYouTubeVideo({
       uniqueKey: videoId,
       status: "failed",
     };
-    // throw error; // 전체 루프를 중단하지 않도록 error throw를 제거 (필요시)
   }
 }

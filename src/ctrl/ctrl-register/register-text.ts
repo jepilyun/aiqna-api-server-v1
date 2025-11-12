@@ -132,25 +132,16 @@ async function processTextToPinecone(
 
   console.log("📤 Processing to Pinecone...");
 
-  await withRetry(
-    async () => {
-      const metadata = {
-        title: textData.title ?? "Unknown", // Title
-      };
+  const metadata = {
+    title: textData.title ?? "Unknown", // Title
+  };
 
-      await saveTextToPinecone(textData, metadata);
+  await saveTextToPinecone(textData, metadata);
 
-      await DBSqlProcessingLogText.updateByHashKey(textData.hash_key, {
-        is_pinecone_processed: true,
-        processing_status: EProcessingStatusType.completed,
-      });
+  await DBSqlProcessingLogText.updateByHashKey(textData.hash_key, {
+    is_pinecone_processed: true,
+    processing_status: EProcessingStatusType.completed,
+  });
 
-      console.log("✅ Pinecone processing completed");
-    },
-    {
-      maxRetries: 3,
-      baseDelay: 1000,
-      operationName: "Pinecone processing",
-    },
-  );
+  console.log("✅ Pinecone processing completed");
 }

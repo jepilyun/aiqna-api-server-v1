@@ -111,7 +111,6 @@ async function processInstagramPost(
     async () => {
       const metadata = await fetchInstagramPostHTMLMetadata(instagramPostUrl);
 
-      // TInstagramPostHTMLMetadata → TSqlInstagramPostDetailInsert 매핑
       const insertData: TSqlInstagramPostDetailInsert = {
         instagram_post_url: instagramPostUrl,
         description: description,
@@ -175,25 +174,16 @@ async function processInstagramPostToPinecone(
 
   console.log("📤 Processing to Pinecone...");
 
-  await withRetry(
-    async () => {
-      const metadata = generateVectorMetadataInstagramPost(instagramPost);
-      await saveInstagramPostToPinecone(instagramPost, metadata);
+  const metadata = generateVectorMetadataInstagramPost(instagramPost);
+  await saveInstagramPostToPinecone(instagramPost, metadata);
 
-      await DBSqlProcessingLogInstagramPost.updateByPostUrl(
-        instagramPost.instagram_post_url,
-        {
-          is_pinecone_processed: true,
-          processing_status: EProcessingStatusType.completed, // ✅ enum 사용
-        },
-      );
-
-      console.log("✅ Pinecone processing completed");
-    },
+  await DBSqlProcessingLogInstagramPost.updateByPostUrl(
+    instagramPost.instagram_post_url,
     {
-      maxRetries: 3,
-      baseDelay: 1000,
-      operationName: "Pinecone processing",
+      is_pinecone_processed: true,
+      processing_status: EProcessingStatusType.completed, // ✅ enum 사용
     },
   );
+
+  console.log("✅ Pinecone processing completed");
 }

@@ -6,6 +6,7 @@ export class RateLimiterWorkerYouTubeVideo {
   private processedCount = 0;
   private batchLimit: number;
   private isResting = false;
+  private cacheHitCount = 0;  // ✅ 캐시 히트 통계
 
   constructor() {
     // 10~15회 사이 랜덤 배치 크기
@@ -41,20 +42,37 @@ export class RateLimiterWorkerYouTubeVideo {
   }
 
   /**
-   * 휴식이 필요한지 확인
-   */
-  shouldRest(): boolean {
-    return this.isResting;
+     * 캐시 히트 시 호출
+     */
+  recordCacheHit(): void {
+    this.cacheHitCount++;
+    console.log(`⚡ Cache hit count: ${this.cacheHitCount}`);
   }
 
   /**
    * 배치 리셋
    */
   resetBatch(): void {
+    const prevCacheHits = this.cacheHitCount;
+    const prevProcessed = this.processedCount;
+    
     this.processedCount = 0;
     this.batchLimit = this.getRandomInt(10, 15);
     this.isResting = false;
-    console.log(`🔄 Batch reset! New limit: ${this.batchLimit}`);
+    this.cacheHitCount = 0;
+    
+    console.log(
+      `🔄 Batch reset! New limit: ${this.batchLimit}\n` +
+      `   Previous batch: ${prevProcessed} API calls, ${prevCacheHits} cache hits ` +
+      `(${((prevCacheHits / (prevProcessed + prevCacheHits)) * 100).toFixed(1)}% cache hit rate)`
+    );
+  }
+
+  /**
+   * 휴식이 필요한지 확인
+   */
+  shouldRest(): boolean {
+    return this.isResting;
   }
 
   /**

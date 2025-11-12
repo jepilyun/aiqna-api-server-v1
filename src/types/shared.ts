@@ -39,6 +39,15 @@ export type TYouTubeVideoCaptionsAvailable = {
   caption_tracks?: TYouTubeVideoCaptionTrack[]; // 사용 가능한 모든 자막 트랙 목록
 };
 
+
+export type TTravelTipItem = {
+  place?: string;
+  district?: string;
+  neighborhood?: string;
+  category?: string;
+  tips: string[]; // 최소 1개 이상 권장
+};
+
 /**
  * Extracted Content(YouTube Video, Instagram Post) Metadata
  */
@@ -64,7 +73,7 @@ export type TAnalyzedContentMetadata = {
   // 타겟 및 실용 정보
   info_target_audience: string[];
   info_reservation_required: boolean;
-  info_travel_tips: string[];
+  info_travel_tips: TTravelTipItem[];
 
   // 언어 및 감정 분석
   language: string;
@@ -72,6 +81,28 @@ export type TAnalyzedContentMetadata = {
   mainTopic: string;
 
   confidence_score: number;
+};
+
+export type TLLMRaw = {
+  info_country?: unknown;
+  info_city?: unknown;
+  info_district?: unknown;
+  info_neighborhood?: unknown;
+  info_landmark?: unknown;
+  info_category?: unknown;
+  info_name?: unknown;
+  info_special_tag?: unknown;
+  info_influencer?: unknown;
+  info_season?: unknown;
+  info_time_of_day?: unknown;
+  info_activity_type?: unknown;
+  info_target_audience?: unknown;
+  info_reservation_required?: unknown;
+  info_travel_tips?: unknown;
+  language?: unknown;
+  sentimentScore?: unknown;
+  mainTopic?: unknown;
+  confidence_score?: unknown;
 };
 
 /**

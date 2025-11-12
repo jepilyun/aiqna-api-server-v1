@@ -1,4 +1,5 @@
 import { google, youtube_v3 } from "googleapis";
+import { saveDataToLocal } from "../../utils/save-file.js";
 
 /**
  * YouTube Data API v3를 사용하여 비디오 메타데이터를 가져옵니다.
@@ -23,7 +24,7 @@ export async function fetchYoutubeVideoAPI(
   try {
     const youtube = google.youtube({
       version: "v3",
-      auth: process.env.YOUTUBE_API_KEY, // API 키 필요
+      auth: process.env.YOUTUBE_API_KEY, // YouTube Data API v3 API 키 필요
     });
 
     const response = await youtube.videos.list({
@@ -40,6 +41,16 @@ export async function fetchYoutubeVideoAPI(
     if (!response.data.items || response.data.items.length === 0) {
       throw new Error(`Video not found: ${videoId}`);
     }
+
+    // DEV Save File
+    // filename: ytb_video_XXXXXXXX_s01_API.json
+    saveDataToLocal(
+      response.data.items[0],
+      `ytb_video_${videoId}_s01`,
+      "API",
+      "json",
+      "../data/youtube",
+    );
 
     // PostgreSQL 함수가 기대하는 형식 그대로 반환
     return response.data.items[0];

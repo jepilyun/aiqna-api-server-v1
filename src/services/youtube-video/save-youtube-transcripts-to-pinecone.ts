@@ -7,7 +7,7 @@ import { chunkYouTubeVideoTranscript } from "../chunk/chunk-youtube-video-transc
 import { OpenAIEmbeddingProvider } from "../embedding/openai-embedding.js";
 import { TAnalyzedContentMetadata } from "../../types/shared.js";
 import { MetadataGeneratorYouTubeVideo } from "../metadata-generator/metadata-generator-youtube-video.js";
-import { PROVIDER_CONFIGS } from "../../consts/const.js";
+import { METADATA_GENERATOR_MODEL, METADATA_GENERATOR_MODEL_NAME, METADATA_GENERATOR_PROVIDER, PROVIDER_CONFIGS } from "../../consts/const.js";
 import DBPinecone from "../../db-ctrl/db-ctrl-pinecone/db-pinecone.js";
 import { ContentKeyManager } from "../../utils/content-key-manager.js";
 import { ERequestCreateContentType } from "../../consts/const.js";
@@ -15,12 +15,17 @@ import {
   safeForEmbedding,
   toSnippet,
 } from "../../utils/chunk-embedding-utils.js";
-import { saveJsonToLocal } from "../../utils/helper-json.js";
+import { saveDataToLocal } from "../../utils/save-file.js";
 import DBSqlYoutubeVideo from "../../db-ctrl/db-ctrl-sql/db-sql-youtube-video.js";
 
-// === 1) 유틸: 문장 단위로 자르고, maxChars/overlapChars/maxDurationSec 강제 ===
-type BaseChunk = { text: string; startTime: number; endTime: number };
 
+type TTranscriptBaseChunk = { text: string; startTime: number; endTime: number };
+
+/**
+ * 문장 단위로 자르기
+ * @param text
+ * @returns
+ */
 function splitBySentences(text: string): string[] {
   // . ! ? 기준 대략적 분할 (필요하면 더 정교한 splitter로 교체)
   return text
@@ -29,21 +34,27 @@ function splitBySentences(text: string): string[] {
     .filter(Boolean);
 }
 
+/**
+ * 문장 단위로 자르고, maxChars/overlapChars/maxDurationSec 강제
+ * @param raw
+ * @param opts
+ * @returns
+ */
 function normalizeChunks(
-  raw: BaseChunk[],
+  raw: TTranscriptBaseChunk[],
   opts: {
     maxChars: number;
     overlapChars?: number;
     maxDurationSec?: number;
     minChars?: number;
   },
-): BaseChunk[] {
+): TTranscriptBaseChunk[] {
   const maxChars = Math.max(200, opts.maxChars);
   const overlapChars = Math.max(0, opts.overlapChars ?? 0);
   const maxDur = opts.maxDurationSec ?? Infinity;
   const minChars = opts.minChars ?? 0;
 
-  const out: BaseChunk[] = [];
+  const out: TTranscriptBaseChunk[] = [];
 
   for (const c of raw) {
     // 이미 충분히 짧고, 시간도 OK면 그대로 사용
@@ -155,14 +166,18 @@ export async function saveYouTubeTranscriptsToPinecone(
   transcriptsOfAllLanguages: TYouTubeTranscriptStandardFormat[],
   vectorMetadata: Partial<IPineconeVectorMetadataForVideo>,
 ) {
+  if (!vectorMetadata) {
+    throw new Error("Metadata Needed");
+  }
+
   try {
-    const provider = new OpenAIEmbeddingProvider();
+    const embeddingProvider = new OpenAIEmbeddingProvider();
 
-    if (!vectorMetadata) {
-      throw new Error("Metadata Needed");
-    }
-
-    const metadataExtractor = new MetadataGeneratorYouTubeVideo();
+    const metadataExtractor = new MetadataGeneratorYouTubeVideo({
+      provider: METADATA_GENERATOR_PROVIDER,
+      model: METADATA_GENERATOR_MODEL,
+      modelName: METADATA_GENERATOR_MODEL_NAME,
+    });
 
     let metadataUpdated = false;
 
@@ -179,40 +194,70 @@ export async function saveYouTubeTranscriptsToPinecone(
 
       const chunksRaw = chunkYouTubeVideoTranscript(transcript.segments);
 
+      // DEV Save File
+      // ytb_video_XXXXXXXX_s08_transcript_lang_XX_full_chunk_raw.txt [파일 체크 필요함]
+      saveDataToLocal(chunksRaw, `ytb_video_${transcript.videoId}_s08_transcript_lang_${transcript.language}`, "full_chunk_raw", "txt", "../data/metaYouTube");
+
       const fullChunkText = chunksRaw.map((chunk) => chunk.text).join(" ");
-      const metadataFromFullChunkText = await metadataExtractor.generateMetadataFromText(
+
+      // DEV Save File
+      // ytb_video_XXXXXXXX_s09_transcript_lang_XX_full_chunk_text.txt [파일 체크 필요함]
+      saveDataToLocal(fullChunkText, `ytb_video_${transcript.videoId}_s09_transcript_lang_${transcript.language}`, "full_chunk_text", "txt", "../data/metaYouTube");
+
+      const rawMetadataFromFullChunkText = await metadataExtractor.generateMetadataFromText(
         transcript.videoId,
         vectorMetadata.title ?? "",
         fullChunkText,
         transcript.language,
       );
 
-      // DEV
-      saveJsonToLocal(metadataFromFullChunkText, `metadata_from_full_chunk_text_${transcript.language}_${transcript.videoId}.json`, transcript.language, "../data/metadataFromFullChunkText");
+      if (!rawMetadataFromFullChunkText) {
+        console.warn(
+          `⚠️  No metadata generated for ${transcript.language}, skipping...`,
+        );
+        continue;
+      }
+
+      // DEV Save File
+      // ytb_video_XXXXXXXX_s10_transcript_lang_XX_meta_raw_from_full_chunk_text.txt [파일 체크 필요함]
+      saveDataToLocal(rawMetadataFromFullChunkText, `ytb_video_${transcript.videoId}_s10_transcript_lang_${transcript.language}`, "meta_raw_from_full_chunk_text", "txt", "../data/metaYouTube");
+
+      const parsedMetadataFromFullChunkText = await metadataExtractor.parseResponse(rawMetadataFromFullChunkText);
+
+      if (!parsedMetadataFromFullChunkText) {
+        console.warn(
+          `⚠️  No parsed metadata generated for ${transcript.language}, skipping...`,
+        );
+        continue;
+      }
+
+      // DEV Save File
+      // ytb_video_XXXXXXXX_s11_transcript_lang_XX_meta_parsed_from_full_chunk_text.txt [파일 체크 필요함]
+      saveDataToLocal(parsedMetadataFromFullChunkText, `ytb_video_${transcript.videoId}_s11_transcript_lang_${transcript.language}`, "meta_parsed_from_full_chunk_text", "txt", "../data/metaYouTube");
 
       if (!metadataUpdated) {
         await DBSqlYoutubeVideo.updateByVideoId(transcript.videoId, {
-          info_country: metadataFromFullChunkText.info_country,
-          info_city: metadataFromFullChunkText.info_city,
-          info_district: metadataFromFullChunkText.info_district,
-          info_neighborhood: metadataFromFullChunkText.info_neighborhood,
-          info_landmark: metadataFromFullChunkText.info_landmark,
-          info_category: metadataFromFullChunkText.info_category,
-          info_name: metadataFromFullChunkText.info_name,
-          info_special_tag: metadataFromFullChunkText.info_special_tag,
-          info_influencer: metadataFromFullChunkText.info_influencer,
-          info_season: metadataFromFullChunkText.info_season,
-          info_time_of_day: metadataFromFullChunkText.info_time_of_day,
-          info_activity_type: metadataFromFullChunkText.info_activity_type,
+          info_country: parsedMetadataFromFullChunkText.info_country,
+          info_city: parsedMetadataFromFullChunkText.info_city,
+          info_district: parsedMetadataFromFullChunkText.info_district,
+          info_neighborhood: parsedMetadataFromFullChunkText.info_neighborhood,
+          info_landmark: parsedMetadataFromFullChunkText.info_landmark,
+          info_category: parsedMetadataFromFullChunkText.info_category,
+          info_name: parsedMetadataFromFullChunkText.info_name,
+          info_special_tag: parsedMetadataFromFullChunkText.info_special_tag,
+          info_influencer: parsedMetadataFromFullChunkText.info_influencer,
+          info_season: parsedMetadataFromFullChunkText.info_season,
+          info_time_of_day: parsedMetadataFromFullChunkText.info_time_of_day,
+          info_activity_type: parsedMetadataFromFullChunkText.info_activity_type,
           // info_target_audience: metadataFromFullChunkText.info_target_audience,
-          info_reservation_required: metadataFromFullChunkText.info_reservation_required,
-          info_travel_tips: metadataFromFullChunkText.info_travel_tips,
+          info_reservation_required: parsedMetadataFromFullChunkText.info_reservation_required,
+          info_travel_tips: parsedMetadataFromFullChunkText.info_travel_tips,
         });
         metadataUpdated = true;
       }
 
-      // 변경: 후처리로 강제 재청킹
-      const chunks = normalizeChunks(chunksRaw as BaseChunk[], {
+      // 후처리로 강제 재청킹
+      const chunks = normalizeChunks(chunksRaw as TTranscriptBaseChunk[], {
         maxChars: 900,
         overlapChars: 150,
         maxDurationSec: 120,
@@ -236,44 +281,57 @@ export async function saveYouTubeTranscriptsToPinecone(
           }
 
           // 1. 임베딩 생성
-          const embedding = await provider.generateEmbedding(
+          const embedding = await embeddingProvider.generateEmbedding(
             safeForEmbedding(chunk.text),
             PROVIDER_CONFIGS.openai.model,
           );
 
           // 2. 청크별 메타데이터 추출
-          let extractedMetadata: TAnalyzedContentMetadata | null = null;
+          let chunkParsedMetadata: TAnalyzedContentMetadata | null = null;
 
           try {
-            extractedMetadata =
-              await metadataExtractor.generateMetadataFromText(
-                transcript.videoId,
-                vectorMetadata.title ?? "",
-                chunk.text,
-                transcript.language,
-              );
+            const chunkRawMetadata =
+              await metadataExtractor.generateMetadataFromText(transcript.videoId, vectorMetadata.title ?? "", chunk.text, transcript.language);
+
+            if (!chunkRawMetadata) {
+              console.warn(`⚠️  No metadata generated for chunk ${idx}, continuing without metadata...`);
+            } else {
+              // DEV Save File
+              // ytb_video_XXXXXXXX_s12_transcript_lang_XX_meta_raw_from_chunk_text_index_[01].txt [파일 체크 필요함]
+              saveDataToLocal(chunkRawMetadata, `ytb_video_${transcript.videoId}_s12_transcript_lang_${transcript.language}_meta_raw_from_chunk_text_index_${idx}`, "meta_raw_from_chunk_text", "txt", "../data/metaYouTube");
+
+              chunkParsedMetadata = await metadataExtractor.parseResponse(chunkRawMetadata);
+
+              if (!chunkParsedMetadata) {
+                console.warn(`⚠️  No parsed metadata generated for chunk ${idx}, continuing without metadata...`);
+              }
+
+              // DEV Save File
+              // ytb_video_XXXXXXXX_s13_transcript_lang_XX_meta_parsed_from_chunk_text_index_[01].txt [파일 체크 필요함]
+              saveDataToLocal(chunkParsedMetadata, `ytb_video_${transcript.videoId}_s13_transcript_lang_${transcript.language}_meta_parsed_from_chunk_text_index_${idx}`, "meta_parsed_from_chunk_text", "txt", "../data/metaYouTube");
+            }
 
             if (idx < 2) {
               console.log(`Metadata:`, {
-                info_country: extractedMetadata?.info_country,
-                info_city: extractedMetadata?.info_city,
-                info_district: extractedMetadata?.info_district,
-                info_neighborhood: extractedMetadata?.info_neighborhood,
-                info_landmark: extractedMetadata?.info_landmark,
-                info_category: extractedMetadata?.info_category,
-                info_name: extractedMetadata?.info_name,
-                info_special_tag: extractedMetadata?.info_special_tag,
-                info_influencer: extractedMetadata?.info_influencer,
-                info_season: extractedMetadata?.info_season,
-                info_time_of_day: extractedMetadata?.info_time_of_day,
-                info_activity_type: extractedMetadata?.info_activity_type,
-                info_target_audience: extractedMetadata?.info_target_audience,
-                info_reservation_required: extractedMetadata?.info_reservation_required,
-                info_travel_tips: extractedMetadata?.info_travel_tips,
-                language: extractedMetadata?.language,
-                sentimentScore: extractedMetadata?.sentimentScore,
-                mainTopic: extractedMetadata?.mainTopic,
-                confidence_score: extractedMetadata?.confidence_score,
+                info_country: chunkParsedMetadata?.info_country,
+                info_city: chunkParsedMetadata?.info_city,
+                info_district: chunkParsedMetadata?.info_district,
+                info_neighborhood: chunkParsedMetadata?.info_neighborhood,
+                info_landmark: chunkParsedMetadata?.info_landmark,
+                info_category: chunkParsedMetadata?.info_category,
+                info_name: chunkParsedMetadata?.info_name,
+                info_special_tag: chunkParsedMetadata?.info_special_tag,
+                info_influencer: chunkParsedMetadata?.info_influencer,
+                info_season: chunkParsedMetadata?.info_season,
+                info_time_of_day: chunkParsedMetadata?.info_time_of_day,
+                info_activity_type: chunkParsedMetadata?.info_activity_type,
+                info_target_audience: chunkParsedMetadata?.info_target_audience,
+                info_reservation_required: chunkParsedMetadata?.info_reservation_required,
+                info_travel_tips: chunkParsedMetadata?.info_travel_tips,
+                language: chunkParsedMetadata?.language,
+                sentimentScore: chunkParsedMetadata?.sentimentScore,
+                mainTopic: chunkParsedMetadata?.mainTopic,
+                confidence_score: chunkParsedMetadata?.confidence_score,
               });
             }
           } catch (metadataError) {
@@ -299,7 +357,7 @@ export async function saveYouTubeTranscriptsToPinecone(
               text: toSnippet(chunk.text),
               text_length: chunk.text.length,
               embedding_model: PROVIDER_CONFIGS.openai.model,
-              embedding_dimensions: provider.getDimensions(
+              embedding_dimensions: embeddingProvider.getDimensions(
                 PROVIDER_CONFIGS.openai.model,
               ),
               created_at: new Date().toISOString(),
@@ -322,60 +380,60 @@ export async function saveYouTubeTranscriptsToPinecone(
             metadata.like_count = vectorMetadata.like_count;
 
           // 청크별 추출된 메타데이터 추가
-          if (extractedMetadata) {
-            if (extractedMetadata.info_country.length > 0) {
-              metadata.info_country = extractedMetadata.info_country;
+          if (chunkParsedMetadata) {
+            if (chunkParsedMetadata.info_country.length > 0) {
+              metadata.info_country = chunkParsedMetadata.info_country;
             }
-            if (extractedMetadata.info_city.length > 0) {
-              metadata.info_city = extractedMetadata.info_city;
+            if (chunkParsedMetadata.info_city.length > 0) {
+              metadata.info_city = chunkParsedMetadata.info_city;
             }
-            if (extractedMetadata.info_district.length > 0) {
-              metadata.info_district = extractedMetadata.info_district;
+            if (chunkParsedMetadata.info_district.length > 0) {
+              metadata.info_district = chunkParsedMetadata.info_district;
             }
-            if (extractedMetadata.info_neighborhood.length > 0) {
-              metadata.info_neighborhood = extractedMetadata.info_neighborhood;
+            if (chunkParsedMetadata.info_neighborhood.length > 0) {
+              metadata.info_neighborhood = chunkParsedMetadata.info_neighborhood;
             }
-            if (extractedMetadata.info_category.length > 0) {
-              metadata.info_category = extractedMetadata.info_category;
+            if (chunkParsedMetadata.info_category.length > 0) {
+              metadata.info_category = chunkParsedMetadata.info_category;
             }
-            if (extractedMetadata.info_name.length > 0) {
-              metadata.info_name = extractedMetadata.info_name;
+            if (chunkParsedMetadata.info_name.length > 0) {
+              metadata.info_name = chunkParsedMetadata.info_name;
             }
-            if (extractedMetadata.info_special_tag.length > 0) {
-              metadata.info_special_tag = extractedMetadata.info_special_tag;
+            if (chunkParsedMetadata.info_special_tag.length > 0) {
+              metadata.info_special_tag = chunkParsedMetadata.info_special_tag;
             }
-            if (extractedMetadata.info_influencer.length > 0) {
-              metadata.info_influencer = extractedMetadata.info_influencer;
+            if (chunkParsedMetadata.info_influencer.length > 0) {
+              metadata.info_influencer = chunkParsedMetadata.info_influencer;
             }
-            if (extractedMetadata.info_season.length > 0) {
-              metadata.info_season = extractedMetadata.info_season;
+            if (chunkParsedMetadata.info_season.length > 0) {
+              metadata.info_season = chunkParsedMetadata.info_season;
             }
-            if (extractedMetadata.info_time_of_day.length > 0) {
-              metadata.info_time_of_day = extractedMetadata.info_time_of_day;
+            if (chunkParsedMetadata.info_time_of_day.length > 0) {
+              metadata.info_time_of_day = chunkParsedMetadata.info_time_of_day;
             }
-            if (extractedMetadata.info_activity_type.length > 0) {
-              metadata.info_activity_type = extractedMetadata.info_activity_type;
+            if (chunkParsedMetadata.info_activity_type.length > 0) {
+              metadata.info_activity_type = chunkParsedMetadata.info_activity_type;
             }
-            if (extractedMetadata.info_target_audience.length > 0) {
-              metadata.info_target_audience = extractedMetadata.info_target_audience;
+            if (chunkParsedMetadata.info_target_audience.length > 0) {
+              metadata.info_target_audience = chunkParsedMetadata.info_target_audience;
             }
-            if (extractedMetadata.info_reservation_required) {
-              metadata.info_reservation_required = extractedMetadata.info_reservation_required;
+            if (chunkParsedMetadata.info_reservation_required) {
+              metadata.info_reservation_required = chunkParsedMetadata.info_reservation_required;
             }
             // if (extractedMetadata.info_travel_tips.length > 0) {
             //   metadata.info_travel_tips = extractedMetadata.info_travel_tips;
             // }
-            if (extractedMetadata.language) {
-              metadata.language = extractedMetadata.language;
+            if (chunkParsedMetadata.language) {
+              metadata.language = chunkParsedMetadata.language;
             }
-            if (extractedMetadata.sentimentScore) {
-              metadata.sentimentScore = extractedMetadata.sentimentScore;
+            if (chunkParsedMetadata.sentimentScore) {
+              metadata.sentimentScore = chunkParsedMetadata.sentimentScore;
             }
-            if (extractedMetadata.mainTopic) {
-              metadata.mainTopic = extractedMetadata.mainTopic;
+            if (chunkParsedMetadata.mainTopic) {
+              metadata.mainTopic = chunkParsedMetadata.mainTopic;
             }
-            if (extractedMetadata.confidence_score) {
-              metadata.confidence_score = extractedMetadata.confidence_score;
+            if (chunkParsedMetadata.confidence_score) {
+              metadata.confidence_score = chunkParsedMetadata.confidence_score;
             }
           }
 

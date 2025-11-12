@@ -1,5 +1,20 @@
 import { EMBEDDING_MODEL, PINECONE_INDEX_NAME } from "aiqna_common_v1";
 
+export const METADATA_GENERATOR_PROVIDER = "openai";              // "openai" 도 가능
+export const METADATA_GENERATOR_MODEL = "gpt-4o-mini";
+export const METADATA_GENERATOR_MODEL_NAME = "gpt4oMini";
+
+export const METADATA_GENERATOR_DEFAULT_MODELS = [
+  { provider: "ollama", model: "llama3.1:8b", modelName: "llama31_8b" },
+  { provider: "ollama", model: "gpt-oss:20b", modelName: "gptOss_20b" }, 
+  { provider: "ollama", model: "qwen3:8b", modelName: "qwen3_8b" },
+  { provider: "ollama", model: "deepseek-r1:14b", modelName: "deepseekR1_14b" },
+  { provider: "groq", model: "llama-3.3-70b-versatile", modelName: "llama33_70b_versatile" },
+  { provider: "groq", model: "llama-3.1-70b-versatile", modelName: "llama31_70b_versatile" },
+  { provider: "groq", model: "llama-3.1-8b-instant", modelName: "llama31_8b_instant" },
+  { provider: "openai", model: "gpt-4o-mini", modelName: "gpt4oMini" },
+];
+
 /**
  * Request Create Content Type Enum
  */

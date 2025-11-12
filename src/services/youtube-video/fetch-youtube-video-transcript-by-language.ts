@@ -10,6 +10,7 @@ import {
 import innertubeClient from "../../config/innertube.js";
 import { fetchYouTubeTranscriptWithRetry } from "../../utils/retry/retry-fetch-youtube.js";
 import { parseYouTubeTranscriptXML } from "./parse-youtube-transcript-xml.js";
+import { saveDataToLocal } from "../../utils/save-file.js";
 
 /**
  * 특정 언어의 YouTube 트랜스크립트를 가져옵니다.
@@ -159,8 +160,17 @@ export async function fetchYoutubeVideoTranscriptByLanguage(
           //   <text start="2.5" dur="2.5">당신도 규칙을 알고 저도 압니다</text>
           // </transcript>
 
+          // DEV Save File
+          // ytb_video_XXXXXXXX_s05_transcript_lang_XX_results.txt [파일 체크해보기]
+          saveDataToLocal(transcriptText, `ytb_video_${videoId}_s05_transcript_lang_${targetLanguage}`, "results", "txt", "../data/metaYouTube");
+
+
           // XML을 TYouTubeTranscriptSegment[]로 파싱
           const segments = parseYouTubeTranscriptXML(transcriptText);
+
+          // DEV Save File
+          // ytb_video_XXXXXXXX_s06_transcript_lang_XX_segments.json [파일 체크해보기]
+          saveDataToLocal(segments, `ytb_video_${videoId}_s06_transcript_lang_${targetLanguage}`, "segments", "json", "../data/metaYouTube");
 
           return {
             videoTitle,

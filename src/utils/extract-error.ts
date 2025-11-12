@@ -1,4 +1,8 @@
-/** ---- 에러 정규화 유틸 (no-explicit-any 회피) ---- */
+/**
+ * 에러 정규화
+ * @param err 에러
+ * @returns 에러 정규화 결과
+ */
 export function extractError(err: unknown): { message: string; status?: string; code?: string } {
   let message = "";
   let status: string | undefined;
